@@ -4,7 +4,7 @@
 
 " Disable vim-racket's nasty K mapping to browser-based html docs.
 " Has to be an after script to override.
-" UPDATE: Still got "E31: No such mapping". So first create a mapping
-" that overrides any pre-existing ones, then remove it.
-nmap! K <Nop>
-nunmap <buffer> K
+" We make sure the mapping exists to prevent the possibility of an error.
+if !empty(maparg("K", "n"))
+    nunmap <buffer> K
+endif
