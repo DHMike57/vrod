@@ -3,7 +3,7 @@ Operating System
     1 Paths
       1.1 Manipulating Paths
       1.2 More Path Utilities
-      1.3 Unix and Mac OS X Paths
+      1.3 Unix and Mac OS Paths
         1.3.1 Unix Path Representation
       1.4 Windows Paths
         1.4.1 Windows Path Representation
@@ -27,6 +27,7 @@ Operating System
       5.1 Creating Loggers
       5.2 Logging Events
       5.3 Receiving Logged Events
+      5.4 Additional Logging Functions
 
     6 Time
       6.1 Date Utilities
@@ -36,6 +37,8 @@ Operating System
     8 Environment and Runtime Information
 
     9 Command-Line Parsing
+
+    10 Additional Operating System Functions
 
 1. Paths
 
@@ -68,39 +71,40 @@ Most Racket primitives that accept paths first cleanse the path before
 using it. Procedures that build paths or merely check the form of a path
 do not cleanse paths, with the exceptions of cleanse-path,
 expand-user-path, and simplify-path.  For more information about path
-cleansing and other platform-specific details, see Unix and Mac OS X
-Paths and Windows Paths.
+cleansing and other platform-specific details, see Unix and Mac OS Paths
+and Windows Paths.
 
 1.1. Manipulating Paths
 
                                         *path?*
 (path? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a path value for the current platform (not a string,
 and not a path for a different platform), #f otherwise.
 
                                         *path-string?*
 (path-string? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
-Return #t if v is either a path value for the current platform or a
-non-empty string without nul characters, #f otherwise.
+Returns #t if v is either a path or string: either a path for the
+current platform or a non-empty string without nul characters. Returns
+#f otherwise.
 
                                         *path-for-some-system?*
 (path-for-some-system? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a path value for some platform (not a string), #f
 otherwise.
 
                                         *string->path*
 (string->path str) -> path? ~
-  str : string? ~
+  str : string? ~ ~
 
 Produces a path whose byte-string encoding is (string->bytes/locale str
-(char->integer #\?)) on Unix and Mac OS X or (string->bytes/utf-8 str)
-on Windows.
+(char->integer #\?)) on Unix and Mac OS or (string->bytes/utf-8 str) on
+Windows.
 
 Beware that the current locale might not encode every string, in which
 case string->path can produce the same path for different strs. See also
@@ -117,8 +121,8 @@ UTF-8.
 
                                         *bytes->path*
 (bytes->path bstr [type]) -> path? ~
-  bstr : bytes? ~
-  type : (or/c 'unix 'windows) = (system-path-convention-type) ~
+  bstr : bytes? ~ ~
+  type : (or/c 'unix 'windows) = (system-path-convention-type) ~ ~
 
 Produces a path (for some platform) whose byte-string encoding is bstr.
 The optional type specifies the convention to use for the path.
@@ -132,13 +136,13 @@ Representation and Windows Path Representation.
 
                                         *path->string*
 (path->string path) -> string? ~
-  path : path? ~
+  path : path? ~ ~
 
 Produces a string that represents path by decoding path’s byte-string
-encoding using the current locale on Unix and Mac OS X and by using
-UTF-8 on Windows. In the former case, ? is used in the result string
-where encoding fails, and if the encoding result is the empty string,
-then the result is "?".
+encoding using the current locale on Unix and Mac OS and by using UTF-8
+on Windows. In the former case, ? is used in the result string where
+encoding fails, and if the encoding result is the empty string, then the
+result is "?".
 
 The resulting string is suitable for displaying to a user,
 string-ordering comparisons, etc., but it is not suitable for
@@ -158,7 +162,7 @@ UTF-8.
 
                                         *path->bytes*
 (path->bytes path) -> bytes? ~
-  path : path-for-some-system? ~
+  path : path-for-some-system? ~ ~
 
 Produces path’s byte-string representation. No information is lost in
 this translation, so that (bytes->path (path->bytes path)
@@ -177,16 +181,16 @@ Representation and Windows Path Representation.
 
                                         *string->path-element*
 (string->path-element str) -> path? ~
-  str : string? ~
+  str : string? ~ ~
 
 Like string->path, except that str corresponds to a single relative
 element in a path, and it is encoded as necessary to convert it to a
-path. See Unix and Mac OS X Paths and Windows Paths for more information
+path. See Unix and Mac OS Paths and Windows Paths for more information
 on the conversion of paths.
 
 If str does not correspond to any path element (e.g., it is an absolute
 path, or it can be split), or if it corresponds to an up-directory or
-same-directory indicator on Unix and Mac OS X, then exn:fail:contract
+same-directory indicator on Unix and Mac OS, then exn:fail:contract
 exception is raised.
 
 Like path->string, information can be lost from str in the
@@ -194,8 +198,8 @@ locale-specific conversion to a path.
 
                                         *bytes->path-element*
 (bytes->path-element bstr [type]) -> path-for-some-system? ~
-  bstr : bytes? ~
-  type : (or/c 'unix 'windows) = (system-path-convention-type) ~
+  bstr : bytes? ~ ~
+  type : (or/c 'unix 'windows) = (system-path-convention-type) ~ ~
 
 Like bytes->path, except that bstr corresponds to a single relative
 element in a path. In terms of conversions and restrictions on bstr,
@@ -208,7 +212,7 @@ manipulation of path elements is necessary.
 
                                         *path-element->string*
 (path-element->string path) -> string? ~
-  path : path-element? ~
+  path : path-element? ~ ~
 
 Like path->string, except that trailing path separators are removed (as
 by split-path). On Windows, any \\?\REL encoding prefix is also removed;
@@ -223,7 +227,7 @@ presenting a pathless file or directory name to a user.
 
                                         *path-element->bytes*
 (path-element->bytes path) -> bytes? ~
-  path : path-element? ~
+  path : path-element? ~ ~
 
 Like path->bytes, except that any encoding prefix is removed, etc., as
 for path-element->string.
@@ -241,15 +245,18 @@ bytes->path-element and build-path).
 
                                         *path<?*
 (path<? a-path b-path ...) -> boolean? ~
-  a-path : path? ~
-  b-path : path? ~
+  a-path : path? ~ ~
+  b-path : path? ~ ~
 
 Returns #t if the arguments are sorted, where the comparison for each
 pair of paths is the same as using path->bytes and bytes<?.
 
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
                                         *path-convention-type*
 (path-convention-type path) -> (or/c 'unix 'windows) ~
-  path : path-for-some-system? ~
+  path : path-for-some-system? ~ ~
 
 Accepts a path value (not a string) and returns its convention type.
 
@@ -257,12 +264,12 @@ Accepts a path value (not a string) and returns its convention type.
 (system-path-convention-type) -> (or/c 'unix 'windows) ~
 
 Returns the path convention type of the current platform: 'unix for Unix
-and Mac OS X, 'windows for Windows.
+and Mac OS, 'windows for Windows.
 
                                         *build-path*
 (build-path base sub ...) -> path-for-some-system? ~
-  base : (or/c path-string? path-for-some-system? 'up 'same) ~
-  sub : (or/c (and/c (or/c path-string? path-for-some-system?) ~
+  base : (or/c path-string? path-for-some-system? 'up 'same) ~ ~
+  sub : (or/c (and/c (or/c path-string? path-for-some-system?) ~ ~
                      (not/c complete-path?))
               (or/c 'up 'same))
 
@@ -293,32 +300,32 @@ contains a nul character), the exn:fail:contract exception is raised.
 The build-path procedure builds a path without checking the validity of
 the path or accessing the filesystem.
 
-See Unix and Mac OS X Paths and Windows Paths for more information on
-the construction of paths.
+See Unix and Mac OS Paths and Windows Paths for more information on the
+construction of paths.
 
 The following examples assume that the current directory is
 "/home/joeuser" for Unix examples and "C:\Joe’s Files" for Windows
 examples.
 
   (define p1 (build-path (current-directory) "src" "racket"))
-   ; Unix: p1 is "/home/joeuser/src/racket" ~
-   ; Windows: p1 is "C:\\Joe's Files\\src\\racket" ~
+   ; Unix: p1 is "/home/joeuser/src/racket" ~ ~
+   ; Windows: p1 is "C:\\Joe's Files\\src\\racket" ~ ~
   (define p2 (build-path 'up 'up "docs" "Racket"))
-   ; Unix: p2 is "../../docs/Racket" ~
-   ; Windows: p2 is "..\\..\\docs\\Racket" ~
+   ; Unix: p2 is "../../docs/Racket" ~ ~
+   ; Windows: p2 is "..\\..\\docs\\Racket" ~ ~
   (build-path p2 p1)
-   ; Unix and Windows: raises exn:fail:contract; p1 is absolute ~
+   ; Unix and Windows: raises exn:fail:contract; p1 is absolute ~ ~
   (build-path p1 p2)
-   ; Unix: is "/home/joeuser/src/racket/../../docs/Racket" ~
-   ; Windows: is "C:\\Joe's Files\\src\\racket\\..\\..\\docs\\Racket" ~
+   ; Unix: is "/home/joeuser/src/racket/../../docs/Racket" ~ ~
+   ; Windows: is "C:\\Joe's Files\\src\\racket\\..\\..\\docs\\Racket" ~ ~
 
                                         *build-path/convention-type*
 (build-path/convention-type type          ~
                             base         
                             sub ...) -> path-for-some-system?
-  type : (or/c 'unix 'windows) ~
-  base : (or/c path-string? path-for-some-system? 'up 'same) ~
-  sub : (or/c (and/c (or/c path-string? path-for-some-system?) ~
+  type : (or/c 'unix 'windows) ~ ~
+  base : (or/c path-string? path-for-some-system? 'up 'same) ~ ~
+  sub : (or/c (and/c (or/c path-string? path-for-some-system?) ~ ~
                      (not/c complete-path?))
               (or/c 'up 'same))
 
@@ -326,7 +333,7 @@ Like build-path, except a path convention type is specified explicitly.
 
                                         *absolute-path?*
 (absolute-path? path) -> boolean? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path? string? path-for-some-system?) ~ ~
 
 Returns #t if path is an absolute path, #f otherwise. The path argument
 can be a path for any platform. If path is not a legal path string
@@ -335,7 +342,7 @@ not access the filesystem.
 
                                         *relative-path?*
 (relative-path? path) -> boolean? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path? string? path-for-some-system?) ~ ~
 
 Returns #t if path is a relative path, #f otherwise. The path argument
 can be a path for any platform. If path is not a legal path string
@@ -344,7 +351,7 @@ not access the filesystem.
 
                                         *complete-path?*
 (complete-path? path) -> boolean? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path? string? path-for-some-system?) ~ ~
 
 Returns #t if path is a completely determined path (not relative to a
 directory or drive), #f otherwise. The path argument can be a path for
@@ -357,8 +364,8 @@ This procedure does not access the filesystem.
 
                                         *path->complete-path*
 (path->complete-path path [base]) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
-  base : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  base : (or/c path-string? path-for-some-system?) ~ ~
        = (current-directory)
 
 Returns path as a complete path. If path is already a complete path, it
@@ -373,21 +380,21 @@ This procedure does not access the filesystem.
 
                                         *path->directory-path*
 (path->directory-path path) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
 Returns path if path syntactically refers to a directory and ends in a
 separator, otherwise it returns an extended version of path that
 specifies a directory and ends with a separator. For example, on Unix
-and Mac OS X, the path "x/y/" syntactically refers to a directory and
-ends in a separator, but "x/y" would be extended to "x/y/", and "x/.."
-would be extended to "x/../". The path argument can be a path for any
+and Mac OS, the path "x/y/" syntactically refers to a directory and ends
+in a separator, but "x/y" would be extended to "x/y/", and "x/.." would
+be extended to "x/../". The path argument can be a path for any
 platform, and the result will be for the same platform.
 
 This procedure does not access the filesystem.
 
                                         *resolve-path*
 (resolve-path path) -> path? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Cleanses path and returns a path that references the same file or
 directory as path. If path is a soft link to another path, then the
@@ -405,24 +412,30 @@ Changed in version 6.0.1.12: Added support for links on Windows.
 
                                         *cleanse-path*
 (cleanse-path path) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
 Cleanses path (as described at the beginning of this chapter) without
 consulting the filesystem.
 
+Example:
+
+  > (let ([p (string->some-system-path "tiny//dancer" 'unix)])
+      (cleanse-path p))
+  #<path:tiny/dancer>
+
                                         *expand-user-path*
 (expand-user-path path) -> path? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
-Cleanses path. In addition, on Unix and Mac OS X, a leading ~ is treated
+Cleanses path. In addition, on Unix and Mac OS, a leading ~ is treated
 as user’s home directory and expanded; the username follows the ~
 (before a / or the end of the path), where ~ by itself indicates the
 home directory of the current user.
 
                                         *simplify-path*
 (simplify-path path [use-filesystem?]) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
-  use-filesystem? : boolean? = #t ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  use-filesystem? : boolean? = #t ~ ~
 
 Eliminates redundant path separators (except for a single trailing
 separator), up-directory .., and same-directory . indicators in path,
@@ -437,10 +450,10 @@ separator.
 
 When path is simplified and use-filesystem? is true (the default), a
 complete path is returned. If path is relative, it is resolved with
-respect to the current directory. On Unix and Mac OS X, up-directory
+respect to the current directory. On Unix and Mac OS, up-directory
 indicators are removed taking into account soft links (so that the
 resulting path refers to the same directory as before); on Windows,
-up-directory indicators are removed by by deleting a preceding path
+up-directory indicators are removed by deleting a preceding path
 element.
 
 When use-filesystem? is #f, up-directory indicators are removed by
@@ -460,20 +473,27 @@ be simplified due to a cycle of links, the exn:fail:filesystem exception
 is raised (but a successfully simplified path may still involve a cycle
 of links if the cycle did not inhibit the simplification).
 
-See Unix and Mac OS X Paths and Windows Paths for more information on
+See Unix and Mac OS Paths and Windows Paths for more information on
 simplifying paths.
+
+Example:
+
+  >
+  (let ([p (string->some-system-path "tiny//in/my/head/../../../dancer" 'unix)])
+      (simplify-path p #f))
+  #<path:tiny/dancer>
 
                                         *normal-case-path*
 (normal-case-path path) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
-Returns path with “normalized” case letters. For Unix and Mac OS X
+Returns path with “normalized” case characters. For Unix and Mac OS
 paths, this procedure always returns the input path, because filesystems
 for these platforms can be case-sensitive. For Windows paths, if path
-does not start \\?\, the resulting string uses only lowercase letters,
-based on the current locale. In addition, for Windows paths when the
-path does not start \\?\, all /s are converted to \s, and trailing
-spaces and .s are removed.
+does not start with \\?\, the resulting string uses only lowercase
+letters, based on the current locale. In addition, for Windows paths
+when the path does not start with \\?\, all /s are converted to \s, and
+trailing spaces and .s are removed.
 
 The path argument can be a path for any platform, but beware that
 local-sensitive decoding and conversion of the path may be different on
@@ -485,7 +505,7 @@ This procedure does not access the filesystem.
 (split-path path) -> (or/c path-for-some-system? 'relative #f) ~
                      (or/c path-for-some-system? 'up 'same)
                      boolean?
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
 Deconstructs path into a smaller path and an immediate directory or file
 name.  Three values are returned:
@@ -522,13 +542,13 @@ for the same platform.
 
 This procedure does not access the filesystem.
 
-See Unix and Mac OS X Paths and Windows Paths for more information on
+See Unix and Mac OS Paths and Windows Paths for more information on
 splitting paths.
 
                                         *explode-path*
 (explode-path path) ~
  -> (listof (or/c path-for-some-system? 'up 'same))
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
 Returns the list of path elements that constitute path.  If path is
 simplified in the sense of simple-form-path, then the result is always a
@@ -538,33 +558,92 @@ The explode-path function computes its result in time proportional to
 the length of path (unlike a loop in that uses split-path, which must
 allocate intermediate paths).
 
-                                        *path-replace-suffix*
-(path-replace-suffix path suffix) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
-  suffix : (or/c string? bytes?) ~
+                                        *path-replace-extension*
+(path-replace-extension path ext) -> path-for-some-system? ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  ext : (or/c string? bytes?) ~ ~
 
-Returns a path that is the same as path, except that the suffix for the
-last element of the path is changed to suffix. If the last element of
-path has no suffix, then suffix is added to the path. A suffix is
-defined as a . followed by any number of non-. characters/bytes at the
-end of the path element, as long as the path element is not ".." or ".".
+Returns a path that is the same as path, except that the extension for
+the last element of the path (including the extension separator) is
+changed to ext. If the last element of path has no extension, then ext
+is added to the path.
+
+An extension is defined as a . that is not at the start of the path
+element followed by any number of non-. characters/bytes at the end of
+the path element, as long as the path element is not a directory
+indicator like "..".
+
 The path argument can be a path for any platform, and the result is for
 the same platform. If path represents a root, the exn:fail:contract
-exception is raised.
+exception is raised. The given ext typically starts with ., but it is
+not required to start with an extension separator.
+
+Examples:
+
+  > (path-replace-extension "x/y.ss" #".rkt")
+  #<path:x/y.rkt>
+  > (path-replace-extension "x/y.ss" #"")
+  #<path:x/y>
+  > (path-replace-extension "x/y" #".rkt")
+  #<path:x/y.rkt>
+  > (path-replace-extension "x/y.tar.gz" #".rkt")
+  #<path:x/y.tar.rkt>
+  > (path-replace-extension "x/.racketrc" #".rkt")
+  #<path:x/.racketrc.rkt>
+
+Added in version 6.5.0.3.
+
+                                        *path-add-extension*
+(path-add-extension path ext [sep]) -> path-for-some-system? ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  ext : (or/c string? bytes?) ~ ~
+  sep : (or/c string? bytes?) = #"_" ~ ~
+
+Similar to path-replace-extension, but any existing extension on path is
+preserved by replacing the . before the extension with sep, and then the
+ext is added to the end.
+
+Examples:
+
+  > (path-add-extension "x/y.ss" #".rkt")
+  #<path:x/y_ss.rkt>
+  > (path-add-extension "x/y" #".rkt")
+  #<path:x/y.rkt>
+  > (path-add-extension "x/y.tar.gz" #".rkt")
+  #<path:x/y.tar_gz.rkt>
+  > (path-add-extension "x/y.tar.gz" #".rkt" #".")
+  #<path:x/y.tar.gz.rkt>
+  > (path-add-extension "x/.racketrc" #".rkt")
+  #<path:x/.racketrc.rkt>
+
+Added in version 6.5.0.3. Changed in version 6.8.0.2: Added the sep
+optional argument.
+
+                                        *path-replace-suffix*
+(path-replace-suffix path ext) -> path-for-some-system? ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  ext : (or/c string? bytes?) ~ ~
+
+  NOTE: This function is deprecated; use path-replace-extension,
+  instead.
+
+Like path-replace-extension, but treats a leading . in a path element as
+an extension separator.
 
                                         *path-add-suffix*
-(path-add-suffix path suffix) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
-  suffix : (or/c string? bytes?) ~
+(path-add-suffix path ext) -> path-for-some-system? ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  ext : (or/c string? bytes?) ~ ~
 
-Similar to path-replace-suffix, but any existing suffix on path is
-preserved by replacing every . in the last path element with _, and then
-the suffix is added to the end.
+  NOTE: This function is deprecated; use path-add-extension, instead.
+
+Like path-add-extension, but treats a leading . in a path element as an
+extension separator.
 
                                         *reroot-path*
 (reroot-path path root-path) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
-  root-path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  root-path : (or/c path-string? path-for-some-system?) ~ ~
 
 Produces a path that extends root-path based on the complete form of
 path.
@@ -578,33 +657,86 @@ a root UNC path is prefixed with "UNC" as a path element and the machine
 and volume names become path elements.
 
 Examples:
+
   > (reroot-path (bytes->path #"/home/caprica/baltar" 'unix)
                  (bytes->path #"/earth" 'unix))
   #<path:/earth/home/caprica/baltar>
-  > (reroot-path (bytes->path #"c:\\usr\\adama" 'windows) ~
+  > (reroot-path (bytes->path #"c:\\usr\\adama" 'windows) ~ ~
                  (bytes->path #"\\\\earth\\africa\\" 'windows))
   #<windows-path:\\earth\africa\c\usr\adama>
   > (reroot-path (bytes->path #"\\\\galactica\\cac\\adama" 'windows)
-                 (bytes->path #"s:\\earth\\africa\\" 'windows)) ~
+                 (bytes->path #"s:\\earth\\africa\\" 'windows)) ~ ~
   #<windows-path:s:\earth\africa\UNC\galactica\cac\adama>
 
 1.2. More Path Utilities
 
- (require racket/path) package: base ~
+ (require racket/path) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/path
 and racket libraries, but not racket/base.
 
                                         *file-name-from-path*
 (file-name-from-path path) -> (or/c path-for-some-system? #f) ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
 Returns the last element of path. If path is syntactically a directory
 path (see split-path), then the result is #f.
 
+                                        *path-get-extension*
+(path-get-extension path) -> (or/c bytes? #f) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+
+Returns a byte string that is the extension part of the filename in
+path, including the . separator. If the path has no extension, #f is
+returned.
+
+See path-replace-extension for the definition of a filename extension.
+
+Examples:
+
+  > (path-get-extension "x/y.rkt")
+  #".rkt"
+  > (path-get-extension "x/y")
+  #f
+  > (path-get-extension "x/y.tar.gz")
+  #".gz"
+  > (path-get-extension "x/.racketrc")
+  #f
+
+Added in version 6.5.0.3 of package base.
+
+                                        *path-has-extension?*
+(path-has-extension? path ext) -> (or/c bytes? #f) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  ext : (or/c bytes? string?) ~ ~
+
+Determines whether the last element of path ends with ext but is not
+exactly the same as ext.
+
+If ext is a byte string with the shape of an extension (i.e., starting
+with .), this check is equivalent to checking whether
+(path-get-extension path) produces ext.
+
+Examples:
+
+  > (path-has-extension? "x/y.rkt" #".rkt")
+  #t
+  > (path-has-extension? "x/y.ss" #".rkt")
+  #f
+  > (path-has-extension? "x/y" #".rkt")
+  #f
+  > (path-has-extension? "x/.racketrc" #".racketrc")
+  #f
+  > (path-has-extension? "x/compiled/y_rkt.zo" #"_rkt.zo")
+  #t
+
+Added in version 6.5.0.3 of package base.
+
                                         *filename-extension*
 (filename-extension path) -> (or/c bytes? #f) ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+
+  NOTE: This function is deprecated; use path-get-extension, instead.
 
 Returns a byte string that is the extension part of the filename in path
 without the . separator. If path is syntactically a directory (see
@@ -613,25 +745,48 @@ split-path) or if the path has no extension, #f is returned.
                                         *find-relative-path*
 (find-relative-path  base                                 ~
                      path                                
-                    [#:more-than-root? more-than-root?])  ~
- -> path-for-some-system?
-  base : (or/c path-string? path-for-some-system?) ~
-  path : (or/c path-string?  path-for-some-system?) ~
-  more-than-root? : any/c = #f ~
+                    [#:more-than-root? more-than-root?    ~ ~
+                     #:more-than-same? more-than-same?    ~ ~
+                     #:normalize-case? normalize-case?])  ~ ~
+ -> (or/c path-for-some-system? path-string?)
+  base : (or/c path-string? path-for-some-system?) ~ ~
+  path : (or/c path-string?  path-for-some-system?) ~ ~
+  more-than-root? : any/c = #f ~ ~
+  more-than-same? : any/c = #t ~ ~
+  normalize-case? : any/c = #t ~ ~
 
 Finds a relative pathname with respect to base that names the same file
 or directory as path. Both base and path must be simplified in the sense
-of simple-form-path.  If path shares no subpath in common with base,
-path is returned.
+of simple-form-path. If path shares no subpath in common with base, path
+is returned.
 
 If more-than-root? is true, if base and path share only a Unix root in
 common, and if neither base nor path is just a root path, then path is
 returned.
 
+If path is the same as base, then (build-path 'same) is returned only if
+more-than-same? is true. Otherwise, path is returned when path is the
+same as base.
+
+If normalize-case? is true (the default), then pairs of path elements to
+be compared are first converted via normal-case-path, which means that
+path elements are comparsed case-insentively on Windows. If
+normalize-case? is #f, then path elements and the path roots match only
+if they have the same case.
+
+The result is normally a path in the sense of path?. The result is a
+string only if path is provided a string and also returned as the
+result.
+
+Changed in version 6.8.0.3 of package base: Made path elements
+case-normalized for comparison by default, and added the
+#:normalize-case? argument. Changed in version 6.90.0.21: Added the
+#:more-than-same? argument.
+
                                         *normalize-path*
 (normalize-path path [wrt]) -> path? ~
-  path : path-string? ~
-  wrt : (and/c path-string? complete-path?) ~
+  path : path-string? ~ ~
+  wrt : (and/c path-string? complete-path?) ~ ~
       = (current-directory)
 
 For most purposes, simple-form-path is the preferred mechanism to
@@ -653,9 +808,14 @@ An error is signaled by normalize-path if the input path contains an
 embedded path for a non-existent directory, or if an infinite cycle of
 soft links is detected.
 
+Example:
+
+  > (equal? (current-directory) (normalize-path "."))
+  #t
+
                                         *path-element?*
 (path-element? path) -> boolean? ~
-  path : any/c ~
+  path : any/c ~ ~
 
 Returns #t if path is a path element: a path value for some platform
 (see path-for-some-system?) such that split-path applied to path would
@@ -664,15 +824,27 @@ Otherwise, the result is #f.
 
                                         *path-only*
 (path-only path) -> (or/c #f path-for-some-system?) ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
-If path is a filename, the file’s path is returned. If path is
-syntactically a directory, path is returned (as a path, if it was a
-string). If path has no directory part #f is returned.
+Returns path without its final path element in the case that path is not
+syntactically a directory; if path has only a single, non-directory path
+element, #f is returned. If path is syntactically a directory, then path
+is returned unchanged (but as a path, if it was a string).
+
+Examples:
+
+  > (path-only (build-path "a" "b"))
+  #<path:a/>
+  > (path-only (build-path "a"))
+  #f
+  > (path-only (path->directory-path (build-path "a")))
+  #<path:a/>
+  > (path-only (build-path 'up 'up))
+  #<path:../..>
 
                                         *simple-form-path*
 (simple-form-path path) -> path? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Returns (simplify-path (path->complete-path path)), which ensures that
 the result is a complete path containing no up- or same-directory
@@ -680,7 +852,7 @@ indicators.
 
                                         *some-system-path->string*
 (some-system-path->string path) -> string? ~
-  path : path-for-some-system? ~
+  path : path-for-some-system? ~ ~
 
 Converts path to a string using a UTF-8 encoding of the path’s bytes.
 
@@ -690,8 +862,8 @@ encoding) and when starting and ending with strings.
 
                                         *string->some-system-path*
 (string->some-system-path str kind) -> path-for-some-system? ~
-  str : string? ~
-  kind : (or/c 'unix 'windows) ~
+  str : string? ~ ~
+  kind : (or/c 'unix 'windows) ~ ~
 
 Converts str to a kind path using a UTF-8 encoding of the path’s bytes.
 
@@ -701,14 +873,15 @@ encoding) and when starting and ending with strings.
 
                                         *shrink-path-wrt*
 (shrink-path-wrt pth other-pths) -> (or/c #f path?) ~
-  pth : path? ~
-  other-pths : (listof path?) ~
+  pth : path? ~ ~
+  other-pths : (listof path?) ~ ~
 
 Returns a suffix of pth that shares nothing in common with the suffixes
 of other-pths, or pth, if not possible (e.g. when other-pths is empty or
 contains only paths with the same elements as pth).
 
 Examples:
+
   > (shrink-path-wrt (build-path "racket" "list.rkt")
                      (list (build-path "racket" "list.rkt")
                            (build-path "racket" "base.rkt")))
@@ -719,16 +892,16 @@ Examples:
                            (build-path "racket" "base.rkt")))
   #<path:racket/list.rkt>
 
-1.3. Unix and Mac OS X Paths
+1.3. Unix and Mac OS Paths
 
-In a path on Unix and Mac OS X, a / separates elements of the path, . as
-a path element always means the directory indicated by preceding path,
-and .. as a path element always means the parent of the directory
-indicated by the preceding path. A leading ~ in a path is not treated
-specially, but expand-user-path can be used to convert a leading ~
-element to a user-specific directory. No other character or byte has a
-special meaning within a path. Multiple adjacent / are equivalent to a
-single / (i.e., they act as a single path separator).
+In a path on Unix and Mac OS, a / separates elements of the path, . as a
+path element always means the directory indicated by preceding path, and
+.. as a path element always means the parent of the directory indicated
+by the preceding path. A leading ~ in a path is not treated specially,
+but expand-user-path can be used to convert a leading ~ element to a
+user-specific directory. No other character or byte has a special
+meaning within a path. Multiple adjacent / are equivalent to a single /
+(i.e., they act as a single path separator).
 
 A path root is always /. A path starting with / is an absolute, complete
 path, and a path starting with any other character is a relative path.
@@ -736,7 +909,7 @@ path, and a path starting with any other character is a relative path.
 Any pathname that ends with a / syntactically refers to a directory, as
 does any path whose last element is . or ...
 
-A Unix and Mac OS X path is cleansed by replacing multiple adjacent /s
+A Unix and Mac OS path is cleansed by replacing multiple adjacent /s
 with a single /.
 
 For (bytes->path-element bstr), bstr must not contain any /, otherwise
@@ -747,15 +920,15 @@ that is not the case for other platforms, however, path-element->bytes
 and path-element->string should be used when converting individual path
 elements.
 
-On Mac OS X, Finder aliases are zero-length files.
+On Mac OS, Finder aliases are zero-length files.
 
 1.3.1. Unix Path Representation
 
-A path on Unix and Mac OS X is natively a byte string. For presentation
-to users and for other string-based operations, a path is converted
-to/from a string using the current locale’s encoding with ? (encoding)
-or #\uFFFD (decoding) in place of errors. Beware that the encoding may
-not accommodate all possible paths as distinct strings.
+A path on Unix and Mac OS is natively a byte string. For presentation to
+users and for other string-based operations, a path is converted to/from
+a string using the current locale’s encoding with ? (encoding) or
+#\uFFFD (decoding) in place of errors. Beware that the encoding may not
+accommodate all possible paths as distinct strings.
 
 1.4. Windows Paths
 
@@ -1003,7 +1176,7 @@ case no errors are possible).
 
                                         *find-system-path*
 (find-system-path kind) -> path? ~
-  kind : symbol? ~
+  kind : symbol? ~ ~
 
 Returns a machine-specific path for a standard type of path specified by
 kind, which must be one of the following:
@@ -1014,7 +1187,7 @@ kind, which must be one of the following:
   as a complete path, then the path is used as the user’s home
   directory.
 
-  On Unix and Mac OS X, when PLTUSERHOME does not apply, the user’s home
+  On Unix and Mac OS, when PLTUSERHOME does not apply, the user’s home
   directory is determined by expanding the path "~", which is expanded
   by first checking for a HOME environment variable. If none is defined,
   the USER and LOGNAME environment variables are consulted (in that
@@ -1038,17 +1211,17 @@ kind, which must be one of the following:
   determined by PLTUSERHOME, otherwise in the user’s application-data
   folder as specified by the Windows registry; the application-data
   folder is usually "Application Data" in the user’s profile directory.
-  On Mac OS X, the preferences directory is "Library/Preferences" in the
+  On Mac OS, the preferences directory is "Library/Preferences" in the
   user’s home directory. The preferences directory might not exist.
 
 * 'pref-file — a file that contains a symbol-keyed association list of
   preference values. The file’s directory path always matches the result
   returned for 'pref-dir. The file name is "racket-prefs.rktd" on Unix
-  and Windows, and it is "org.racket-lang.prefs.rktd" on Mac OS X. The
+  and Windows, and it is "org.racket-lang.prefs.rktd" on Mac OS. The
   file’s directory might not exist. See also get-preference.
 
 * 'temp-dir — the standard directory for storing temporary files. On
-  Unix and Mac OS X, this is the directory specified by the TMPDIR
+  Unix and Mac OS, this is the directory specified by the TMPDIR
   environment variable, if it is defined, otherwise it is the first path
   that exists among "/var/tmp", "/usr/tmp", and "/tmp". On Windows, the
   result is the directory specified by the TMP or TEMP environment
@@ -1061,7 +1234,7 @@ kind, which must be one of the following:
   directory part of the path is the same path as returned for 'init-dir.
   The file name is platform-specific:
 
-  * Unix and Mac OS X: ".racketrc"
+  * Unix and Mac OS: ".racketrc"
 
   * Windows: "racketrc.rktl"
 
@@ -1074,31 +1247,36 @@ kind, which must be one of the following:
   'config-dir) is a relative path, it is relative to the current
   executable. The directory might not exist.
 
+* 'host-config-dir — like 'config-dir, but when cross-platform build
+  mode has been selected (through the -C or --cross argument to racket;
+  see [missing]), the result refers to a directory for the current
+  system’s installation, instead of for the target system.
+
 * 'addon-dir — a directory for user-specific Racket configuration,
   packages, and extension. This directory is specified by the
   PLTADDONDIR environment variable, and it can be overridden by the
   --addon or -A command-line flag.  If no environment variable or flag
   is specified, or if the value is not a legal path name, then this
   directory defaults to "Library/Racket" in the user’s home directory on
-  Mac OS X and 'pref-dir otherwise.  The directory might not exist.
+  Mac OS and 'pref-dir otherwise.  The directory might not exist.
 
 * 'doc-dir — the standard directory for storing the current user’s
   documents. On Unix, it’s the user’s home directory.  On Windows, it is
   the user’s home directory if determined by PLTUSERHOME, otherwise it
   is the user’s documents folder as specified by the Windows registry;
   the documents folder is usually "My Documents" in the user’s home
-  directory.  On Mac OS X, it’s the "Documents" directory in the user’s
+  directory.  On Mac OS, it’s the "Documents" directory in the user’s
   home directory.
 
 * 'desk-dir — the directory for the current user’s desktop. On Unix,
   it’s the user’s home directory. On Windows, it is the user’s home
   directory if determined by PLTUSERHOME, otherwise it is the user’s
   desktop folder as specified by the Windows registry; the desktop
-  folder is usually "Desktop" in the user’s home directory. On Mac OS X,
+  folder is usually "Desktop" in the user’s home directory. On Mac OS,
   it is "Desktop" in the user’s home directory
 
 * 'sys-dir — the directory containing the operating system for Windows.
-  On Unix and Mac OS X, the result is "/".
+  On Unix and Mac OS, the result is "/".
 
 * 'exec-file — the path of the Racket executable as provided by the
   operating system for the current invocation. For some operating
@@ -1122,21 +1300,31 @@ kind, which must be one of the following:
   the Racket executable, but it can be overridden by the --collects or
   -X command-line flag.
 
+* 'host-collects-dir — like 'collects-dir, but when cross-platform build
+  mode has been selected (through the -C or --cross argument to racket;
+  see [missing]), the result refers to a directory for the current
+  system’s installation, instead of for the target system. In
+  cross-platform build mode, collection files are normally read from the
+  target system’s installation, but some tasks require current-system
+  directories (such as the one that holds foreign libraries) that are
+  configured relative to the main library-collection path.
+
 * 'orig-dir — the current directory at start-up, which can be useful in
   converting a relative-path result from (find-system-path 'exec-file)
   or (find-system-path 'run-file) to a complete path.
 
-Changed in version 6.0.0.3: Added PLTUSERHOME.
+Changed in version 6.0.0.3: Added PLTUSERHOME. Changed in version
+6.9.0.1: Added 'host-config-dir and 'host-collects-dir.
 
                                         *path-list-string->path-list*
 (path-list-string->path-list str                 ~
                              default-path-list) 
  -> (listof path?)
-  str : (or/c string? bytes?) ~
-  default-path-list : (listof path?) ~
+  str : (or/c string? bytes?) ~ ~
+  default-path-list : (listof path?) ~ ~
 
 Parses a string or byte string containing a list of paths, and returns a
-list of path strings. On Unix and Mac OS X, paths in a path list are
+list of path strings. On Unix and Mac OS, paths in a path list are
 separated by a :; on Windows, paths are separated by a ;, and all "s in
 the string are discarded. Whenever the path list contains an empty path,
 the list default-path-list is spliced into the returned list of paths.
@@ -1147,9 +1335,9 @@ returned list.
 (find-executable-path  program         ~
                       [related        
                        deepest?]) -> (or/c path? #f)
-  program : path-string? ~
-  related : (or/c path-string? #f) = #f ~
-  deepest? : any/c = #f ~
+  program : path-string? ~ ~
+  related : (or/c path-string? #f) = #f ~ ~
+  deepest? : any/c = #f ~ ~
 
 Finds a path for the executable program, returning #f if the path cannot
 be found.
@@ -1162,7 +1350,7 @@ full path for the found related, instead of the path for the executable.
 This procedure is used by the Racket executable to find the standard
 library collection directory (see [missing]).  In this case, program is
 the name used to start Racket and related is "collects".  The related
-argument is used because, on Unix and Mac OS X, program may involve a
+argument is used because, on Unix and Mac OS, program may involve a
 sequence of soft links; in this case, related determines which link in
 the chain is relevant.
 
@@ -1189,7 +1377,7 @@ Windows.)
 
                                         *file-exists?*
 (file-exists? path) -> boolean? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Returns #t if a file (not a directory) path exists, #f otherwise.
 
@@ -1198,7 +1386,7 @@ filenames (e.g., "LPT1", "x:/baddir/LPT1").
 
                                         *link-exists?*
 (link-exists? path) -> boolean? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Returns #t if a link path exists, #f otherwise.
 
@@ -1216,7 +1404,7 @@ Changed in version 6.0.1.12: Added support for links on Windows.
 
                                         *delete-file*
 (delete-file path) -> void? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Deletes the file with path path if it exists, otherwise the
 exn:fail:filesystem exception is raised. If path is a link, the link is
@@ -1232,6 +1420,15 @@ permission change if the deletion fails.
 On Windows, delete-file can delete a symbolic link, but not a junction.
 Use delete-directory to delete a junction.
 
+On Windows, beware that if a file is deleted while it remains in use by
+some process (e.g., a background search indexer), then the file’s
+content will eventually go away, but the file’s name remains occupied
+until the file is no longer used. As long as the name remains occupied,
+attempts to open, delete, or replace the file will trigger a permission
+error (as opposed to a file-exists error). A common technique to avoid
+this pitfall is to move the file to a generated temporary name before
+deleting it. See also delete-directory/files.
+
 Changed in version 6.1.1.7: Changed Windows behavior to use
 current-force-delete-permissions.
 
@@ -1239,23 +1436,24 @@ current-force-delete-permissions.
 (rename-file-or-directory  old               ~
                            new              
                           [exists-ok?]) -> void?
-  old : path-string? ~
-  new : path-string? ~
-  exists-ok? : any/c = #f ~
+  old : path-string? ~ ~
+  new : path-string? ~ ~
+  exists-ok? : any/c = #f ~ ~
 
 Renames the file or directory with path old—if it exists—to the path
 new. If the file or directory is not renamed successfully, the
 exn:fail:filesystem exception is raised.
 
 This procedure can be used to move a file/directory to a different
-directory (on the same disk) as well as rename a file/directory within a
-directory. Unless exists-ok?  is provided as a true value, new cannot
-refer to an existing file or directory. Even if exists-ok? is true, new
-cannot refer to an existing file when old is a directory, and vice
-versa.
+directory (on the same filesystem) as well as rename a file/directory
+within a directory. Unless exists-ok?  is provided as a true value, new
+cannot refer to an existing file or directory, but the check is not
+atomic with the rename operation on Unix and Mac OS. Even if exists-ok?
+is true, new cannot refer to an existing file when old is a directory,
+and vice versa.
 
 If new exists and is replaced, the replacement is atomic on Unix and Mac
-OS X, but it is not guaranteed to be atomic on Windows. Furthermore, if
+OS, but it is not guaranteed to be atomic on Windows. Furthermore, if
 new exists and is opened by any process for reading or writing, then
 attempting to replace it will typically fail on Windows. See also
 call-with-atomic-output-file.
@@ -1263,22 +1461,30 @@ call-with-atomic-output-file.
 If old is a link, the link is renamed rather than the destination of the
 link, and it counts as a file for replacing any existing new.
 
+On Windows, beware that a directory cannot be renamed if any file within
+the directory is open. That constraint is particularly problematic if a
+search indexer is running in the background (as in the default Windows
+configuration). A possible workaround is to combine copy-directory/files
+and delete-directory/files, since the latter can deal with open files,
+although that sequence is obviously not atomic and temporarily
+duplicates files.
+
                                         *file-or-directory-modify-seconds*
 (file-or-directory-modify-seconds  path          ~
                                   [secs-n]) -> exact-integer?
-  path : path-string? ~
-  secs-n : #f = #f ~
+  path : path-string? ~ ~
+  secs-n : #f = #f ~ ~
 (file-or-directory-modify-seconds path        
                                   secs-n) -> void?
-  path : path-string? ~
-  secs-n : exact-integer? ~
+  path : path-string? ~ ~
+  secs-n : exact-integer? ~ ~
 (file-or-directory-modify-seconds  path             
                                   [secs-n           
                                    fail-thunk]) -> any
-  path : path-string? ~
-  secs-n : (or/c exact-integer? #f) = #f ~
-  fail-thunk : (-> any) ~
-             = (lambda () (raise (make-exn:fail:filesystem ....))) ~
+  path : path-string? ~ ~
+  secs-n : (or/c exact-integer? #f) = #f ~ ~
+  fail-thunk : (-> any) ~ ~
+             = (lambda () (raise (make-exn:fail:filesystem ....))) ~ ~
 
 Returns the file or directory’s last modification date in seconds since
 midnight UTC, January 1, 1970 (see also Time) when secs-n is not
@@ -1299,19 +1505,19 @@ error raises exn:fail:filesystem.
                                         *file-or-directory-permissions*
 (file-or-directory-permissions path [mode]) ~
  -> (listof (or/c 'read 'write 'execute))
-  path : path-string? ~
-  mode : #f = #f ~
+  path : path-string? ~ ~
+  mode : #f = #f ~ ~
 (file-or-directory-permissions path mode) -> (integer-in 0 65535)
-  path : path-string? ~
-  mode : 'bits ~
+  path : path-string? ~ ~
+  mode : 'bits ~ ~
 (file-or-directory-permissions path mode) -> void
-  path : path-string? ~
-  mode : (integer-in 0 65535) ~
+  path : path-string? ~ ~
+  mode : (integer-in 0 65535) ~ ~
 
 When given one argument or #f as the second argument, returns a list
 containing 'read, 'write, and/or 'execute to indicate permission the
 given file or directory path by the current user and group. On Unix and
-Mac OS X, permissions are checked for the current effective user instead
+Mac OS, permissions are checked for the current effective user instead
 of the real user.
 
 If 'bits is supplied as the second argument, the result is a
@@ -1321,28 +1527,28 @@ and group. The lowest nine bits of the encoding are somewhat portable,
 reflecting permissions for the file or directory’s owner, members of the
 file or directory’s group, or other users:
 
-* #o100 : owner has read permission
+* #o400 : owner has read permission
 
 * #o200 : owner has write permission
 
-* #o400 : owner has execute permission
+* #o100 : owner has execute permission
 
-* #o010 : group has read permission
+* #o040 : group has read permission
 
 * #o020 : group has write permission
 
-* #o040 : group has execute permission
+* #o010 : group has execute permission
 
-* #o001 : others have read permission
+* #o004 : others have read permission
 
 * #o002 : others have write permission
 
-* #o004 : others have execute permission
+* #o001 : others have execute permission
 
 See also user-read-bit, etc. On Windows, permissions from all three
 (owner, group, and others) are always the same, and read and execute
-permission are always available. On Unix and Mac OS X, higher bits have
-a platform-specific meaning.
+permission are always available. On Unix and Mac OS, higher bits have a
+platform-specific meaning.
 
 If an integer is supplied as the second argument, its is used as an
 encoding of properties (mostly permissions) to install for the file.
@@ -1353,8 +1559,8 @@ In all modes, the exn:fail:filesystem exception is raised on error
                                         *file-or-directory-identity*
 (file-or-directory-identity path [as-link?]) ~
  -> exact-positive-integer?
-  path : path-string? ~
-  as-link? : any/c = #f ~
+  path : path-string? ~ ~
+  as-link? : any/c = #f ~ ~
 
 Returns a number that represents the identity of path in terms of the
 device and file or directory that it accesses. This function can be used
@@ -1367,17 +1573,17 @@ referenced file or directory (if any).
 
                                         *file-size*
 (file-size path) -> exact-nonnegative-integer? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
-Returns the (logical) size of the specified file in bytes. On Mac OS X,
+Returns the (logical) size of the specified file in bytes. On Mac OS,
 this size excludes the resource-fork size. On error (e.g., if no such
 file exists), the exn:fail:filesystem exception is raised.
 
                                         *copy-file*
 (copy-file src dest [exists-ok?]) -> void? ~
-  src : path-string? ~
-  dest : path-string? ~
-  exists-ok? : any/c = #f ~
+  src : path-string? ~ ~
+  dest : path-string? ~ ~
+  exists-ok? : any/c = #f ~ ~
 
 Creates the file dest as a copy of src, if dest does not already exist.
 If dest already exists and exists-ok? is #f, the copy fails with
@@ -1391,8 +1597,8 @@ updated.
 
                                         *make-file-or-directory-link*
 (make-file-or-directory-link to path) -> void? ~
-  to : path-string? ~
-  path : path-string? ~
+  to : path-string? ~ ~
+  path : path-string? ~ ~
 
 Creates a link path to to. The creation will fail if path already
 exists. The to need not refer to an existing file or directory, and to
@@ -1411,7 +1617,7 @@ Changed in version 6.0.1.12: Added support for links on Windows.
                                         *current-force-delete-permissions*
 (current-force-delete-permissions) -> boolean? ~
 (current-force-delete-permissions any/c) -> void?
-  any/c : boolean? ~
+  any/c : boolean? ~ ~
 
 A parameter that determines on Windows whether delete-file and
 delete-directory attempt to change a file or directory’s permissions to
@@ -1425,7 +1631,7 @@ file-or-directory-permissions.
                                         *current-directory*
 (current-directory) -> (and/c path? complete-path?) ~
 (current-directory path) -> void?
-  path : path-string? ~
+  path : path-string? ~ ~
 
 A parameter that determines the current directory for resolving relative
 paths.
@@ -1439,7 +1645,7 @@ always a cleansed, simplified, complete, directory path.
 
 The path is not checked for existence when the parameter is set.
 
-On Unix and Mac OS X, the initial value of the parameter for a Racket
+On Unix and Mac OS, the initial value of the parameter for a Racket
 process is taken from the PWD environment variable—if the value of the
 environment variable identifies the same directory as the operating
 system’s report of the current directory.
@@ -1447,7 +1653,7 @@ system’s report of the current directory.
                                         *current-directory-for-user*
 (current-directory-for-user) -> (and/c path? complete-path?) ~
 (current-directory-for-user path) -> void?
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Like current-directory, but use only by srcloc->string for reporting
 paths relative to a directory.
@@ -1467,20 +1673,20 @@ the drive of the current directory.
 
                                         *directory-exists?*
 (directory-exists? path) -> boolean? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Returns #t if path refers to a directory, #f otherwise.
 
                                         *make-directory*
 (make-directory path) -> void? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Creates a new directory with the path path.  If the directory is not
 created successfully, the exn:fail:filesystem exception is raised.
 
                                         *delete-directory*
 (delete-directory path) -> void? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Deletes an existing directory with the path path. If the directory is
 not deleted successfully, the exn:fail:filesystem exception is raised.
@@ -1496,9 +1702,9 @@ Changed in version 6.1.1.7: Changed Windows behavior to use
 current-force-delete-permissions.
 
                                         *directory-list*
-(directory-list [path #:build? build?]) -> (listof path?) ~ ~
-  path : path-string? = (current-directory) ~
-  build? : any/c = #f ~
+(directory-list [path #:build? build?]) -> (listof path?) ~ ~ ~
+  path : path-string? = (current-directory) ~ ~
+  build? : any/c = #f ~ ~
 
 See also the in-directory sequence constructor.
 
@@ -1523,16 +1729,15 @@ those notifications are reflected in Racket by filesystem change events.
 
                                         *filesystem-change-evt?*
 (filesystem-change-evt? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
-Returns #f if v is a filesystem change event, #f otherwise.
+Returns #t if v is a filesystem change event, #f otherwise.
 
                                         *filesystem-change-evt*
-(filesystem-change-evt path) -> filesystem-change-evt? ~
-  path : path-string? ~
-(filesystem-change-evt path failure-thunk) -> any
-  path : path-string? ~
-  failure-thunk : (-> any) ~
+(filesystem-change-evt path [failure-thunk]) ~
+ -> (or/c filesystem-change-evt? any)
+  path : path-string? ~ ~
+  failure-thunk : (or/c (-> any) #f) = #f ~ ~
 
 Creates a filesystem change event, which is a synchronizable event that
 becomes ready for synchronization after a change to path:
@@ -1560,32 +1765,36 @@ the event itself.
 
 If the current platform does not support filesystem-change
 notifications, then the exn:fail:unsupported exception is raised if
-failure-thunk is not provided, or failure-thunk is called in tail
-position if provided. Similarly, if there is any operating-system error
-when creating the event (such as a non-existent file), then the
-exn:fail:filesystem exception is raised or failure-thunk is called.
+failure-thunk is not provided as a procedure, or failure-thunk is called
+in tail position if provided. Similarly, if there is any
+operating-system error when creating the event (such as a non-existent
+file), then the exn:fail:filesystem exception is raised or failure-thunk
+is called.
 
-Creation of a filesystem change event alloates resources at the
+Creation of a filesystem change event allocates resources at the
 operating-system level. The resources are released at latest when the
-event is sychronized and ready for synchronization or when the event is
-canceled with filesystem-change-evt-cancel. See also system-type in
-'fs-change mode.
+event is sychronized and ready for synchronization, when the event is
+canceled with filesystem-change-evt-cancel, or when the garbage
+collector determine that the filesystem change event is unreachable. See
+also system-type in 'fs-change mode.
 
 A filesystem change event is placed under the management of the current
 custodian when it is created. If the custodian is shut down,
 filesystem-change-evt-cancel is applied to the event.
 
+Changed in version 7.3.0.8: Allow #f for failure-thunk.
+
                                         *filesystem-change-evt-cancel*
 (filesystem-change-evt-cancel evt) -> void? ~
-  evt : filesystem-change-evt? ~
+  evt : filesystem-change-evt? ~ ~
 
 Causes evt to become immediately ready for synchronization, whether it
-was ready or before not, and releases and resources (at the
+was ready or not before, and releases the resources (at the
 operating-system level) for tracking filesystem changes.
 
 2.5. Declaring Paths Needed at Run Time
 
- (require racket/runtime-path) package: base ~
+ (require racket/runtime-path) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/runtime-path library, not racket/base or racket.
@@ -1602,13 +1811,18 @@ provides #%datum in phase level 1, since string constants are often used
 as compile-time expressions with define-runtime-path.
 
                                         *define-runtime-path*
-(define-runtime-path id expr) ~
+(define-runtime-path id maybe-runtime?-id expr) ~
+ 
+maybe-runtime? = 
+               | #:runtime?-id runtime?-id ~ ~
 
 Uses expr as both a compile-time (i.e., phase 1) expression and a
 run-time (i.e., phase 0) expression. In either context, expr should
 produce a path, a string that represents a path, a list of the form
 (list 'lib str ...+), or a list of the form (list 'so str) or (list 'so
-str vers).
+str vers). If runtime?-id is provided, then it is bound in the context
+of expr to #f for the compile-time instance of expr and #t for the
+run-time instance of expr.
 
 For run time, id is bound to a path that is based on the result of expr.
 The path is normally computed by taking a relative path result from expr
@@ -1637,6 +1851,13 @@ using str directly, then it tries adding each version specified by
 vers—which defaults to '(#f)—along with a platform-specific
 shared-library extension—as produced by (system-type 'so-suffix). A vers
 can be a string, or it can be a list of strings and #f.
+
+If expr produces a list of the form (list 'share str), the value bound
+to id can be either str or an absolute path; it is an absolute path when
+searching in the directories reported by find-user-share-dir and
+find-share-dir (in that order) locates the path. In this way, files that
+are installed in Racket’s "share" directory get carried along in
+distributions.
 
 If expr produces a list of the form (list 'module module-path var-ref)
 or (list 'so str (list str-or-false ...)), the value bound to id is a
@@ -1680,7 +1901,8 @@ from the define-runtime-path syntactic form:
   then the source location is determined by preserving the original
   expression as a syntax object, extracting its source module path at
   run time (again using syntax-source-module), and then resolving the
-  resulting module path index.
+  resulting module path index. Note that syntax-source-module is based
+  on a syntax object’s lexical information, not its source location.
 
 * If the expression has no source module, the syntax-source location
   associated with the form is used, if is a string or path.
@@ -1695,12 +1917,13 @@ a result of collection-file-path, then the path is record as relative to
 the corresponding module path.
 
 Changed in version 6.0.1.6 of package base: Preserve relative paths only
-within a package.
+within a package. Changed in version 7.5.0.7: Added support for 'share
+in expr.
 
 Examples:
 
   ; Access a file "data.txt" at run-time that is originally
-  ; located in the same directory as the module source file: ~
+  ; located in the same directory as the module source file: ~ ~
   (define-runtime-path data-file "data.txt")
   (define (read-data)
     (with-input-from-file data-file
@@ -1709,7 +1932,7 @@ Examples:
    
   ; Load a platform-specific shared object (using ffi-lib)
   ; that is located in a platform-specific sub-directory of the
-  ; module's source directory: ~
+  ; module's source directory: ~ ~
   (define-runtime-path libfit-path
     (build-path "compiled" "native" (system-library-subpath #f)
                 (path-replace-suffix "libfit"
@@ -1718,26 +1941,28 @@ Examples:
    
   ; Load a platform-specific shared object that might be installed
   ; as part of the operating system, or might be installed
-  ; specifically for Racket: ~
+  ; specifically for Racket: ~ ~
   (define-runtime-path libssl-so
     (case (system-type)
       [(windows) '(so "ssleay32")]
       [else '(so "libssl")]))
   (define libssl (ffi-lib libssl-so))
 
+Changed in version 6.4 of package base: Added #:runtime?-id.
+
                                         *define-runtime-paths*
-(define-runtime-paths (id ...) expr) ~
+(define-runtime-paths (id ...) maybe-runtime?-id expr) ~
 
 Like define-runtime-path, but declares and binds multiple paths at once.
 The expr should produce as many values as ids.
 
                                         *define-runtime-path-list*
-(define-runtime-path-list id expr) ~
+(define-runtime-path-list id maybe-runtime?-id expr) ~
 
 Like define-runtime-path, but expr should produce a list of paths.
 
                                         *define-runtime-module-path-index*
-(define-runtime-module-path-index id module-path-expr) ~
+(define-runtime-module-path-index id maybe-runtime?-id module-path-expr) ~
 
 Similar to define-runtime-path, but id is bound to a module path index
 that encapsulates the result of module-path-expr relative to the
@@ -1786,51 +2011,51 @@ not include module paths bound through define-runtime-module-path.
 
 2.6. More File and Directory Utilities
 
- (require racket/file) package: base ~
+ (require racket/file) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/file
 and racket libraries, but not racket/base.
 
                                         *file->string*
-(file->string path [#:mode mode-flag]) -> string? ~ ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+(file->string path [#:mode mode-flag]) -> string? ~ ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Reads all characters from path and returns them as a string. The
 mode-flag argument is the same as for open-input-file.
 
                                         *file->bytes*
-(file->bytes path [#:mode mode-flag]) -> bytes? ~ ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+(file->bytes path [#:mode mode-flag]) -> bytes? ~ ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Reads all characters from path and returns them as a byte string.  The
 mode-flag argument is the same as for open-input-file.
 
                                         *file->value*
-(file->value path [#:mode mode-flag]) -> any ~ ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+(file->value path [#:mode mode-flag]) -> any ~ ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Reads a single S-expression from path using read. The mode-flag argument
 is the same as for open-input-file.
 
                                         *file->list*
-(file->list path [proc #:mode mode-flag]) -> (listof any/c) ~ ~
-  path : path-string? ~
-  proc : (input-port? . -> . any/c) = read ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+(file->list path [proc #:mode mode-flag]) -> (listof any/c) ~ ~ ~
+  path : path-string? ~ ~
+  proc : (input-port? . -> . any/c) = read ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Repeatedly calls proc to consume the contents of path, until eof is
 produced. The mode-flag argument is the same as for open-input-file.
 
                                         *file->lines*
 (file->lines  path                         ~
-             [#:mode mode-flag             ~
-              #:line-mode line-mode]) -> (listof string?) ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~
+             [#:mode mode-flag             ~ ~
+              #:line-mode line-mode]) -> (listof string?) ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~ ~
             = 'any
 
 Read all characters from path, breaking them into lines. The line-mode
@@ -1840,11 +2065,11 @@ as for open-input-file.
 
                                         *file->bytes-lines*
 (file->bytes-lines  path                         ~
-                   [#:mode mode-flag             ~
-                    #:line-mode line-mode]) -> (listof bytes?) ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~
+                   [#:mode mode-flag             ~ ~
+                    #:line-mode line-mode]) -> (listof bytes?) ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~ ~
             = 'any
 
 Like file->lines, but reading bytes and collecting them into lines like
@@ -1853,12 +2078,12 @@ read-bytes-line.
                                         *display-to-file*
 (display-to-file  v                           ~
                   path                       
-                 [#:mode mode-flag            ~
-                  #:exists exists-flag]) -> void? ~
-  v : any/c ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+                 [#:mode mode-flag            ~ ~
+                  #:exists exists-flag]) -> void? ~ ~
+  v : any/c ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -1868,12 +2093,12 @@ are the same as for open-output-file.
                                         *write-to-file*
 (write-to-file  v                           ~
                 path                       
-               [#:mode mode-flag            ~
-                #:exists exists-flag]) -> void? ~
-  v : any/c ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+               [#:mode mode-flag            ~ ~
+                #:exists exists-flag]) -> void? ~ ~
+  v : any/c ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -1882,14 +2107,14 @@ Like display-to-file, but using write instead of display.
                                         *display-lines-to-file*
 (display-lines-to-file  lst                         ~
                         path                       
-                       [#:separator separator       ~
-                        #:mode mode-flag            ~
-                        #:exists exists-flag]) -> void? ~
-  lst : list? ~
-  path : path-string? ~
-  separator : any/c = #"\n" ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+                       [#:separator separator       ~ ~
+                        #:mode mode-flag            ~ ~
+                        #:exists exists-flag]) -> void? ~ ~
+  lst : list? ~ ~
+  path : path-string? ~ ~
+  separator : any/c = #"\n" ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -1898,30 +2123,36 @@ element. The mode-flag and exists-flag arguments are the same as for
 open-output-file.
 
                                         *copy-directory/files*
-(copy-directory/files                                               ~
-                      src                                          
-                      dest                                         
-                      #:keep-modify-seconds? keep-modify-seconds?)  ~
+(copy-directory/files                                              ~
+                      src                                         
+                      dest                                        
+                      #:keep-modify-seconds? keep-modify-seconds?  ~ ~
+                      #:preserve-links? preserve-links?)           ~ ~
  -> void?
-  src : path-string? ~
-  dest : path-string? ~
-  keep-modify-seconds? : #f ~
+  src : path-string? ~ ~
+  dest : path-string? ~ ~
+  keep-modify-seconds? : #f ~ ~
+  preserve-links? : #f ~ ~
 
 Copies the file or directory src to dest, raising exn:fail:filesystem if
 the file or directory cannot be copied, possibly because dest exists
 already. If src is a directory, the copy applies recursively to the
-directory’s content. If a source is a link, the target of the link is
-copied rather than the link itself.
+directory’s content. If a source is a link and preserve-links? is #f,
+the target of the link is copied rather than the link itself; if
+preserve-links? is #t, the link is copied.
 
 If keep-modify-seconds? is #f, then file copies keep only the properties
-kept by copy-file, If keep-modify-seconds? is true, then each file copy
+kept by copy-file. If keep-modify-seconds? is true, then each file copy
 also keeps the modification date of the original.
+
+Changed in version 6.3 of package base: Added the #:preserve-links?
+argument.
 
                                         *delete-directory/files*
 (delete-directory/files path                            ~
-                        #:must-exist? must-exist?) -> void? ~
-  path : path-string? ~
-  must-exist? : #t ~
+                        #:must-exist? must-exist?) -> void? ~ ~
+  path : path-string? ~ ~
+  must-exist? : #t ~ ~
 
 Deletes the file or directory specified by path, raising
 exn:fail:filesystem if the file or directory cannot be deleted. If path
@@ -1934,13 +2165,27 @@ if path does not exist (but a failure is possible if path initially
 exists and is removed by another thread or process before
 delete-directory/files deletes it).
 
+On Windows, delete-directory/files attempts to move a file into the
+temporary-file directory before deleting it, which avoids problems
+caused by deleting a file that is currently open (e.g., by a search
+indexer running as a background process). If the move attempt fails
+(e.g., because the temporary directory is on a different drive than the
+file), then the file is deleted directly with delete-file.
+
+Changed in version 7.0 of package base: Added Windows-specific file
+deletion.
+
                                         *find-files*
-(find-files  predicate                           ~
-            [start-path]                        
-             #:follow-links? follow-links?) -> (listof path?) ~
-  predicate : (path? . -> . any/c) ~
-  start-path : (or/c path-string? #f) = #f ~
-  follow-links? : #f ~
+(find-files                                                       ~
+             predicate                                           
+            [start-path]                                         
+             #:skip-filtered-directory? skip-filtered-directory?  ~ ~
+             #:follow-links? follow-links?)                       ~ ~
+ -> (listof path?)
+  predicate : (path? . -> . any/c) ~ ~
+  start-path : (or/c path-string? #f) = #f ~ ~
+  skip-filtered-directory? : #f ~ ~
+  follow-links? : #f ~ ~
 
 Traverses the filesystem starting at start-path and creates a list of
 all files and directories for which predicate returns true. If
@@ -1956,6 +2201,9 @@ complete paths in the former case and relative paths in the latter.
 Another difference is that predicate is not called for the current
 directory when start-path is #f.
 
+If skip-filtered-directory? is true, then when predicate returns #f for
+a directory, the directory’s content is not traversed.
+
 If follow-links? is true, the find-files traversal follows links, and
 links are not included in the result. If follow-links? is #f, then links
 are not followed, and links are included in the result.
@@ -1966,12 +2214,17 @@ predicate will be called exactly once with start-path as the argument.
 The find-files procedure raises an exception if it encounters a
 directory for which directory-list fails.
 
+Changed in version 6.3.0.11 of package base: Added the
+#:skip-filtered-directory? argument.
+
                                         *pathlist-closure*
-(pathlist-closure path-list                       ~
-                  #:follow-links? follow-links?)  ~
+(pathlist-closure  path-list                        ~
+                  [#:path-filter path-filter        ~ ~
+                   #:follow-links? follow-links?])  ~ ~
  -> (listof path?)
-  path-list : (listof path-string?) ~
-  follow-links? : #f ~
+  path-list : (listof path-string?) ~ ~
+  path-filter : (or/c #f (path? . -> . any/c)) = #f ~ ~
+  follow-links? : any/c = #f ~ ~
 
 Given a list of paths, either absolute or relative to the current
 directory, returns a list such that
@@ -1980,28 +2233,36 @@ directory, returns a list such that
   the result (but the same ancestor is not added twice);
 
 * if a path refers to directory, all of its descendants are also
-  included in the result;
+  included in the result, except as omitted by path-filter;
 
 * ancestor directories appear before their descendants in the result
-  list.
+  list, as long as they are not misordered in the given path-list.
+
+If path-filter is a procedure, then it is applied to each descendant of
+a directory. If path-filter returns #f, then the descendant (and any of
+its descendants, in the case of a subdirectory) are omitted from the
+result.
 
 If follow-links? is true, then the traversal of directories and files
 follows links, and the link paths are not included in the result. If
-follow-links? is #f, then he result list includes paths to link and the
+follow-links? is #f, then the result list includes paths to link and the
 links are not followed.
+
+Changed in version 6.3.0.11 of package base: Added the #:path-filter
+argument.
 
                                         *fold-files*
 (fold-files  proc                 ~
              init-val            
             [start-path          
              follow-links?]) -> any
-  proc : (or/c (path? (or/c 'file 'dir 'link) any/c ~
+  proc : (or/c (path? (or/c 'file 'dir 'link) any/c ~ ~
                  . -> . any/c)
                (path? (or/c 'file 'dir 'link) any/c
                  . -> . (values any/c any/c)))
-  init-val : any/c ~
-  start-path : (or/c path-string? #f) = #f ~
-  follow-links? : any/c = #t ~
+  init-val : any/c ~ ~
+  start-path : (or/c path-string? #f) = #f ~ ~
+  follow-links? : any/c = #t ~ ~
 
 Traverses the filesystem starting at start-path, calling proc on each
 discovered file, directory, and link. If start-path is #f, then the
@@ -2044,7 +2305,7 @@ disappear during the scan, then an exception is raised.
 
                                         *make-directory**
 (make-directory* path) -> void? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Creates directory specified by path, creating intermediate directories
 as necessary, and never failing if path exists already.
@@ -2055,7 +2316,7 @@ considers only explicit elements of path.
 
                                         *make-parent-directory**
 (make-parent-directory* path) -> void? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Creates the parent directory of the path specified by path, creating
 intermediate directories as necessary, and never failing if an ancestor
@@ -2072,9 +2333,9 @@ Added in version 6.1.1.3 of package base.
 (make-temporary-file [template                ~
                       copy-from-filename     
                       directory])        -> path?
-  template : string? = "rkttmp~a" ~
-  copy-from-filename : (or/c path-string? #f 'directory) = #f ~
-  directory : (or/c path-string? #f) = #f ~
+  template : string? = "rkttmp~a" ~ ~
+  copy-from-filename : (or/c path-string? #f 'directory) = #f ~ ~
+  directory : (or/c path-string? #f) = #f ~ ~
 
 Creates a new temporary file and returns a pathname string for the file.
 Instead of merely generating a fresh file name, the file is actually
@@ -2106,20 +2367,25 @@ and flags (probably using the 'truncate flag; see open-output-file) and
 to delete it when it is no longer needed.
 
                                         *call-with-atomic-output-file*
-(call-with-atomic-output-file  file                               ~
-                               proc                              
-                              [#:security-guard security-guard])  ~
+(call-with-atomic-output-file                                               ~
+                               file                                        
+                               proc                                        
+                              [#:security-guard security-guard              ~ ~
+                               #:rename-fail-handler rename-fail-handler])  ~ ~
  -> any
-  file : path-string? ~
-  proc : ([port output-port?] [tmp-path path?]  . -> . any) ~
-  security-guard : (or/c #f security-guard?) = #f ~
+  file : path-string? ~ ~
+  proc : ([port output-port?] [tmp-path path?]  . -> . any) ~ ~
+  security-guard : (or/c #f security-guard?) = #f ~ ~
+  rename-fail-handler : (or/c #f (exn:fail:filesystem? path> . -> . any)) ~ ~
+                      = #f
 
 Opens a temporary file for writing in the same directory as file, calls
-proc to write to the temporary file, and then atomically moves the
-temporary file in place of proc. The atomic move simply uses
-rename-file-or-directory on Unix and Mac OS X, but it uses an extra
-rename step (see below) on Windows to avoid problems due to concurrent
-readers of file.
+proc to write to the temporary file, and then atomically (except on
+Windows) moves the temporary file in place of file. The move simply uses
+rename-file-or-directory on Unix and Mac OS, and it uses
+rename-file-or-directory on Windows if rename-fail-handler is provided;
+otherwise, on Windows, the moves uses an extra rename step (see below)
+on Windows to avoid problems due to concurrent readers of file.
 
 The proc function is called with an output port for the temporary file,
 plus the path of the temporary file. The result of proc is the result of
@@ -2130,28 +2396,40 @@ files on exceptions.
 
 Windows prevents programs from deleting or replacing files that are
 open, but it allows renaming of open files. Therefore, on Windows,
-call-with-atomic-output-file creates a second temporary file
+call-with-atomic-output-file by default creates a second temporary file
 extra-tmp-file, renames file to extra-tmp-file, renames the temporary
-file written by proc to file, and finally deletes extra-tmp-file.
+file written by proc to file, and finally deletes extra-tmp-file. Since
+that process is not atomic, however, rename-file-or-directory is used if
+rename-fail-handler is provided, where rename-file-or-directory has some
+chance of being atomic, since that the source and destination of the
+moves will be in the same directory; any filesystem exception while
+attempting to rename the file is send to rename-fail-handler, which can
+re-raise the exception or simply return to try again, perhaps after a
+delay. In addition to a filesystem exception, the rename-fail-handler
+procedure also receives the temporary file path to be moved to path. The
+rename-fail-handler argument is used only on Windows.
+
+Changed in version 7.1.0.6 of package base: Added the
+#:rename-fail-handler argument.
 
                                         *get-preference*
 (get-preference  name                                         ~
                 [failure-thunk                               
                  flush-mode                                  
                  filename                                    
-                 #:use-lock? use-lock?                        ~
-                 #:timeout-lock-there timeout-lock-there      ~
-                 #:lock-there lock-there])               -> any ~
-  name : symbol? ~
-  failure-thunk : (-> any) = (lambda () #f) ~
-  flush-mode : any/c = 'timestamp ~
-  filename : (or/c string-path? #f) = #f ~
-  use-lock? : any/c = #t ~
-  timeout-lock-there : (or/c (path? . -> . any) #f) = #f ~
-  lock-there : (or/c (path? . -> . any) #f) ~
+                 #:use-lock? use-lock?                        ~ ~
+                 #:timeout-lock-there timeout-lock-there      ~ ~
+                 #:lock-there lock-there])               -> any ~ ~
+  name : symbol? ~ ~
+  failure-thunk : (-> any) = (lambda () #f) ~ ~
+  flush-mode : any/c = 'timestamp ~ ~
+  filename : (or/c string-path? #f) = #f ~ ~
+  use-lock? : any/c = #t ~ ~
+  timeout-lock-there : (or/c (path? . -> . any) #f) = #f ~ ~
+  lock-there : (or/c (path? . -> . any) #f) ~ ~
              = (make-handle-get-preference-locked
                 0.01 name failure-thunk flush-mode filename
-                #:lock-there timeout-lock-there) ~
+                #:lock-there timeout-lock-there) ~ ~
 
 Extracts a preference value from the file designated by
 (find-system-path 'pref-file), or by filename if it is provided and is
@@ -2199,7 +2477,7 @@ paths are checked for compatibility with old versions of Racket:
 * Windows: (build-path (find-system-path 'pref-dir) 'up "PLT Scheme"
   "plt-prefs.ss")
 
-* Mac OS X: (build-path (find-system-path 'pref-dir)
+* Mac OS: (build-path (find-system-path 'pref-dir)
   "org.plt-scheme.prefs.ss")
 
 * Unix: (expand-user-path "~/.plt-scheme/plt-prefs.ss")
@@ -2209,10 +2487,10 @@ paths are checked for compatibility with old versions of Racket:
                   vals            
                  [locked-proc     
                   filename])  -> void?
-  names : (listof symbol?) ~
-  vals : list? ~
-  locked-proc : (or/c #f (path? . -> . any)) = #f ~
-  filename : (or/c #f path-string?) = #f ~
+  names : (listof symbol?) ~ ~
+  vals : list? ~ ~
+  locked-proc : (or/c #f (path? . -> . any)) = #f ~ ~
+  filename : (or/c #f path-string?) = #f ~ ~
 
 Installs a set of preference values and writes all current values to the
 preference file designated by (find-system-path 'pref-file), or filename
@@ -2266,16 +2544,16 @@ interfere with replacing the file via rename-file-or-directory.)
                                    [failure-thunk           
                                     flush-mode              
                                     filename                
-                                    #:lock-there lock-there  ~
-                                    #:max-delay max-delay])  ~
+                                    #:lock-there lock-there  ~ ~
+                                    #:max-delay max-delay])  ~ ~
  -> (path-string? . -> . any)
-  delay : real? ~
-  name : symbol? ~
-  failure-thunk : (-> any) = (lambda () #f) ~
-  flush-mode : any/c = 'timestamp ~
-  filename : (or/c path-string? #f) = #f ~
-  lock-there : (or/c (path? . -> . any) #f) = #f ~
-  max-delay : real? = 0.2 ~
+  delay : real? ~ ~
+  name : symbol? ~ ~
+  failure-thunk : (-> any) = (lambda () #f) ~ ~
+  flush-mode : any/c = 'timestamp ~ ~
+  filename : (or/c path-string? #f) = #f ~ ~
+  lock-there : (or/c (path? . -> . any) #f) = #f ~ ~
+  max-delay : real? = 0.2 ~ ~
 
 Creates a procedure suitable for use as the #:lock-there argument to
 get-preference, where the name, failure-thunk, flush-mode, and filename
@@ -2294,16 +2572,16 @@ is called with the given lock-there, instead.
                               kind                        
                               thunk                       
                               failure-thunk               
-                             [#:lock-file lock-file        ~
-                              #:delay delay                ~
-                              #:max-delay max-delay]) -> any ~
-  filename : (or/c path-string? #f) ~
-  kind : (or/c 'shared 'exclusive) ~
-  thunk : (-> any) ~
-  failure-thunk : (-> any) ~
-  lock-file : (or/c #f path-string?) = #f ~
-  delay : (and/c real? (not/c negative?)) = 0.01 ~
-  max-delay : (and/c real? (not/c negative?)) = 0.2 ~
+                             [#:lock-file lock-file        ~ ~
+                              #:delay delay                ~ ~
+                              #:max-delay max-delay]) -> any ~ ~
+  filename : (or/c path-string? #f) ~ ~
+  kind : (or/c 'shared 'exclusive) ~ ~
+  thunk : (-> any) ~ ~
+  failure-thunk : (-> any) ~ ~
+  lock-file : (or/c #f path-string?) = #f ~ ~
+  delay : (and/c real? (not/c negative?)) = 0.01 ~ ~
+  max-delay : (and/c real? (not/c negative?)) = 0.2 ~ ~
 
 Obtains a lock for the filename lock-file and then calls thunk.  The
 filename argument specifies a file path prefix that is used only to
@@ -2322,44 +2600,45 @@ kind argument specifies whether the lock is 'shared or 'exclusive in the
 sense of port-try-file-lock?.
 
 Examples:
+
   > (call-with-file-lock/timeout filename 'exclusive
       (lambda () (printf "File is locked\n"))
       (lambda () (printf "Failed to obtain lock for file\n")))
   File is locked
-
   > (call-with-file-lock/timeout #f 'exclusive
       (lambda ()
         (call-with-file-lock/timeout filename 'shared
           (lambda () (printf "Shouldn't get here\n"))
           (lambda () (printf "Failed to obtain lock for file\n"))))
       (lambda () (printf "Shouldn't get here either\n"))
-      #:lock-file (make-lock-file-name filename)) ~
+      #:lock-file (make-lock-file-name filename)) ~ ~
   Failed to obtain lock for file
-
 
                                         *make-lock-file-name*
 (make-lock-file-name path) -> path? ~
-  path : (or path-string? path-for-some-system?) ~
+  path : (or path-string? path-for-some-system?) ~ ~
 (make-lock-file-name dir name) -> path?
-  dir : (or path-string? path-for-some-system?) ~
-  name : path-element? ~
+  dir : (or path-string? path-for-some-system?) ~ ~
+  name : path-element? ~ ~
 
-Creates a lock filename by prepending "_LOCK" on Windows or ".LOCK" on
-other platforms to the file portion of the path.
+Creates a lock filename by prepending "_LOCK" on Windows (i.e., when
+cross-system-type reports 'windows) or ".LOCK" on other platforms to the
+file portion of the path.
 
 Example:
+
   > (make-lock-file-name "/home/george/project/important-file")
   #<path:/home/george/project/.LOCKimportant-file>
 
-user-read-bit : #o400 ~
-user-write-bit : #o200 ~
-user-execute-bit : #o100 ~
-group-read-bit : #o040 ~
-group-write-bit : #o020 ~
-group-execute-bit : #o010 ~
-other-read-bit : #o004 ~
-other-write-bit : #o002 ~
-other-execute-bit : #o001 ~
+user-read-bit : #o400 ~ ~
+user-write-bit : #o200 ~ ~
+user-execute-bit : #o100 ~ ~
+group-read-bit : #o040 ~ ~
+group-write-bit : #o020 ~ ~
+group-execute-bit : #o010 ~ ~
+other-read-bit : #o004 ~ ~
+other-write-bit : #o002 ~ ~
+other-execute-bit : #o001 ~ ~
 
 Constants that are useful with file-or-directory-permissions and bitwise
 operations such as bitwise-ior, and bitwise-and.
@@ -2371,7 +2650,7 @@ operations such as bitwise-ior, and bitwise-and.
 
 3.1. TCP
 
- (require racket/tcp) package: base ~
+ (require racket/tcp) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/tcp
 and racket libraries, but not racket/base.
@@ -2384,10 +2663,10 @@ by W. Richard Stevens.
             [max-allow-wait     
              reuse?             
              hostname])     -> tcp-listener?
-  port-no : (integer-in 0 65535) ~
-  max-allow-wait : exact-nonnegative-integer? = 4 ~
-  reuse? : any/c = #f ~
-  hostname : (or/c string? #f) = #f ~
+  port-no : listen-port-number? ~ ~
+  max-allow-wait : exact-nonnegative-integer? = 4 ~ ~
+  reuse? : any/c = #f ~ ~
+  hostname : (or/c string? #f) = #f ~ ~
 
 Creates a “listening” server on the local machine at the port number
 specified by port-no. If port-no is 0 the socket binds to an ephemeral
@@ -2437,10 +2716,10 @@ itself.
               port-no             
              [local-hostname      
               local-port-no]) -> input-port? output-port?
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  local-hostname : (or/c string? #f) = #f ~
-  local-port-no : (or/c (integer-in 1 65535) #f) = #f ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  local-hostname : (or/c string? #f) = #f ~ ~
+  local-port-no : (or/c port-number? #f) = #f ~ ~
 
 Attempts to connect as a client to a listening server.  The hostname
 argument is the server host’s Internet address name, and port-no is the
@@ -2493,10 +2772,10 @@ exn:fail:network exception is raised.
                           [local-hostname] 
                            local-port-no)  
  -> input-port? output-port?
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  local-hostname : (or/c string? #f) = #f ~
-  local-port-no : (or/c (integer-in 1 65535) #f) ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  local-hostname : (or/c string? #f) = #f ~ ~
+  local-port-no : (or/c port-number? #f) ~ ~
 
 Like tcp-connect, but breaking is enabled (see [missing]) while trying
 to connect. If breaking is disabled when tcp-connect/enable-break is
@@ -2505,7 +2784,7 @@ raised, but not both.
 
                                         *tcp-accept*
 (tcp-accept listener) -> input-port? output-port? ~
-  listener : tcp-listener? ~
+  listener : tcp-listener? ~ ~
 
 Accepts a client connection for the server associated with listener. If
 no client connection is waiting on the listening port, the call to
@@ -2524,7 +2803,7 @@ been closed, the exn:fail:network exception is raised.
 
                                         *tcp-accept/enable-break*
 (tcp-accept/enable-break listener) -> input-port? output-port? ~
-  listener : tcp-listener? ~
+  listener : tcp-listener? ~ ~
 
 Like tcp-accept, but breaking is enabled (see [missing]) while trying to
 accept a connection. If breaking is disabled when
@@ -2533,7 +2812,7 @@ exn:break exception is raised, but not both.
 
                                         *tcp-accept-ready?*
 (tcp-accept-ready? listener) -> boolean? ~
-  listener : tcp-listener? ~
+  listener : tcp-listener? ~ ~
 
 Tests whether an unaccepted client has connected to the server
 associated with listener. If a client is waiting, the return value is
@@ -2546,7 +2825,7 @@ raised.
 
                                         *tcp-close*
 (tcp-close listener) -> void? ~
-  listener : tcp-listener? ~
+  listener : tcp-listener? ~ ~
 
 Shuts down the server associated with listener. All unaccepted clients
 receive an end-of-file from the server; connections to accepted clients
@@ -2561,25 +2840,25 @@ information, see Stevens’s explanation of the TIME_WAIT TCP state.
 
                                         *tcp-listener?*
 (tcp-listener? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a TCP listener created by tcp-listen, #f otherwise.
 
                                         *tcp-accept-evt*
 (tcp-accept-evt listener) -> evt? ~
-  listener : tcp-listener? ~
+  listener : tcp-listener? ~ ~
 
 Returns a synchronizable event (see [missing]) that is ready for
 synchronization when tcp-accept on listener would not block. The
 synchronization result is a list of two items, which correspond to the
-two results of tcp-accept. (If the event is not chosen in a syntax, no
+two results of tcp-accept. (If the event is not chosen in a sync, no
 connections are accepted.) The ports are placed into the management of
 the custodian that is the current custodian (see [missing]) at the time
 that tcp-accept-evt is called.
 
                                         *tcp-abandon-port*
 (tcp-abandon-port tcp-port) -> void? ~
-  tcp-port : tcp-port? ~
+  tcp-port : tcp-port? ~ ~
 
 Like close-output-port or close-input-port (depending on whether
 tcp-port is an input or output port), but if tcp-port is an output port
@@ -2594,20 +2873,20 @@ input TCP ports.
                                         *tcp-addresses*
 (tcp-addresses tcp-port [port-numbers?]) ~
  -> (or/c (values string? string?)
-          (values string? (integer-in 1 65535)
-                  string? (integer-in 0 65535)))
-  tcp-port : (or/c tcp-port? tcp-listener?) ~
-  port-numbers? : any/c = #f ~
+          (values string? port-number?
+                  string? listen-port-number?))
+  tcp-port : (or/c tcp-port? tcp-listener? udp?) ~ ~
+  port-numbers? : any/c = #f ~ ~
 
 Returns two strings when port-numbers? is #f (the default). The first
-string is the Internet address for the local machine a viewed by the
-given TCP port’s connection or for the TCP listener. (For most machines,
-the answer corresponds to the current machine’s only Internet address,
-but when a machine serves multiple addresses, the result is
-connection-specific or listener-specific.) If a listener is given and it
-has no specific host, the first string result is "0.0.0.0". The second
-string is the Internet address for the other end of the connection, or
-always "0.0.0.0" for a listener.
+string is the Internet address for the local machine as viewed by the
+given TCP port’s connection, for the TCP listener, or the UDP socket.
+(When a machine serves multiple addresses, as it usually does if you
+count the loopback device, the result is connection-specific or
+listener-specific.) If a listener or UDP socket is given and it has no
+specific host, the first string result is "0.0.0.0". The second string
+is the Internet address for the other end of the connection, or always
+"0.0.0.0" for a listener or unconnected UDP socket.
 
 If port-numbers? is true, then four results are returned: a string for
 the local machine’s address, an exact integer between 1 and 65535 for
@@ -2615,20 +2894,32 @@ the local machine’s port number, a string for the remote machine’s
 address, and an exact integer between 1 and 65535 for the remote
 machine’s port number or 0 for a listener.
 
-If the given port has been closed, the exn:fail:network exception is
-raised.
+If the given port, listener, or socket has been closed, the
+exn:fail:network exception is raised.
 
                                         *tcp-port?*
 (tcp-port? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a TCP port—which is a port returned by tcp-accept,
 tcp-connect, tcp-accept/enable-break, or tcp-connect/enable-break—#f
 otherwise.
 
+port-number? : contract? ~ ~
+
+Equivalent to (between/c 1 65535).
+
+Added in version 6.3 of package base.
+
+listen-port-number? : contract? ~ ~
+
+Equivalent to (between/c 0 65535).
+
+Added in version 6.3 of package base.
+
 3.2. UDP
 
- (require racket/udp) package: base ~
+ (require racket/udp) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/udp
 and racket libraries, but not racket/base.
@@ -2639,8 +2930,8 @@ by W. Richard Stevens.
                                         *udp-open-socket*
 (udp-open-socket [family-hostname       ~
                   family-port-no]) -> udp?
-  family-hostname : (or/c string? #f) = #f ~
-  family-port-no : (or/c (integer-in 1 65535) #f) = #f ~
+  family-hostname : (or/c string? #f) = #f ~ ~
+  family-port-no : (or/c port-number? #f) = #f ~ ~
 
 Creates and returns a UDP socket to send and receive datagrams
 (broadcasting is allowed). Initially, the socket is not bound or
@@ -2661,10 +2952,10 @@ family-port-no is non-#f, then the socket’s protocol family is IPv4.
             hostname-string     
             port-no             
            [reuse?])        -> void?
-  udp-socket : udp? ~
-  hostname-string : (or/c string? #f) ~
-  port-no : (integer-in 0 65535) ~
-  reuse? : any/c = #f ~
+  udp-socket : udp? ~ ~
+  hostname-string : (or/c string? #f) ~ ~
+  port-no : listen-port-number? ~ ~
+  reuse? : any/c = #f ~ ~
 
 Binds an unbound udp-socket to the local port number port-no.  If
 port-no is 0 the udp-socket is bound to an ephemeral port, which can be
@@ -2703,10 +2994,9 @@ multicast.
 (udp-connect! udp-socket           ~
               hostname-string     
               port-no)        -> void?
-  udp-socket : udp? ~
-  hostname-string : (or/c string? #f) ~
-  port-no : (or/c (integer-in 1 65535) ~
-                  #f)
+  udp-socket : udp? ~ ~
+  hostname-string : (or/c string? #f) ~ ~
+  port-no : (or/c port-number? #f) ~ ~
 
 Connects the socket to the indicated remote address and port if
 hostname-string is a string and port-no is an exact integer.
@@ -2728,13 +3018,13 @@ If udp-socket is closed, the exn:fail:network exception is raised.
               port-no        
               bstr           
              [start-pos      
-              end-pos])  -> void
-  udp-socket : udp? ~
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+              end-pos])  -> void?
+  udp-socket : udp? ~ ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Sends (subbytes bytes start-pos end-pos) as a datagram from the
 unconnected udp-socket to the socket at the remote machine
@@ -2751,11 +3041,11 @@ If udp-socket is closed or connected, the exn:fail:network exception is
 raised.
 
                                         *udp-send*
-(udp-send udp-socket bstr [start-pos end-pos]) -> void ~
-  udp-socket : udp? ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+(udp-send udp-socket bstr [start-pos end-pos]) -> void? ~
+  udp-socket : udp? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-send-to, except that udp-socket must be connected, and the
 datagram goes to the connection target.  If udp-socket is closed or
@@ -2768,12 +3058,12 @@ unconnected, the exn:fail:network exception is raised.
                bstr           
               [start-pos      
                end-pos])  -> boolean?
-  udp-socket : udp? ~
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  udp-socket : udp? ~ ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-send-to, but never blocks; if the socket’s outgoing queue is
 too full to support the send, #f is returned, otherwise the datagram is
@@ -2781,10 +3071,10 @@ queued and the result is #t.
 
                                         *udp-send**
 (udp-send* udp-socket bstr [start-pos end-pos]) -> boolean? ~
-  udp-socket : udp? ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  udp-socket : udp? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-send, except that (like udp-send-to) it never blocks and
 returns #f or #t.
@@ -2795,13 +3085,13 @@ returns #f or #t.
                            port-no        
                            bstr           
                           [start-pos      
-                           end-pos])  -> void
-  udp-socket : udp? ~
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+                           end-pos])  -> void?
+  udp-socket : udp? ~ ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-send-to, but breaking is enabled (see [missing]) while trying
 to send the datagram. If breaking is disabled when
@@ -2812,11 +3102,11 @@ the exn:break exception is raised, but not both.
 (udp-send/enable-break  udp-socket      ~
                         bstr           
                        [start-pos      
-                        end-pos])  -> void
-  udp-socket : udp? ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+                        end-pos])  -> void?
+  udp-socket : udp? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-send, except that breaks are enabled like
 udp-send-to/enable-break.
@@ -2827,11 +3117,11 @@ udp-send-to/enable-break.
               [start-pos      
                end-pos])  -> exact-nonnegative-integer?
                              string?
-                             (integer-in 1 65535)
-  udp-socket : udp? ~
-  bstr : (and/c bytes? (not immutable?)) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+                             port-number?
+  udp-socket : udp? ~ ~
+  bstr : (and/c bytes? (not immutable?)) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Accepts up to end-pos-start-pos bytes of udp-socket’s next incoming
 datagram into bstr, writing the datagram bytes starting at position
@@ -2856,11 +3146,11 @@ exception is raised.
                 end-pos])  
  -> (or/c exact-nonnegative-integer? #f)
     (or/c string? #f)
-    (or/c (integer-in 1 65535) #f)
-  udp-socket : udp? ~
-  bstr : (and/c bytes? (not immutable?)) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+    (or/c port-number? #f)
+  udp-socket : udp? ~ ~
+  bstr : (and/c bytes? (not immutable?)) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-receive!, except that it never blocks. If no datagram is
 available, the three result values are all #f.
@@ -2872,47 +3162,62 @@ available, the three result values are all #f.
                             end-pos])  
  -> exact-nonnegative-integer?
     string?
-    (integer-in 1 65535)
-  udp-socket : udp? ~
-  bstr : (and/c bytes? (not immutable?)) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+    port-number?
+  udp-socket : udp? ~ ~
+  bstr : (and/c bytes? (not immutable?)) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-receive!, but breaking is enabled (see [missing]) while trying
 to receive the datagram. If breaking is disabled when
 udp-receive!/enable-break is called, then either a datagram is received
 or the exn:break exception is raised, but not both.
 
+                                        *udp-set-receive-buffer-size!*
+(udp-set-receive-buffer-size! udp-socket      ~
+                              size)      -> void?
+  udp-socket : udp? ~ ~
+  size : exact-positive-integer? ~ ~
+
+Set the receive buffer size (SO_RCVBUF) for udp-socket. Using a larger
+buffer can minimize packet loss that can occur due to slow polling of a
+connection, including during a major garbage collection.
+
+If size is greater than the maximum allowed by the system, the
+exn:fail:network exception is raised.
+
+Added in version 7.1.0.11 of package base.
+
                                         *udp-close*
 (udp-close udp-socket) -> void? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Closes udp-socket, discarding unreceived datagrams.  If the socket is
 already closed, the exn:fail:network exception is raised.
 
                                         *udp?*
 (udp? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a socket created by udp-open-socket, #f otherwise.
 
                                         *udp-bound?*
 (udp-bound? udp-socket) -> boolean? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Returns #t if udp-socket is bound to a local address and port, #f
 otherwise.
 
                                         *udp-connected?*
 (udp-connected? udp-socket) -> boolean? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Returns #t if udp-socket is connected to a remote address and port, #f
 otherwise.
 
                                         *udp-send-ready-evt*
 (udp-send-ready-evt udp-socket) -> evt? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Returns a synchronizable event (see [missing]) that is in a blocking
 state when udp-send-to on udp-socket would block. The synchronization
@@ -2920,7 +3225,7 @@ result is the event itself.
 
                                         *udp-receive-ready-evt*
 (udp-receive-ready-evt udp-socket) -> evt? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Returns a synchronizable event (see [missing]) that is in a blocking
 state when udp-receive! on udp-socket would block. The synchronization
@@ -2933,12 +3238,12 @@ result is the event itself.
                   bstr           
                  [start-pos      
                   end-pos])  -> evt?
-  udp-socket : udp? ~
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  udp-socket : udp? ~ ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Returns a synchronizable event. The event is in a blocking state when
 udp-send-to on udp-socket would block. Otherwise, if the event is chosen
@@ -2952,10 +3257,10 @@ not chosen.)
                bstr           
               [start-pos      
                end-pos])  -> evt?
-  udp-socket : udp? ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  udp-socket : udp? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Returns a synchronizable event. The event is ready for synchronization
 when udp-send on udp-socket would not block. Otherwise, if the event is
@@ -2970,10 +3275,10 @@ synchronization attempt.
                    bstr           
                   [start-pos      
                    end-pos])  -> evt?
-  udp-socket : udp? ~
-  bstr : (and/c bytes? (not immutable?)) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  udp-socket : udp? ~ ~
+  bstr : (and/c bytes? (not immutable?)) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Returns a synchronizable event. The event is ready for synchronization
 when udp-receive on udp-socket would not block. Otherwise, if the event
@@ -2986,10 +3291,10 @@ content is not modified if the event is not chosen.)
                                         *udp-addresses*
 (udp-addresses udp-port [port-numbers?]) ~
  -> (or/c (values string? string?)
-          (values string? (integer-in 0 65535)
-                  string? (integer-in 0 65535)))
-  udp-port : udp? ~
-  port-numbers? : any/c = #f ~
+          (values string? listen-port-number?
+                  string? listen-port-number?))
+  udp-port : udp? ~ ~
+  port-numbers? : any/c = #f ~ ~
 
 Returns two strings when port-numbers? is #f (the default). The first
 string is the Internet address for the local machine a viewed by the
@@ -3009,19 +3314,32 @@ unconnected.
 If the given port has been closed, the exn:fail:network exception is
 raised.
 
+                                        *udp-set-ttl!*
+(udp-set-ttl! udp-socket ttl) -> void? ~
+  udp-socket : udp? ~ ~
+  ttl : byte? ~ ~
+(udp-ttl udp-socket) -> byte?
+  udp-socket : udp? ~ ~
+
+Time-to-live settings correspond to the IP_TTL setting of the socket.
+
+Sets or retrieves the current time-to-live setting of udp-socket.
+
+Added in version 7.5.0.5 of package base.
+
                                         *udp-multicast-join-group!*
 (udp-multicast-join-group! udp-socket          ~
                            multicast-addr     
                            hostname)      -> void?
-  udp-socket : udp? ~
-  multicast-addr : string? ~
-  hostname : (or/c string? #f) ~
+  udp-socket : udp? ~ ~
+  multicast-addr : string? ~ ~
+  hostname : (or/c string? #f) ~ ~
 (udp-multicast-leave-group! udp-socket         
                             multicast-addr     
                             hostname)      -> void?
-  udp-socket : udp? ~
-  multicast-addr : string? ~
-  hostname : (or/c string? #f) ~
+  udp-socket : udp? ~ ~
+  multicast-addr : string? ~ ~
+  hostname : (or/c string? #f) ~ ~
 
 Adds or removes udp-socket to a named multicast group.
 
@@ -3036,11 +3354,11 @@ that were used to join the group.
 
                                         *udp-multicast-interface*
 (udp-multicast-interface udp-socket) -> string? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 (udp-multicast-set-interface! udp-socket     
                               hostname)  -> void?
-  udp-socket : udp? ~
-  hostname : (or/c string? #f) ~
+  udp-socket : udp? ~ ~
+  hostname : (or/c string? #f) ~ ~
 
 Retrieves or sets the interface that udp-socket uses to send (not
 receive) multicast datagrams. If the result or hostname is either #f or
@@ -3050,10 +3368,10 @@ multicast datagram is sent.
                                         *udp-multicast-set-loopback!*
 (udp-multicast-set-loopback! udp-socket      ~
                              loopback?) -> void?
-  udp-socket : udp? ~
-  loopback? : any/c ~
+  udp-socket : udp? ~ ~
+  loopback? : any/c ~ ~
 (udp-multicast-loopback? udp-socket) -> boolean?
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Loopback settings correspond to the IP_MULTICAST_LOOP setting of the
 socket.
@@ -3064,10 +3382,10 @@ enabled, and #f indicates that self-receipt is disabled.
 
                                         *udp-multicast-set-ttl!*
 (udp-multicast-set-ttl! udp-socket ttl) -> void? ~
-  udp-socket : udp? ~
-  ttl : byte? ~
+  udp-socket : udp? ~ ~
+  ttl : byte? ~ ~
 (udp-multicast-ttl udp-socket) -> byte?
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Time-to-live settings correspond to the IP_MULTICAST_TTL setting of the
 socket.
@@ -3082,43 +3400,49 @@ stack.
 4. Processes
 
                                         *subprocess*
-(subprocess stdout    ~
-            stdin    
-            stderr   
-            command  
-            arg ...) 
+(subprocess  stdout    ~
+             stdin    
+             stderr   
+            [group]   
+             command  
+             arg ...) 
  -> subprocess?
     (or/c (and/c input-port? file-stream-port?) #f)
     (or/c (and/c output-port? file-stream-port?) #f)
     (or/c (and/c input-port? file-stream-port?) #f)
-  stdout : (or/c (and/c output-port? file-stream-port?) #f) ~
-  stdin : (or/c (and/c input-port? file-stream-port?) #f) ~
-  stderr : (or/c (and/c output-port? file-stream-port?) #f 'stdout) ~
-  command : path-string? ~
-  arg : (or/c path? string-no-nuls? bytes-no-nuls?) ~
-(subprocess stdout  
-            stdin   
-            stderr  
-            command 
-            exact   
-            arg)    
+  stdout : (or/c (and/c output-port? file-stream-port?) #f) ~ ~
+  stdin : (or/c (and/c input-port? file-stream-port?) #f) ~ ~
+  stderr : (or/c (and/c output-port? file-stream-port?) #f 'stdout) ~ ~
+  group : (or/c #f 'new subprocess) ~ ~
+        = (and (subprocess-group-enabled) 'new)
+  command : path-string? ~ ~
+  arg : (or/c path? string-no-nuls? bytes-no-nuls?) ~ ~
+(subprocess  stdout  
+             stdin   
+             stderr  
+            [group]  
+             command 
+             exact   
+             arg)    
  -> subprocess?
     (or/c (and/c input-port? file-stream-port?) #f)
     (or/c (and/c output-port? file-stream-port?) #f)
     (or/c (and/c input-port? file-stream-port?) #f)
-  stdout : (or/c (and/c output-port? file-stream-port?) #f) ~
-  stdin : (or/c (and/c input-port? file-stream-port?) #f) ~
-  stderr : (or/c (and/c output-port? file-stream-port?) #f) ~
-  command : path-string? ~
-  exact : 'exact ~
-  arg : string? ~
+  stdout : (or/c (and/c output-port? file-stream-port?) #f) ~ ~
+  stdin : (or/c (and/c input-port? file-stream-port?) #f) ~ ~
+  stderr : (or/c (and/c output-port? file-stream-port?) #f) ~ ~
+  group : (or/c #f 'new subprocess) ~ ~
+        = (and (subprocess-group-enabled) 'new)
+  command : path-string? ~ ~
+  exact : 'exact ~ ~
+  arg : string? ~ ~
 
 Creates a new process in the underlying operating system to execute
 command asynchronously, providing the new process with environment
 variables current-environment-variables. See also system and process
 from racket/system.
 
-On Unix and Mac OS X, subprocess creation is separate from starting the
+On Unix and Mac OS, subprocess creation is separate from starting the
 program indicated by command. In particular, if command refers to a
 non-existent or non-executable file, an error will be reported (via
 standard error and a non-0 exit code) in the subprocess, not in the
@@ -3127,10 +3451,10 @@ creating process.
 The command argument is a path to a program executable, and the args are
 command-line arguments for the program. See find-executable-path for
 locating an executable based on the PATH environment variable. On Unix
-and Mac OS X, command-line arguments are passed as byte strings, and
+and Mac OS, command-line arguments are passed as byte strings, and
 string args are converted using the current locale’s encoding (see
 [missing]). On Windows, command-line arguments are passed as strings,
-and bytes strings are converted using UTF-8.
+and byte strings are converted using UTF-8.
 
 On Windows, the first arg can be replaced with 'exact, which triggers a
 Windows-specific behavior: the sole arg is used exactly as the
@@ -3151,7 +3475,22 @@ system pipe is created and returned by subprocess. The stderr argument
 can be 'stdout, in which case the same file-stream port or system pipe
 that is supplied as standard output is also used for standard error. For
 each port or 'stdout that is provided, no pipe is created and the
-corresponding returned value is #f.
+corresponding returned value is #f. If stdout or stderr is a port for
+which port-waiting-peer? returns true, then subprocess waits for the
+port to become ready for writing before proceeding with the subprocess
+creation.
+
+If group is 'new, then the new process is created as a new OS-level
+process group. In that case, subprocess-kill attempts to terminate all
+processes within the group, which may include additional processes
+created by the subprocess. Beware that creating a group may interfere
+with the job control in an interactive shell, since job control is based
+on process groups. See subprocess-kill for details. If group is a
+subprocess, then that subprocess must have been created with 'new, and
+the new subprocess will be added to the group; adding to the group will
+succeed only on Unix and Mac OS, and only in the same cases that
+subprocess-kill would have an effect (i.e., the subprocess is not known
+to have terminated), otherwise it will fail silently.
 
 The subprocess procedure returns four values:
 
@@ -3160,7 +3499,7 @@ The subprocess procedure returns four values:
 * an input port piped from the process’s standard output, or #f if
   stdout-output-port was a port;
 
-* an output port piped to the process standard input, or #f if
+* an output port piped to the process’s standard input, or #f if
   stdin-input-port was a port;
 
 * an input port piped from the process’s standard error, or #f if
@@ -3184,13 +3523,6 @@ The exn:fail exception is raised when a low-level error prevents the
 spawning of a process or the creation of operating system pipes for
 process communication.
 
-If the subprocess-group-enabled parameter’s value is true, then the new
-process is created as a new OS-level process group. In that case,
-subprocess-kill attempts to terminate all processes within the group,
-which may include additional processes created by the subprocess. See
-subprocess-kill for details, and see subprocess-group-enabled for
-additional caveats.
-
 The current-subprocess-custodian-mode parameter determines whether the
 subprocess itself is registered with the current custodian so that a
 custodian shutdown calls subprocess-kill for the subprocess.
@@ -3200,9 +3532,13 @@ subprocess value is ready for synchronization when subprocess-wait would
 not block; the synchronization result of a subprocess value is the
 subprocess value itself.
 
+Changed in version 6.11.0.1: Added the group argument. Changed in
+version 7.4.0.5: Added waiting for a fifo without a reader as stdout
+and/or stderr.
+
                                         *subprocess-wait*
 (subprocess-wait subproc) -> void? ~
-  subproc : subprocess? ~
+  subproc : subprocess? ~ ~
 
 Blocks until the process represented by subproc terminates. The subproc
 value also can be used with sync and sync/timeout.
@@ -3210,7 +3546,7 @@ value also can be used with sync and sync/timeout.
                                         *subprocess-status*
 (subprocess-status subproc) -> (or/c 'running ~
                                      exact-nonnegative-integer?)
-  subproc : subprocess? ~
+  subproc : subprocess? ~ ~
 
 Returns 'running if the process represented by subproc is still running,
 or its exit code otherwise. The exit code is an exact integer, and 0
@@ -3219,8 +3555,8 @@ signal, the exit code is non-zero.
 
                                         *subprocess-kill*
 (subprocess-kill subproc force?) -> void? ~
-  subproc : subprocess? ~
-  force? : any/c ~
+  subproc : subprocess? ~ ~
+  force? : any/c ~ ~
 
 Terminates the subprocess represented by subproc. The precise action
 depends on whether force? is true, whether the process was created in
@@ -3230,12 +3566,12 @@ true value, and the current platform:
 * force? is true, not a group, all platforms: Terminates the process if
   the process still running.
 
-* force? is false, not a group, on Unix or Mac OS X: Sends the process
-  an interrupt signal instead of a kill signal.
+* force? is false, not a group, on Unix or Mac OS: Sends the process an
+  interrupt signal instead of a kill signal.
 
 * force? is false, not a group, on Windows: No action is taken.
 
-* force? is true, a group, on Unix or Mac OS X: Terminates all processes
+* force? is true, a group, on Unix or Mac OS: Terminates all processes
   in the group, but only if subprocess-status has never produced a
   non-'running result for the subprocess and only if functions like
   subprocess-wait and sync have not detected the subprocess’s
@@ -3246,7 +3582,7 @@ true value, and the current platform:
 * force? is true, a group, on Windows: Terminates the process if the
   process still running.
 
-* force? is false, a group, on Unix or Mac OS X: The same as when force?
+* force? is false, a group, on Unix or Mac OS: The same as when force?
   is #t, but when the group is sent a signal, it is an interrupt signal
   instead of a kill signal.
 
@@ -3258,7 +3594,7 @@ If an error occurs during termination, the exn:fail exception is raised.
 
                                         *subprocess-pid*
 (subprocess-pid subproc) -> exact-nonnegative-integer? ~
-  subproc : subprocess? ~
+  subproc : subprocess? ~ ~
 
 Returns the operating system’s numerical ID (if any) for the process
 represented by subproc. The result is valid only as long as the process
@@ -3266,7 +3602,7 @@ is running.
 
                                         *subprocess?*
 (subprocess? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a subprocess value, #f otherwise.
 
@@ -3274,7 +3610,7 @@ Returns #t if v is a subprocess value, #f otherwise.
 (current-subprocess-custodian-mode) ~
  -> (or/c #f 'kill 'interrupt)
 (current-subprocess-custodian-mode mode) -> void?
-  mode : (or/c #f 'kill 'interrupt) ~
+  mode : (or/c #f 'kill 'interrupt) ~ ~
 
 A parameter that determines whether a subprocess (as created by
 subprocess or wrappers like process) is registered with the current
@@ -3297,13 +3633,11 @@ not all of them.
                                         *subprocess-group-enabled*
 (subprocess-group-enabled) -> boolean? ~
 (subprocess-group-enabled on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that determines whether a subprocess is created as a new
-process group. See subprocess-kill for more information.
-
-Beware that creating a group may interfere with the job control in an
-interactive shell, since job control is based on process groups.
+process group by default. See subprocess and subprocess-kill for more
+information.
 
                                         *shell-execute*
 (shell-execute verb            ~
@@ -3311,11 +3645,11 @@ interactive shell, since job control is based on process groups.
                parameters     
                dir            
                show-mode) -> #f
-  verb : (or/c string? #f) ~
-  target : string? ~
-  parameters : string? ~
-  dir : path-string? ~
-  show-mode : symbol? ~
+  verb : (or/c string? #f) ~ ~
+  target : string? ~ ~
+  parameters : string? ~ ~
+  dir : path-string? ~ ~
+  show-mode : symbol? ~ ~
 
 Performs the action specified by verb on target in Windows. For
 platforms other than Windows, the exn:fail:unsupported exception is
@@ -3323,7 +3657,7 @@ raised.
 
 For example,
 
-  (shell-execute #f "http://racket-lang.org" "" ~
+  (shell-execute #f "http://racket-lang.org" "" ~ ~
                  (current-directory) 'sw_shownormal)
 
 Opens the Racket home page in a browser window.
@@ -3391,17 +3725,17 @@ ID).
 
 4.1. Simple Subprocesses
 
- (require racket/system) package: base ~
+ (require racket/system) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/system and racket libraries, but not racket/base.
 
                                         *system*
-(system command [#:set-pwd? set-pwd?]) -> boolean? ~ ~
-  command : (or/c string-no-nuls? bytes-no-nuls?) ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+(system command [#:set-pwd? set-pwd?]) -> boolean? ~ ~ ~
+  command : (or/c string-no-nuls? bytes-no-nuls?) ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 
-Executes a Unix, Mac OS X, or Windows shell command synchronously (i.e.,
+Executes a Unix, Mac OS, or Windows shell command synchronously (i.e.,
 the call to system does not return until the subprocess has ended). The
 command argument is a string or byte string containing no nul
 characters. If the command succeeds, the return value is #t, #f
@@ -3425,18 +3759,18 @@ given function:
   (with-output-to-string (lambda () (system "date")))
 
                                         *system**
-(system* command arg ... [#:set-pwd? set-pwd?]) -> boolean? ~ ~
-  command : path-string? ~
-  arg : (or/c path? string-no-nuls? bytes-no-nuls?) ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+(system* command arg ... [#:set-pwd? set-pwd?]) -> boolean? ~ ~ ~
+  command : path-string? ~ ~
+  arg : (or/c path? string-no-nuls? bytes-no-nuls?) ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 (system*  command                   
           exact                     
           arg                       
-         [#:set-pwd? set-pwd?]) -> boolean? ~
-  command : path-string? ~
-  exact : 'exact ~
-  arg : string? ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+         [#:set-pwd? set-pwd?]) -> boolean? ~ ~
+  command : path-string? ~ ~
+  exact : 'exact ~ ~
+  arg : string? ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 
 Like system, except that command is a filename that is executed directly
 (instead of through a shell command; see find-executable-path for
@@ -3449,9 +3783,9 @@ final arg is a complete command line. See subprocess for details.
 
                                         *system/exit-code*
 (system/exit-code  command                    ~
-                  [#:set-pwd? set-pwd?]) -> byte? ~
-  command : (or/c string-no-nuls? bytes-no-nuls?) ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+                  [#:set-pwd? set-pwd?]) -> byte? ~ ~
+  command : (or/c string-no-nuls? bytes-no-nuls?) ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 
 Like system, except that the result is the exit code returned by the
 subprocess. A 0 result normally indicates success.
@@ -3459,32 +3793,32 @@ subprocess. A 0 result normally indicates success.
                                         *system*/exit-code*
 (system*/exit-code  command                    ~
                     arg ...                   
-                   [#:set-pwd? set-pwd?]) -> byte? ~
-  command : path-string? ~
-  arg : (or/c path? string-no-nuls? bytes-no-nuls?) ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+                   [#:set-pwd? set-pwd?]) -> byte? ~ ~
+  command : path-string? ~ ~
+  arg : (or/c path? string-no-nuls? bytes-no-nuls?) ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 (system*/exit-code  command                   
                     exact                     
                     arg                       
-                   [#:set-pwd? set-pwd?]) -> byte? ~
-  command : path-string? ~
-  exact : 'exact ~
-  arg : string? ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+                   [#:set-pwd? set-pwd?]) -> byte? ~ ~
+  command : path-string? ~ ~
+  exact : 'exact ~ ~
+  arg : string? ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 
 Like system*, but returns the exit code like system/exit-code.
 
                                         *process*
-(process command [#:set-pwd? set-pwd?]) ~ ~
+(process command [#:set-pwd? set-pwd?]) ~ ~ ~
  -> (list input-port?
           output-port?
           exact-nonnegative-integer?
           input-port?
           ((or/c 'status 'wait 'interrupt 'kill) . -> . any))
-  command : (or/c string-no-nuls? bytes-no-nuls?) ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+  command : (or/c string-no-nuls? bytes-no-nuls?) ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 
-Executes a shell command asynchronously (using sh on Unix and Mac OS X,
+Executes a shell command asynchronously (using sh on Unix and Mac OS,
 cmd on Windows). The result is a list of five values:
 
 See also subprocess for notes about error handling and the limited
@@ -3492,7 +3826,7 @@ buffer capacity of subprocess pipes.
 
 * an input port piped from the subprocess’s standard output,
 
-* an output port piped to the subprocess standard input,
+* an output port piped to the subprocess’s standard input,
 
 * the system process id of the subprocess,
 
@@ -3511,9 +3845,9 @@ buffer capacity of subprocess pipes.
     has completed.
 
   * 'interrupt sends the subprocess an interrupt signal on Unix and Mac
-    OS X, and takes no action on Windows. The result is #<void>.
+    OS, and takes no action on Windows. The result is #<void>.
 
-    On Unix and Mac OS X, if command runs a single program, then sh
+    On Unix and Mac OS, if command runs a single program, then sh
     typically runs the program in such a way that it replaces sh in the
     same process. For reliable and precise control over process
     creation, however, use process*.
@@ -3537,18 +3871,18 @@ process.
                                         *process**
 (process*  command                    ~
            arg ...                   
-          [#:set-pwd? set-pwd?]) -> list? ~
-  command : path-string? ~
-  arg : (or/c path? string-no-nuls? bytes-no-nuls?) ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+          [#:set-pwd? set-pwd?]) -> list? ~ ~
+  command : path-string? ~ ~
+  arg : (or/c path? string-no-nuls? bytes-no-nuls?) ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 (process*  command                   
            exact                     
            arg                       
-          [#:set-pwd? set-pwd?]) -> list? ~
-  command : path-string? ~
-  exact : 'exact ~
-  arg : string? ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+          [#:set-pwd? set-pwd?]) -> list? ~ ~
+  command : path-string? ~ ~
+  exact : 'exact ~ ~
+  arg : string? ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 
 Like process, except that command is a filename that is executed
 directly like system*, and the args are the arguments. On Windows, as
@@ -3559,12 +3893,12 @@ for system*, the first arg can be replaced with 'exact.
                 in                        
                 error-out                 
                 command                   
-               [#:set-pwd? set-pwd?]) -> list? ~
-  out : (or/c #f output-port?) ~
-  in : (or/c #f input-port?) ~
-  error-out : (or/c #f output-port? 'stdout) ~
-  command : (or/c path? string-no-nuls? bytes-no-nuls?) ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+               [#:set-pwd? set-pwd?]) -> list? ~ ~
+  out : (or/c #f output-port?) ~ ~
+  in : (or/c #f input-port?) ~ ~
+  error-out : (or/c #f output-port? 'stdout) ~ ~
+  command : (or/c path? string-no-nuls? bytes-no-nuls?) ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 
 Like process, except that out is used for the process’s standard output,
 in is used for the process’s standard input, and error-out is used for
@@ -3580,27 +3914,27 @@ corresponding value in the returned list is #f.
                  error-out                 
                  command                   
                  arg ...                   
-                [#:set-pwd? set-pwd?]) -> list? ~
-  out : (or/c #f output-port?) ~
-  in : (or/c #f input-port?) ~
-  error-out : (or/c #f output-port? 'stdout) ~
-  command : path-string? ~
-  arg : (or/c path? string-no-nuls? bytes-no-nuls?) ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+                [#:set-pwd? set-pwd?]) -> list? ~ ~
+  out : (or/c #f output-port?) ~ ~
+  in : (or/c #f input-port?) ~ ~
+  error-out : (or/c #f output-port? 'stdout) ~ ~
+  command : path-string? ~ ~
+  arg : (or/c path? string-no-nuls? bytes-no-nuls?) ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 (process*/ports  out                       
                  in                        
                  error-out                 
                  command                   
                  exact                     
                  arg                       
-                [#:set-pwd? set-pwd?]) -> list? ~
-  out : (or/c #f output-port?) ~
-  in : (or/c #f input-port?) ~
-  error-out : (or/c #f output-port? 'stdout) ~
-  command : path-string? ~
-  exact : 'exact ~
-  arg : string? ~
-  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~
+                [#:set-pwd? set-pwd?]) -> list? ~ ~
+  out : (or/c #f output-port?) ~ ~
+  in : (or/c #f input-port?) ~ ~
+  error-out : (or/c #f output-port? 'stdout) ~ ~
+  command : path-string? ~ ~
+  exact : 'exact ~ ~
+  arg : string? ~ ~
+  set-pwd? : any/c = (member (system-type) '(unix macosx)) ~ ~
 
 Like process*, but with the port handling of process/ports.
 
@@ -3609,13 +3943,13 @@ error with references to the following functions.
 
                                         *string-no-nuls?*
 (string-no-nuls? x) -> boolean? ~
-  x : any/c ~
+  x : any/c ~ ~
 
 Ensures that x is a string and does not contain "\u0000".
 
                                         *bytes-no-nuls?*
 (bytes-no-nuls? x) -> boolean? ~
-  x : any/c ~
+  x : any/c ~ ~
 
 Ensures that x is a byte-string and does not contain #"\0".
 
@@ -3625,19 +3959,19 @@ A logger accepts events that contain information to be logged for
 interested parties. A log receiver represents an interested party that
 receives logged events asynchronously. Each event has a topic and level
 of detail, and a log receiver subscribes to logging events at a certain
-level of detail (and higher) for a specific topic or for all topics. The
-levels, in increasing order of detail, are 'fatal, 'error, 'warning,
-'info, and 'debug.
+level of detail (and lower) for a specific topic or for all topics. The
+levels, in increasing order of detail, are 'none, 'fatal, 'error,
+'warning, 'info, and 'debug.
 
 To help organize logged events, a logger can have a default topic and/or
-a parent logger. Every event reported to a logger is also propagated to
-its parent (if any), while the event message is prefixed with the
-logger’s topic (if any) if the message doesn’t already have a topic.
-Furthermore, events that are propagated from a logger to its parent can
-be filtered by level and topic.
+a parent logger. Every event reported to a logger is propagated to its
+parent (if any), and the event message is prefixed with the logger’s
+topic (if any) if the message doesn’t already have a topic. Furthermore,
+events that are propagated from a logger to its parent can be filtered
+by level and topic.
 
 On start-up, Racket creates an initial logger that is used to record
-events from the core run-time system. For example, an 'debug event is
+events from the core run-time system. For example, a 'debug event is
 reported for each garbage collection (see [missing]). For this initial
 logger, two log receivers are also created: one that writes events to
 the process’s original error output port, and one that writes events to
@@ -3650,23 +3984,32 @@ flags (see [missing]) or through environment variables:
   that propagates events to the original error port.
 
   The environment variable’s value can be a >level<: none, fatal, error,
-  warning, info, or debug; all events the corresponding level of higher
-  are printed. After an initial >level<, the value can contain
-  space-separated specifications of the form >level<@>topic<, which
-  prints events whose topics match >topic< only at the given >level< or
-  higher (where a >topic< contains any character other than a space or
-  @). For example, the value "error debug@GC" prints all events at the
-  'error level and higher, but prints events for the topic topic 'GC at
-  the 'debug level and higher (which includes all levels).
+  warning, info, or debug (from low detail to high detail); all events
+  at the corresponding level of detail or lower are printed. After an
+  initial >level<, the value can contain whitespace-separated
+  specifications of the form >level<@>topic<, which prints events whose
+  topics match >topic< only at the given >level< or higher (where a
+  >topic< contains any character other than whitespace or @). Leading
+  and trailing whitespace is ignored. For example, the value "error
+  debug@GC" prints all events at the 'error level and higher, but prints
+  events for the topic 'GC at the 'debug level and higher (which
+  includes all levels).
 
   The default is "error".
+
+* If the PLTSTDOUT environment variable is defined and is not overridden
+  by a command-line flag, it determines the level of the log receiver
+  that propagates events to the original output port. The possible
+  values are the same as for PLTSTDERR.
+
+  The default is "none".
 
 * If the PLTSYSLOG environment variable is defined and is not overridden
   by a command-line flag, it determines the level of the log receiver
   that propagates events to the system log. The possible values are the
   same as for PLTSTDERR.
 
-  The default is "none" for Unix or "error" for Windows and Mac OS X.
+  The default is "none" for Unix or "error" for Windows and Mac OS.
 
 The current-logger parameter determines the current logger that is used
 by forms such as log-warning. On start-up, the initial value of this
@@ -3675,11 +4018,17 @@ current logger to report events. For example, the bytecode compiler
 sometimes reports 'warning events when it detects an expression that
 would produce a run-time error if evaluated.
 
+Changed in version 6.6.0.2: Prior to version 6.6.0.2, parsing of
+PLTSTDERR and PLTSYSLOG was very strict. Leading and trailing whitespace
+was forbidden, and anything other than exactly one space character
+separating two specifications was rejected. Changed in version
+6.90.0.17: Added PLTSTDOUT.
+
 5.1. Creating Loggers
 
                                         *logger?*
 (logger? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a logger, #f otherwise.
 
@@ -3689,11 +4038,10 @@ Returns #t if v is a logger, #f otherwise.
               propagate-level          
               propagate-topic ...]     
               ...)                 -> logger?
-  topic : (or/c symbol? #f) = #f ~
-  parent : (or/c logger? #f) = #f ~
-  propagate-level : (or/c 'none 'fatal 'error 'warning 'info 'debug) ~
-                  = 'debug
-  propagate-topic : (or/c #f symbol?) = #f ~
+  topic : (or/c symbol? #f) = #f ~ ~
+  parent : (or/c logger? #f) = #f ~ ~
+  propagate-level : log-level/c = 'debug ~ ~
+  propagate-topic : (or/c #f symbol?) = #f ~ ~
 
 Creates a new logger with an optional topic and parent.
 
@@ -3708,26 +4056,34 @@ constraints for events to propagate.
 
                                         *logger-name*
 (logger-name logger) -> (or/c symbol? #f) ~
-  logger : logger? ~
+  logger : logger? ~ ~
 
 Reports logger’s default topic, if any.
 
                                         *current-logger*
 (current-logger) -> logger? ~
 (current-logger logger) -> void?
-  logger : logger? ~
+  logger : logger? ~ ~
 
 A parameter that determines the current logger.
 
                                         *define-logger*
-(define-logger id) ~
+(define-logger id maybe-parent) ~
+ 
+maybe-parent = 
+             | #:parent parent-expr ~ ~
+ 
+  parent-expr : (or/c logger? #f) ~ ~
 
 Defines log-id-fatal, log-id-error, log-id-warning, log-id-info, and
 log-id-debug as forms like log-fatal, log-error,log-warning, log-info,
 and log-debug. The define-logger form also defines id-logger, which is a
-logger with default topic 'id that is a child of (current-logger); the
-log-id-fatal, etc. forms use this new logger. The new logger is created
-when define-logger is evaluated.
+logger with default topic 'id that is a child of the result of
+parent-expr (if parent-expr does not produce #f), or of (current-logger)
+if parent-expr not provided; the log-id-fatal, etc. forms use this new
+logger. The new logger is created when define-logger is evaluated.
+
+Changed in version 7.1.0.9: Added the #:parent option.
 
 5.2. Logging Events
 
@@ -3736,14 +4092,14 @@ when define-logger is evaluated.
               level                 
              [topic]                
               message               
-              data                  
-             [prefix-message?]) -> void?
-  logger : logger? ~
-  level : (or/c 'fatal 'error 'warning 'info 'debug) ~
-  topic : (or/c symbol? #f) = (logger-name logger) ~
-  message : string? ~
-  data : any/c ~
-  prefix-message? : any/c = #t ~
+             [data                  
+              prefix-message?]) -> void?
+  logger : logger? ~ ~
+  level : log-level/c ~ ~
+  topic : (or/c symbol? #f) = (logger-name logger) ~ ~
+  message : string? ~ ~
+  data : any/c = #f ~ ~
+  prefix-message? : any/c = #t ~ ~
 
 Reports an event to logger, which in turn distributes the information to
 any log receivers attached to logger or its ancestors that are
@@ -3753,13 +4109,14 @@ Log receivers can filter events based on topic.  In addition, if topic
 and prefix-message? are not #f, then message is prefixed with the topic
 followed by ": " before it is sent to receivers.
 
-Changed in version 6.0.1.10: Added the prefix-message? argument.
+Changed in version 6.0.1.10: Added the prefix-message? argument. Changed
+in version 7.2.0.7: Made the data argument optional.
 
                                         *log-level?*
 (log-level? logger level [topic]) -> boolean? ~
-  logger : logger? ~
-  level : (or/c 'fatal 'error 'warning 'info 'debug) ~
-  topic : (or/c symbol? #f) = #f ~
+  logger : logger? ~ ~
+  level : log-level/c ~ ~
+  topic : (or/c symbol? #f) = #f ~ ~
 
 Reports whether any log receiver attached to logger or one of its
 ancestors is interested in level events (or potentially lower) for
@@ -3779,10 +4136,9 @@ that any event information it receives will never become accessible).
 Changed in version 6.1.1.3: Added the topic argument.
 
                                         *log-max-level*
-(log-max-level logger [topic]) ~
- -> (or/c #f 'fatal 'error 'warning 'info 'debug)
-  logger : logger? ~
-  topic : (or/c symbol? #f) = #f ~
+(log-max-level logger [topic]) -> (or/c log-level/c #f) ~
+  logger : logger? ~ ~
+  topic : (or/c symbol? #f) = #f ~ ~
 
 Similar to log-level?, but reports the maximum-detail level of logging
 for which log-level? on logger and topic returns #t. The result is #f if
@@ -3791,11 +4147,10 @@ log-level? with logger and topic currently returns #f for all levels.
 Changed in version 6.1.1.3: Added the topic argument.
 
                                         *log-all-levels*
-(log-all-levels logger) ~
- -> (list/c (or/c #f 'fatal 'error 'warning 'info 'debug)
-            (or/c #f symbol?)
-            ... ...)
-  logger : logger? ~
+(log-all-levels logger) -> (list/c (or/c #f log-level/c) ~
+                                   (or/c #f symbol?)
+                                   ... ...)
+  logger : logger? ~ ~
 
 Summarizes the possible results of log-max-level on all possible
 interned symbols. The result list contains a sequence of symbols and #f,
@@ -3814,7 +4169,7 @@ Added in version 6.1.1.4.
 
                                         *log-level-evt*
 (log-level-evt logger) -> evt? ~
-  logger : logger? ~
+  logger : logger? ~ ~
 
 Creates a synchronizable event that is ready for synchronization when
 the result of log-level?, log-max-level, or log-all-levels can be
@@ -3874,15 +4229,15 @@ is equivalent to
 
                                         *log-receiver?*
 (log-receiver? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a log receiver, #f otherwise.
 
                                         *make-log-receiver*
 (make-log-receiver logger level [topic ...] ...) -> log-receiver? ~
-  logger : logger? ~
-  level : (or/c 'none 'fatal 'error 'warning 'info 'debug) ~
-  topic : (or/c #f symbol?) = #f ~
+  logger : logger? ~ ~
+  level : log-level/c ~ ~
+  topic : (or/c #f symbol?) = #f ~ ~
 
 Creates a log receiver to receive events of detail level and lower as
 reported to logger and its descendants, as long as either topic is #f or
@@ -3890,7 +4245,7 @@ the event’s topic matches topic.
 
 A log receiver is a synchronizable event. It becomes ready for
 synchronization when a logging event is received, so use sync to receive
-an logged event. The log receiver’s synchronization result is an
+a logged event. The log receiver’s synchronization result is an
 immutable vector containing four values: the level of the event as a
 symbol, an immutable string for the event message, an arbitrary value
 that was supplied as the last argument to log-message when the event was
@@ -3902,6 +4257,97 @@ for the last given level). A level for a #f topic applies only to events
 whose topic does not match any other provided topic. If the same topic
 is provided multiple times, the level provided with the last instance in
 the argument list takes precedence.
+
+5.4. Additional Logging Functions
+
+ (require racket/logging) package: base ~ ~
+
+The bindings documented in this section are provided by the
+racket/logging library, not racket/base or racket.
+
+                                        *log-level/c*
+(log-level/c v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t if v is a valid logging level ('none, 'fatal, 'error,
+'warning, 'info, or 'debug), #f otherwise.
+
+Added in version 6.3 of package base.
+
+                                        *with-intercepted-logging*
+(with-intercepted-logging  interceptor           ~
+                           proc                 
+                          [#:logger logger]      ~ ~
+                           level                
+                          [topic ...]           
+                           ...)             -> any
+  interceptor : (-> (vector/c ~ ~
+                      log-level/c
+                      string?
+                      any/c
+                      (or/c symbol? #f))
+                     any)
+  proc : (-> any) ~ ~
+  logger : logger? = #f ~ ~
+  level : log-level/c ~ ~
+  topic : (or/c #f symbol?) = #f ~ ~
+
+Runs proc, calling interceptor on any log event that the execution of
+proc emits to current-logger at the specified levels and topics. If
+#:logger is specified, intercepts events sent to that logger, otherwise
+uses a new child logger of the current logger. Returns whatever proc
+returns.
+
+Example:
+
+  > (let ([warning-counter 0])
+      (with-intercepted-logging
+        (lambda (l)
+          (when (eq? (vector-ref l 0)
+                     'warning)
+            (set! warning-counter (add1 warning-counter))))
+        (lambda ()
+          (log-warning "Warning!")
+          (log-warning "Warning again!")
+          (+ 2 2))
+        'warning)
+      warning-counter)
+  2
+
+Added in version 6.3 of package base. Changed in version 6.7.0.1: Added
+#:logger argument.
+
+                                        *with-logging-to-port*
+(with-logging-to-port  port                  ~
+                       proc                 
+                      [#:logger logger]      ~ ~
+                       level                
+                      [topic ...]           
+                       ...)             -> any
+  port : output-port? ~ ~
+  proc : (-> any) ~ ~
+  logger : logger? = #f ~ ~
+  level : log-level/c ~ ~
+  topic : (or/c #f symbol?) = #f ~ ~
+
+Runs proc, outputting any logging that the execution of proc emits to
+current-logger at the specified levels and topics. If #:logger is
+specified, intercepts events sent to that logger, otherwise uses a new
+child logger of the current logger. Returns whatever proc returns.
+
+Example:
+
+  > (let ([my-log (open-output-string)])
+      (with-logging-to-port my-log
+        (lambda ()
+          (log-warning "Warning World!")
+          (+ 2 2))
+        'warning)
+      (get-output-string my-log))
+  "Warning World!\n"
+
+Added in version 6.3 of package base. Changed in version 6.7.0.1: Added
+#:logger argument.
 
 6. Time
 
@@ -3917,6 +4363,7 @@ Returns the current time in milliseconds since midnight UTC, January 1,
 1970. The result may contain fractions of a millisecond.
 
 Example:
+
   > (current-inexact-milliseconds)
   1289513737015.418
 
@@ -3925,8 +4372,8 @@ microseconds.
 
                                         *seconds->date*
 (seconds->date secs-n [local-time?]) -> date*? ~
-  secs-n : real? ~
-  local-time? : any/c = #t ~
+  secs-n : real? ~ ~
+  local-time? : any/c = #t ~ ~
 
 Takes secs-n, a platform-specific time in seconds returned by
 current-seconds, file-or-directory-modify-seconds, or 1/1000th of
@@ -3948,18 +4395,18 @@ if local-time? is #t, otherwise it reflects a date in UTC.
               year-day
               dst?
               time-zone-offset)
-    #:extra-constructor-name make-date ~
-    #:transparent) ~
-  second : (integer-in 0 60) ~
-  minute : (integer-in 0 59) ~
-  hour : (integer-in 0 23) ~
-  day : (integer-in 1 31) ~
-  month : (integer-in 1 12) ~
-  year : exact-integer? ~
-  week-day : (integer-in 0 6) ~
-  year-day : (integer-in 0 365) ~
-  dst? : boolean? ~
-  time-zone-offset : exact-integer? ~
+    #:extra-constructor-name make-date ~ ~
+    #:transparent) ~ ~
+  second : (integer-in 0 60) ~ ~
+  minute : (integer-in 0 59) ~ ~
+  hour : (integer-in 0 23) ~ ~
+  day : (integer-in 1 31) ~ ~
+  month : (integer-in 1 12) ~ ~
+  year : exact-integer? ~ ~
+  week-day : (integer-in 0 6) ~ ~
+  year-day : (integer-in 0 365) ~ ~
+  dst? : boolean? ~ ~
+  time-zone-offset : exact-integer? ~ ~
 
 Represents a date. The second field reaches 60 only for leap seconds.
 The week-day field is 0 for Sunday, 1 for Monday, etc. The year-day
@@ -3986,9 +4433,9 @@ See also the racket/date library.
 
                                         *struct*
 (struct date* date (nanosecond time-zone-name) ~
-    #:extra-constructor-name make-date*) ~
-  nanosecond : (integer-in 0 999999999) ~
-  time-zone-name : (and/c string? immutable?) ~
+    #:extra-constructor-name make-date*) ~ ~
+  nanosecond : (integer-in 0 999999999) ~ ~
+  time-zone-name : (and/c string? immutable?) ~ ~
 
 Extends date with nanoseconds and a time zone name, such as "MDT",
 "Mountain Daylight Time", or "UTC".
@@ -4008,7 +4455,7 @@ limited (though reasonably long) time on a 32-bit platform.
 
                                         *current-process-milliseconds*
 (current-process-milliseconds [scope]) -> exact-integer? ~
-  scope : (or/c #f thread? 'subprocesses) = #f ~
+  scope : (or/c #f thread? 'subprocesses) = #f ~ ~
 
 Returns an amount of processor time in fixnum milliseconds that has been
 consumed by on the underlying operating system, including both user and
@@ -4018,11 +4465,13 @@ system time.
   places.
 
 * If scope is a thread, the result is specific to the time while the
-  thread ran, but it may include time for other places.
+  thread ran, but it may include time for other places. The more a
+  thread synchronizes with other threads, the less precisely per-thread
+  processor time is recorded.
 
 * If scope is 'subprocesses, the result is the sum of process times for
   known-completed subprocesses (see Processes)—and known-completed
-  children of the subprocesses, etc., on Unix and Mac OS X—across all
+  children of the subprocesses, etc., on Unix and Mac OS—across all
   places.
 
 The precision of the result is platform-specific, and since the result
@@ -4044,8 +4493,8 @@ similarly limited.
                          exact-integer?
                          exact-integer?
                          exact-integer?
-  proc : procedure? ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  lst : list? ~ ~
 
 Collects timing information for a procedure application.
 
@@ -4068,7 +4517,10 @@ last body.
 
 6.1. Date Utilities
 
- (require racket/date) package: base ~
+For more date & time operations, see the Gregor: Date and Time
+documentation or srfi/19
+
+ (require racket/date) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/date
 library, not racket/base or racket.
@@ -4081,8 +4533,8 @@ An abbreviation for (seconds->date (* 0.001
 
                                         *date->string*
 (date->string date [time?]) -> string? ~
-  date : date? ~
-  time? : any/c = #f ~
+  date : date? ~ ~
+  time? : any/c = #f ~ ~
 
 Converts a date to a string. The returned string contains the time of
 day only if time?. See also date-display-format.
@@ -4097,7 +4549,7 @@ day only if time?. See also date-display-format.
                                'rfc2822
                                'julian)
 (date-display-format format) -> void?
-  format : (or/c 'american ~
+  format : (or/c 'american ~ ~
                  'chinese
                  'german
                  'indian
@@ -4111,8 +4563,8 @@ Parameter that determines the date string format. The initial format is
 
                                         *date->seconds*
 (date->seconds date [local-time?]) -> exact-integer? ~
-  date : date? ~
-  local-time? : any/c = #t ~
+  date : date? ~ ~
+  local-time? : any/c = #t ~ ~
 
 Finds the representation of a date in platform-specific seconds. If the
 platform cannot represent the specified date, exn:fail exception is
@@ -4124,8 +4576,8 @@ be in local time by default or in UTC if local-time? is #f.
 
                                         *date*->seconds*
 (date*->seconds date [local-time?]) -> real? ~
-  date : date? ~
-  local-time? : any/c = #t ~
+  date : date? ~ ~
+  local-time? : any/c = #t ~ ~
 
 Like date->seconds, but returns an exact number that can include a
 fraction of a second based on (date*-nanosecond date) if date is a date*
@@ -4139,13 +4591,13 @@ instance.
                month             
                year              
               [local-time?]) -> exact-integer?
-  second : (integer-in 0 61) ~
-  minute : (integer-in 0 59) ~
-  hour : (integer-in 0 23) ~
-  day : (integer-in 1 31) ~
-  month : (integer-in 1 12) ~
-  year : exact-nonnegative-integer? ~
-  local-time? : any/c = #t ~
+  second : (integer-in 0 61) ~ ~
+  minute : (integer-in 0 59) ~ ~
+  hour : (integer-in 0 23) ~ ~
+  day : (integer-in 1 31) ~ ~
+  month : (integer-in 1 12) ~ ~
+  year : exact-nonnegative-integer? ~ ~
+  local-time? : any/c = #t ~ ~
 
 Finds the representation of a date in platform-specific seconds. The
 arguments correspond to the fields of the date structure—in local time
@@ -4153,27 +4605,36 @@ by default or UTC if local-time? is #f. If the platform cannot represent
 the specified date, an error is signaled, otherwise an integer is
 returned.
 
-                                        *date->julian/scalinger*
-(date->julian/scalinger date) -> exact-integer? ~
-  date : date? ~
+                                        *date->julian/scaliger*
+(date->julian/scaliger date) -> exact-integer? ~
+  date : date? ~ ~
 
 Converts a date structure (up to 2099 BCE Gregorian) into a Julian date
 number. The returned value is not a strict Julian number, but rather
-Scalinger’s version, which is off by one for easier calculations.
+Scaliger’s version, which is off by one for easier calculations.
 
-                                        *julian/scalinger->string*
-(julian/scalinger->string date-number) -> string? ~
-  date-number : exact-integer? ~
+                                        *julian/scaliger->string*
+(julian/scaliger->string date-number) -> string? ~
+  date-number : exact-integer? ~ ~
 
-Converts a Julian number (Scalinger’s off-by-one version) into a string.
+Converts a Julian number (Scaliger’s off-by-one version) into a string.
+
+                                        *date->julian/scalinger*
+(date->julian/scalinger date) -> exact-integer? ~
+  date : date? ~ ~
+(julian/scalinger->string date-number) -> string?
+  date-number : exact-integer? ~ ~
+
+The same as date->julian/scaliger and julian/scaliger->string, but
+misspelled.
 
 7. Environment Variables
 
 An environment variable set encapsulates a partial mapping from byte
-strings to bytes strings. A Racket process’s initial environment
-variable set is connected to the operating system’s environment
-variables: accesses or changes to the set read or change
-operating-system environment variables for the Racket process.
+strings to byte strings. A Racket process’s initial environment variable
+set is connected to the operating system’s environment variables:
+accesses or changes to the set read or change operating-system
+environment variables for the Racket process.
 
 Since Windows environment variables are case-insensitive, environment
 variable set’s key byte strings on Windows are case-folded. More
@@ -4186,14 +4647,14 @@ when the subprocess is created.
 
                                         *environment-variables?*
 (environment-variables? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an environment variable set, #f otherwise.
 
                                         *current-environment-variables*
 (current-environment-variables) -> environment-variables? ~
 (current-environment-variables env) -> void?
-  env : environment-variables? ~
+  env : environment-variables? ~ ~
 
 A parameter that determines the environment variable set that is
 propagated to a subprocess and that is used as the default set for
@@ -4201,7 +4662,7 @@ getenv and putenv.
 
                                         *bytes-environment-variable-name?*
 (bytes-environment-variable-name? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a byte string and if it is valid for an environment
 variable name. An environment variable name must contain no bytes with
@@ -4211,8 +4672,8 @@ environment variable name also must have a non-zero length.
                                         *make-environment-variables*
 (make-environment-variables name val ... ...) ~
  -> environment-variables?
-  name : bytes-environment-variable-name? ~
-  val : bytes-no-nuls? ~
+  name : bytes-environment-variable-name? ~ ~
+  val : bytes-no-nuls? ~ ~
 
 Creates a fresh environment variable set that is initialized with the
 given name to val mappings.
@@ -4220,8 +4681,8 @@ given name to val mappings.
                                         *environment-variables-ref*
 (environment-variables-ref env name) ~
  -> (or/c #f (and/c bytes-no-nuls? immutable?))
-  env : environment-variables? ~
-  name : bytes-environment-variable-name? ~
+  env : environment-variables? ~ ~
+  name : bytes-environment-variable-name? ~ ~
 
 Returns the mapping for name in env, returning #f if name has no
 mapping.
@@ -4235,11 +4696,11 @@ UTF-8 encoding and case-normalized.
                              name           
                              maybe-bstr     
                             [fail])     -> any
-  env : environment-variables? ~
-  name : bytes-environment-variable-name? ~
-  maybe-bstr : (or/c bytes-no-nuls? #f) ~
-  fail : (-> any) = (lambda () ~
-                      (raise (make-exn:fail ....))) ~
+  env : environment-variables? ~ ~
+  name : bytes-environment-variable-name? ~ ~
+  maybe-bstr : (or/c bytes-no-nuls? #f) ~ ~
+  fail : (-> any) = (lambda () ~ ~
+                      (raise (make-exn:fail ....))) ~ ~
 
 Changes the mapping for name in env to maybe-bstr.  If maybe-bstr is #f
 and env is the initial environment variable set of the Racket process,
@@ -4262,23 +4723,23 @@ fail raises an exception.
                                         *environment-variables-names*
 (environment-variables-names env) ~
  -> (listof (and/c bytes-environment-variable-name? immutable?))
-  env : environment-variables? ~
+  env : environment-variables? ~ ~
 
 Returns a list of byte strings that corresponds to names mapped by env.
 
                                         *environment-variables-copy*
 (environment-variables-copy env) -> environment-variables? ~
-  env : environment-variables? ~
+  env : environment-variables? ~ ~
 
 Returns an environment variable set that is initialized with the same
 mappings as env.
 
                                         *getenv*
 (getenv name) -> (or/c string-no-nuls? #f) ~
-  name : string-environment-variable-name? ~
+  name : string-environment-variable-name? ~ ~
 (putenv name value) -> boolean?
-  name : string-environment-variable-name? ~
-  value : string-no-nuls? ~
+  name : string-environment-variable-name? ~ ~
+  value : string-no-nuls? ~ ~
 
 Convenience wrappers for environment-variables-ref and
 environment-variables-set! that convert between strings and byte strings
@@ -4289,7 +4750,7 @@ function returns #t for success and #f for failure.
 
                                         *string-environment-variable-name?*
 (string-environment-variable-name? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a string and if its encoding using the current
 locale’s encoding is valid for an environment variable name according to
@@ -4299,12 +4760,14 @@ bytes-environment-variable-name?.
 
                                         *system-type*
 (system-type [mode]) ~
- -> (or/c symbol? string? bytes? exact-positive-integer? vector?)
-  mode : (or/c 'os 'word 'gc 'link 'machine    = 'os ~
-               'so-suffix 'so-mode 'fs-change)
+ -> (or/c symbol? string? bytes? exact-positive-integer? vector? #f)
+  mode : (or/c 'os 'word 'vm 'gc 'link 'machine 'target-machine ~ ~
+               'so-suffix 'so-mode 'fs-change 'cross)
+       = 'os
 
 Returns information about the operating system, build mode, or machine
-for a running Racket.
+for a running Racket. (Installation tools should use cross-system-type,
+instead, to support cross-installation.)
 
 In 'os mode,  the possible symbol results are:
 
@@ -4317,11 +4780,21 @@ In 'os mode,  the possible symbol results are:
 In 'word mode, the result is either 32 or 64 to indicate whether Racket
 is running as a 32-bit program or 64-bit program.
 
+See [missing] for more information about the 'vm and 'gc mode results.
+
+In 'vm mode, the possible symbol results are:
+
+* 'racket
+
+* 'chez-scheme
+
 In 'gc mode, the possible symbol results are:
 
-* 'cgc
+* 'cgc — when (system-type 'vm) is 'racket
 
-* '3m
+* '3m — when (system-type 'vm) is 'racket
+
+* 'cs — when (system-type 'vm) is 'chez-scheme
 
 In 'link mode, the possible symbol results are:
 
@@ -4331,13 +4804,19 @@ In 'link mode, the possible symbol results are:
 
 * 'dll (Windows)
 
-* 'framework (Mac OS X)
+* 'framework (Mac OS)
 
-Future ports of Racket may expand the list of 'os, 'gc, and 'link
+Future ports of Racket may expand the list of 'os, 'vm, 'gc, and 'link
 results.
 
 In 'machine mode, then the result is a string, which contains further
 details about the current machine in a platform-specific format.
+
+In 'target-machine mode, the result is a symbol for the running Racket’s
+native bytecode format, or it is #f if there is no native format other
+than the machine-independent format. If the result is a symbol, then
+compile-target-machine? returns #t when applied to the symbol; see also
+current-compile-target-machine.
 
 In 'so-suffix mode, then the result is a byte string that represents the
 file extension used for shared objects on the current platform. The byte
@@ -4359,8 +4838,8 @@ possible symbols, in order, are:
 
 * 'scalable — resources consumed by a filesystem change event are
   effectively limited only by available memory, as opposed to
-  file-descriptor limits; this property is #f on Mac OS X and BSD
-  variants of Unix
+  file-descriptor limits; this property is #f on Mac OS and BSD variants
+  of Unix
 
 * 'low-latency — creation and checking of a filesystem change event is
   practically instantaneous; this property is #f on Linux
@@ -4369,12 +4848,27 @@ possible symbols, in order, are:
   of a file, as opposed to the file’s directory; this property is #f on
   Windows
 
+In 'cross mode, the result reports whether cross-platform build mode has
+been selected (through the -C or --cross argument to racket; see
+[missing]). The possible symbols are:
+
+* 'infer — infer cross-platform mode based on whether (system-type) and
+  (cross-system-type) report the same symbol
+
+* 'force — use cross-platform mode, even if the current and target
+  system types are the same, because the current and target executables
+  can be different
+
+Changed in version 6.8.0.2: Added 'vm mode. Changed in version 6.9.0.1:
+Added 'cross mode. Changed in version 7.1.0.6: Added 'target-machine
+mode.
+
                                         *system-language+country*
 (system-language+country) -> string? ~
 
 Returns a string to identify the current user’s language and country.
 
-On Unix and Mac OS X, the string is five characters: two lowercase ASCII
+On Unix and Mac OS, the string is five characters: two lowercase ASCII
 letters for the language, an underscore, and two uppercase ASCII letters
 for the country. On Windows, the string can be arbitrarily long, but the
 language and country are in English (all ASCII letters or spaces)
@@ -4384,12 +4878,12 @@ On Unix, the result is determined by checking the LC_ALL, LC_TYPE, and
 LANG environment variables, in that order (and the result is used if the
 environment variable’s value starts with two lowercase ASCII letters, an
 underscore, and two uppercase ASCII letters, followed by either nothing
-or a period). On Windows and Mac OS X, the result is determined by
-system calls.
+or a period). On Windows and Mac OS, the result is determined by system
+calls.
 
                                         *system-library-subpath*
 (system-library-subpath [mode]) -> path? ~
-  mode : (or/c 'cgc '3m #f) = (system-type 'gc) ~
+  mode : (or/c 'cgc '3m 'cs #f) = (system-type 'gc) ~ ~
 
 Returns a relative directory path. This string can be used to build
 paths to system-specific files. For example, when Racket is running on
@@ -4398,14 +4892,20 @@ while the subpath for Windows on an i386 architecture starts
 "win32\\i386".
 
 The optional mode argument specifies the relevant garbage-collection
-variant, which one of the possible results of (system-type 'gc): 'cgc or
-'3m. It can also be #f, in which case the result is independent of the
-garbage-collection variant.
+variant, which one of the possible results of (system-type 'gc): 'cgc,
+'3m, or 'cs. It can also be #f, in which case the result is independent
+of the garbage-collection variant.
+
+Installation tools should use cross-system-library-subpath, instead, to
+support cross-installation.
+
+Changed in version 7.0: Added 'cs mode.
 
                                         *version*
 (version) -> (and/c string? immutable?) ~
 
-Returns an string indicating the currently executing version of Racket.
+Returns an immutable string indicating the currently executing version
+of Racket.
 
                                         *banner*
 (banner) -> (and/c string? immutable?) ~
@@ -4415,18 +4915,23 @@ banner text for an embedding program, such as GRacket). The banner
 string ends with a newline.
 
                                         *current-command-line-arguments*
-(current-command-line-arguments) -> (vectorof string?) ~
+(current-command-line-arguments) ~
+ -> (vectorof (and/c string? immutable?))
 (current-command-line-arguments argv) -> void?
-  argv : (vectorof (and/c string? immutable?)) ~
+  argv : (vectorof string?) ~ ~
 
 A parameter that is initialized with command-line arguments when Racket
 starts (not including any command-line arguments that were treated as
 flags for the system).
 
+On Unix and Mac OS, command-line arguments are provided to the Racket
+process as byte strings. The arguments are converted to strings using
+bytes->string/locale and #\uFFFD as the encoding-error character.
+
                                         *current-thread-initial-stack-size*
 (current-thread-initial-stack-size) -> exact-positive-integer? ~
 (current-thread-initial-stack-size size) -> void?
-  size : exact-positive-integer? ~
+  size : exact-positive-integer? ~ ~
 
 A parameter that provides a hint about how much space to reserve for a
 newly created thread’s local variables. The actual space used by a
@@ -4435,14 +4940,14 @@ platform-independent.
 
                                         *vector-set-performance-stats!*
 (vector-set-performance-stats! results [thd]) -> void? ~
-  results : (and/c vector? ~
+  results : (and/c vector? ~ ~
                    (not/c immutable?))
-  thd : (or/c thread? #f) = #f ~
+  thd : (or/c thread? #f) = #f ~ ~
 
 Sets elements in results to report current performance statistics. If
 thd is not #f, a particular set of thread-specific statistics are
 reported, otherwise a different set of global (within the current place)
-statics are reported.
+statistics are reported.
 
 For global statistics, up to 12 elements are set in the vector, starting
 from the beginning. If results has n elements where n < 12, then the n
@@ -4502,7 +5007,7 @@ statistics.
 
 9. Command-Line Parsing
 
- (require racket/cmdline) package: base ~
+ (require racket/cmdline) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/cmdline and racket libraries, but not racket/base.
@@ -4513,18 +5018,18 @@ racket/cmdline and racket libraries, but not racket/base.
               finish-clause)
  
 optional-name-expr = 
-                   | #:program name-expr ~
+                   | #:program name-expr ~ ~
                       
 optional-argv-expr = 
-                   | #:argv argv-expr ~
+                   | #:argv argv-expr ~ ~
                       
-       flag-clause = #:multi flag-spec ... ~
-                   | #:once-each flag-spec ... ~
-                   | #:once-any flag-spec ... ~
-                   | #:final flag-spec ... ~
-                   | #:usage-help string ... ~
-                   | #:help-labels string ... ~
-                   | #:ps string ... ~
+       flag-clause = #:multi flag-spec ... ~ ~
+                   | #:once-each flag-spec ... ~ ~
+                   | #:once-any flag-spec ... ~ ~
+                   | #:final flag-spec ... ~ ~
+                   | #:usage-help string ... ~ ~
+                   | #:help-labels string ... ~ ~
+                   | #:ps string ... ~ ~
                       
          flag-spec = (flags id ... help-spec body ...+)
                    | (flags => handler-expr help-expr)
@@ -4536,8 +5041,8 @@ optional-argv-expr = 
                    | (string-expr ...+)
                       
      finish-clause = 
-                   | #:args arg-formals body ...+ ~
-                   | #:handlers handlers-exprs ~
+                   | #:args arg-formals body ...+ ~ ~
+                   | #:handlers handlers-exprs ~ ~
                       
        arg-formals = rest-id
                    | (arg ...)
@@ -4672,24 +5177,24 @@ Example:
    
   (define file-to-compile
     (command-line
-     #:program "compiler" ~
-     #:once-each ~
+     #:program "compiler" ~ ~
+     #:once-each ~ ~
      [("-v" "--verbose") "Compile with verbose messages"
                          (verbose-mode #t)]
      [("-p" "--profile") "Compile with profiling"
                          (profiling-on #t)]
-     #:once-any ~
+     #:once-any ~ ~
      [("-o" "--optimize-1") "Compile with optimization level 1"
                             (optimize-level 1)]
      ["--optimize-2"        (; show help on separate lines
                              "Compile with optimization level 2,"
                              "which includes all of level 1")
                             (optimize-level 2)]
-     #:multi ~
+     #:multi ~ ~
      [("-l" "--link-flags") lf ; flag takes one argument
                             "Add a flag <lf> for the linker"
                             (link-flags (cons lf (link-flags)))]
-     #:args (filename) ; expect one command-line argument: <filename> ~
+     #:args (filename) ; expect one command-line argument: <filename> ~ ~
      ; return the argument as a filename to compile
      filename))
 
@@ -4701,13 +5206,13 @@ Example:
                      arg-help-strs      
                     [help-proc          
                      unknown-proc]) -> any
-  name : (or/c string? path?) ~
-  argv : (or/c (listof string?) (vectorof string?)) ~
-  table : (listof (cons/c symbol? list?)) ~
-  finish-proc : ((list?) () #:rest list? . ->* . any) ~
-  arg-help-strs : (listof string?) ~
-  help-proc : (string? . -> . any) = (lambda (str) ....) ~
-  unknown-proc : (string? . -> . any) = (lambda (str) ...) ~
+  name : (or/c string? path?) ~ ~
+  argv : (or/c (listof string?) (vectorof string?)) ~ ~
+  table : (listof (cons/c symbol? list?)) ~ ~
+  finish-proc : ((list?) () #:rest list? . ->* . any) ~ ~
+  arg-help-strs : (listof string?) ~ ~
+  help-proc : (string? . -> . any) = (lambda (str) ....) ~ ~
+  unknown-proc : (string? . -> . any) = (lambda (str) ...) ~ ~
 
 Parses a command-line using the specification in table. For an overview
 of command-line parsing, see the command-line form, which provides a
@@ -4806,3 +5311,24 @@ translated to the procedural form:
         ("Add a flag <lf> for the linker" "lf")]))
      (lambda (flag-accum file) file)
      '("filename"))
+
+10. Additional Operating System Functions
+
+ (require racket/os) package: base ~ ~
+
+The racket/os library additional functions for querying the operating
+system.
+
+Added in version 6.3 of package base.
+
+                                        *gethostname*
+(gethostname) -> string? ~
+
+Returns a string for the current machine’s hostname (including its
+domain).
+
+                                        *getpid*
+(getpid) -> exact-integer? ~
+
+Returns an integer identifying the current process within the operating
+system.

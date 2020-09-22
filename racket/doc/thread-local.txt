@@ -32,14 +32,14 @@ capturing and restoring threads can be different.
 
                                         *thread-cell?*
 (thread-cell? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a thread cell, #f otherwise.
 
                                         *make-thread-cell*
 (make-thread-cell v [preserved?]) -> thread-cell? ~
-  v : any/c ~
-  preserved? : any/c = #f ~
+  v : any/c ~ ~
+  preserved? : any/c = #f ~ ~
 
 Creates and returns a new thread cell. Initially, v is the cell’s value
 for all threads. If preserved? is true, then the cell’s initial value
@@ -48,36 +48,32 @@ otherwise the cell’s value is initially v in all future threads.
 
                                         *thread-cell-ref*
 (thread-cell-ref cell) -> any ~
-  cell : thread-cell? ~
+  cell : thread-cell? ~ ~
 
 Returns the current value of cell for the current thread.
 
                                         *thread-cell-set!*
 (thread-cell-set! cell v) -> any ~
-  cell : thread-cell? ~
-  v : any/c ~
+  cell : thread-cell? ~ ~
+  v : any/c ~ ~
 
 Sets the value in cell to v for the current thread.
 
 Examples:
+
   > (define cnp (make-thread-cell '(nerve) #f))
-
   > (define cp (make-thread-cell '(cancer) #t))
-
   > (thread-cell-ref cnp)
   '(nerve)
   > (thread-cell-ref cp)
   '(cancer)
   > (thread-cell-set! cnp '(nerve nerve))
-
   > (thread-cell-set! cp '(cancer cancer))
-
   > (thread-cell-ref cnp)
   '(nerve nerve)
   > (thread-cell-ref cp)
   '(cancer cancer)
   > (define ch (make-channel))
-
   > (thread (lambda ()
               (channel-put ch (thread-cell-ref cnp))
               (channel-put ch (thread-cell-ref cp))
@@ -89,18 +85,16 @@ Examples:
   > (channel-get ch)
   '(cancer cancer)
   > (thread-cell-set! cp '(cancer cancer cancer))
-
   > (thread-cell-ref cp)
   '(cancer cancer cancer)
   > (channel-put ch 'ok)
-
   > (channel-get ch)
   '(cancer cancer)
 
                                         *current-preserved-thread-cell-values*
 (current-preserved-thread-cell-values) -> thread-cell-values? ~
 (current-preserved-thread-cell-values thread-cell-vals) -> void?
-  thread-cell-vals : thread-cell-values? ~
+  thread-cell-vals : thread-cell-values? ~ ~
 
 When called with no arguments, this procedure produces a
 thread-cell-vals that represents the current values (in the current
@@ -115,7 +109,7 @@ current thread reverts to its initial value.
 
                                         *thread-cell-values?*
 (thread-cell-values? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a set of thread cell values produced by
 current-preserved-thread-cell-values, #f otherwise.
@@ -146,35 +140,44 @@ associated with a parameter through parameterize remains reachable as
 long the continuation is reachable, even if the parameter is mutated.
 
                                         *make-parameter*
-(make-parameter v [guard]) -> parameter? ~
-  v : any/c ~
-  guard : (or/c (any/c . -> . any) #f) = #f ~
+(make-parameter v [guard name]) -> parameter? ~
+  v : any/c ~ ~
+  guard : (or/c (any/c . -> . any) #f) = #f ~ ~
+  name : symbol? = 'parameter-procedure ~ ~
 
 Returns a new parameter procedure. The value of the parameter is
-initialized to v in all threads.  If guard is supplied, it is used as
-the parameter’s guard procedure.  A guard procedure takes one argument.
-Whenever the parameter procedure is applied to an argument, the argument
-is passed on to the guard procedure. The result returned by the guard
-procedure is used as the new parameter value.  A guard procedure can
-raise an exception to reject a change to the parameter’s value. The
-guard is not applied to the initial v.
+initialized to v in all threads.
+
+If guard is not #f, it is used as the parameter’s guard procedure.  A
+guard procedure takes one argument. Whenever the parameter procedure is
+applied to an argument, the argument is passed on to the guard
+procedure. The result returned by the guard procedure is used as the new
+parameter value.  A guard procedure can raise an exception to reject a
+change to the parameter’s value. The guard is not applied to the initial
+v.
+
+The name argument is used as the parameter procedure’s name as reported
+by object-name.
+
+Changed in version 7.4.0.6: Added the name argument.
 
                                         *parameterize*
 (parameterize ([parameter-expr value-expr] ...) ~
   body ...+)
  
-  parameter-expr : parameter? ~
+  parameter-expr : parameter? ~ ~
 
 +[missing] in [missing] introduces parameterize.
 
 The result of a parameterize expression is the result of the last body.
 The parameter-exprs determine the parameters to set, and the value-exprs
 determine the corresponding values to install while evaluating the
-body-exprs. All of the parameter-exprs are evaluated first (and checked
-with parameter?), then all value-exprs are evaluated, and then the
-parameters are bound in the continuation to preserved thread cells that
-contain the values of the value-exprs. The last body-expr is in tail
-position with respect to the entire parameterize form.
+bodys. The parameter-exprs and value-exprs are evaluated left-to-right
+(interleaved), and then the parameters are bound in the continuation to
+preserved thread cells that contain the values of the value-exprs; the
+result of each parameter-expr is checked with parameter? just before it
+is bound. The last body is in tail position with respect to the entire
+parameterize form.
 
 Outside the dynamic extent of a parameterize expression, parameters
 remain bound to other thread cells. Effectively, therefore, old
@@ -188,13 +191,11 @@ continuation via a continuation mark (see [missing]) using a private
 key.
 
 Examples:
+
   > (parameterize ([exit-handler (lambda (x) 'no-exit)])
       (exit))
-
   > (define p1 (make-parameter 1))
-
   > (define p2 (make-parameter 2))
-
   > (parameterize ([p1 3]
                    [p2 (p1)])
       (cons (p1) (p2)))
@@ -210,7 +211,6 @@ Examples:
           k))
   '(1 . 3)
   > (define ch (make-channel))
-
   > (parameterize ([p1 0])
       (thread (lambda ()
                 (channel-put ch (cons (p1) (p2))))))
@@ -218,7 +218,6 @@ Examples:
   > (channel-get ch)
   '(0 . 2)
   > (define k-ch (make-channel))
-
   > (define (send-k)
       (parameterize ([p1 0])
         (thread (lambda ()
@@ -227,7 +226,6 @@ Examples:
                                  ((let/cc k
                                     (channel-put k-ch k)
                                     (esc)))))))))
-
   > (send-k)
   #<thread>
   > (thread (lambda () ((channel-get k-ch)
@@ -254,9 +252,9 @@ series of single-parameter parameterize forms.
 (make-derived-parameter parameter      ~
                         guard         
                         wrap)     -> parameter?
-  parameter : parameter? ~
-  guard : (any/c . -> . any) ~
-  wrap : (any/c . -> . any) ~
+  parameter : parameter? ~ ~
+  guard : (any/c . -> . any) ~ ~
+  wrap : (any/c . -> . any) ~ ~
 
 Returns a parameter procedure that sets or retrieves the same value as
 parameter, but with:
@@ -271,14 +269,14 @@ procedures.
 
                                         *parameter?*
 (parameter? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a parameter procedure, #f otherwise.
 
-                                        *parameter-procedure*
+                                        *parameter-procedure=?*
 (parameter-procedure=? a b) -> boolean? ~
-  a : parameter? ~
-  b : parameter? ~
+  a : parameter? ~ ~
+  b : parameter? ~ ~
 
 Returns #t if the parameter procedures a and b always modify the same
 parameter with the same guards (although possibly with different
@@ -292,15 +290,15 @@ Returns the current continuation’s parameterization.
                                         *call-with-parameterization*
 (call-with-parameterization parameterization      ~
                             thunk)           -> any
-  parameterization : parameterization? ~
-  thunk : (-> any) ~
+  parameterization : parameterization? ~ ~
+  thunk : (-> any) ~ ~
 
 Calls thunk (via a tail call) with parameterization as the current
 parameterization.
 
                                         *parameterization?*
 (parameterization? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a parameterization returned by
 current-parameterization, #f otherwise.

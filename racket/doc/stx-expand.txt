@@ -2,7 +2,7 @@ Expanding Top-Level Forms
 
                                         *expand*
 (expand top-level-form) -> syntax? ~
-  top-level-form : any/c ~
+  top-level-form : any/c ~ ~
 
 Expands all non-primitive syntax in top-level-form, and returns a syntax
 object for the expanded form that contains only core forms, matching the
@@ -34,14 +34,14 @@ Here’s an example of using expand on a non-top-level form:
 
                                         *expand-syntax*
 (expand-syntax stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Like (expand stx), except that the argument must be a syntax object, and
 its lexical context is not enriched before expansion.
 
                                         *expand-once*
 (expand-once top-level-form) -> syntax? ~
-  top-level-form : any/c ~
+  top-level-form : any/c ~ ~
 
 Partially expands top-level-form and returns a syntax object for the
 partially-expanded expression. Due to limitations in the expansion
@@ -54,14 +54,14 @@ namespace-syntax-introduce, as for eval.
 
                                         *expand-syntax-once*
 (expand-syntax-once stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Like (expand-once stx), except that the argument must be a syntax
 object, and its lexical context is not enriched before expansion.
 
                                         *expand-to-top-form*
 (expand-to-top-form top-level-form) -> syntax? ~
-  top-level-form : any/c ~
+  top-level-form : any/c ~ ~
 
 Partially expands top-level-form to reveal the outermost syntactic form.
 This partial expansion is mainly useful for detecting top-level uses of
@@ -74,7 +74,7 @@ namespace-syntax-introduce, as for eval.
 
                                         *expand-syntax-to-top-form*
 (expand-syntax-to-top-form stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Like (expand-to-top-form stx), except that the argument must be a syntax
 object, and its lexical context is not enriched before expansion.
@@ -83,17 +83,6 @@ object, and its lexical context is not enriched before expansion.
 
 Information for an expanded module declaration is stored in a set of
 syntax properties (see [missing]) attached to the syntax object:
-
-* 'module-direct-requires — a list of module path indexes (or symbols)
-  representing the modules explicitly imported into the module.
-
-* 'module-direct-for-syntax-requires — a list of module path indexes (or
-  symbols) representing the modules explicitly for-syntax imported into
-  the module.
-
-* 'module-direct-for-template-requires — a list of module path indexes
-  (or symbols) representing the modules explicitly for-template imported
-  into the module.
 
 * 'module-variable-provides — a list of provided items, where each item
   is one of the following:
@@ -119,4 +108,38 @@ syntax properties (see [missing]) attached to the syntax object:
 * 'module-indirect-provides — a list of symbols for variables that are
   defined in the module but not exported; they may be exported
   indirectly through macro expansions.  Definitions of macro-generated
-  identifiers create uninterned symbols in this list.
+  identifiers create uninterned symbols in this list. The order of
+  identifiers in the list corresponds to an order for access from
+  bytecode.
+
+* 'module-indirect-for-meta-provides — similar to
+  'module-indirect-provides: an association list from a phase level to a
+  list of symbols for variables that are defined in the module at phases
+  higher than 0 and not exported.
+
+  Added in version 6.5.0.5.
+
+* 'module-body-context — a syntax object whose lexical information
+  corresponds to the inside of the module, so it includes the
+  expansion’s outside-edge scope and its inside-edge scope; that is, the
+  syntax object simulates an identifier that is present in the original
+  module body and inaccessible to manipulation by any macro, so that its
+  lexical information includes bindings for the module’s imports and
+  definitions.
+
+  Added in version 6.4.0.1.
+
+* 'module-body-inside-context — a syntax object whose lexical
+  information corresponds to an identifier that starts with no lexical
+  context and is moved into the macro, so that it includes only the
+  expansions’s inside-edge scope.
+
+  Added in version 6.4.0.1.
+
+* 'module-body-context-simple? — a boolean, where #t indicates that the
+  bindings of the module’s body (as recorded in the lexical information
+  of the value of the 'module-body-inside-context property) can be
+  directly reconstructed from modules directly imported into the module,
+  including imported for-syntax, for-meta, and for-template.
+
+  Added in version 6.4.0.1.

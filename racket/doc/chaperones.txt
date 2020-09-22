@@ -75,89 +75,111 @@ instances.
 
                                         *impersonator?*
 (impersonator? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
-Returns #t if v is an impersonator, #f otherwise.
+Returns #t if v is an impersonator created by procedures like
+impersonate-procedure or impersonate-struct, #f otherwise.
 
 Programs and libraries generally should avoid impersonator? and treat
 impersonators the same as non-impersonator values. In rare cases,
 impersonator? may be needed to guard against redirection by an
 impersonator of an operation to an arbitrary procedure.
 
+A limitation of impersonator? is that it does not recognize an
+impersonator that is created by instantiating a structure type with the
+prop:impersonator-of property. The limitation reflects how those
+impersonators cannot redirect structure access and mutation operations
+to arbitrary procedures.
+
                                         *chaperone?*
 (chaperone? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a chaperone, #f otherwise.
 
 Programs and libraries generally should avoid chaperone? for the same
-reason that they should avoid impersonator?.
+reason that they should avoid impersonator?. A true value for chaperone?
+implies a true value of impersonator?.
 
                                         *impersonator-of?*
 (impersonator-of? v1 v2) -> boolean? ~
-  v1 : any/c ~
-  v2 : any/c ~
+  v1 : any/c ~ ~
+  v2 : any/c ~ ~
 
 Indicates whether v1 can be considered equivalent modulo impersonators
 to v2.
 
-For values that include no impersonators, v1 and v2 can be considered
+Any two values that are eq? to one another are also impersonator-of?.
+For values that include no impersonators, v1 and v2 are considered
 impersonators of each other if they are equal?.
 
-Otherwise, impersonators within v2 must be intact within v1:
+If at least one of v1 or v2 is an impersonator:
 
-* If a part of v2 is an impersonator created from one of  the
-  impersonator constructors (e.g.,  impersonate-procedure or
-  chaperone-procedure), and if the impersonator is  constructed with at
-  least one redirection procedure (i.e., a  value other than #f was
-  supplied for a redirection  procedure), then the corresponding part of
-  v1 must be  one of the following:
+* If v1 impersonates v1* then (impersonator-of? v1 v2)    is #t if and
+  only if (impersonator-of? v1* v2) is #t.
 
-  * the same value that is a part of v2 (with a special meaning of “the
-    same value“ in the case of immutable hash tables, as described
-    below);
+* If v2 is a non-interposing impersonator that impersonates v2*, i.e.,
+  all of its interposition procedures are #f, then (impersonator-of? v1
+  v2)    is #t if and only if (impersonator-of? v1 v2*) is #t.
 
-  * a value further derived from the same value that is part of v2 using
-    an impersonator constructor; or
+* When v2 is an impersonator constructed with at least one non-#f
+  interposition procedure,      but v1 is not an impersonator then
+  (impersonator-of? v1 v2) is #f.
 
-  * a value with the prop:impersonator-of property whose procedure
-    produces an impersonator of the same value that is part of v2.
+Otherwise, if neither v1 or v2 is an impersonator, but either of them
+contains an impersonator as a subpart (e.g., v1 is a list with an
+impersonator as one of its elements), then (impersonator-of? v1 v2)
+proceeds by comparing v1 and v2 recursively (as with equal?), returning
+true if all subparts are impersonator-of?.
 
-  For most kinds of values, “the same value” means equal according to
-  eq?. In the case of an immutable hash table, two impersonated hash
-  tables count as “the same value” when their redirection procedures
-  were originally attached to a hash table by the same call to
-  impersonate-hash or chaperone-hash (and potentially propagated by
-  hash-set, hash-remove, or hash-clear), as long as the content of the
-  first hash table is impersonator-of? of the second hash table.
+Examples:
 
-* If a part of v2 is a structure or procedure impersonator that was
-  created with no redirection procedures (i.e, #f in place of all
-  redirection procedures for specified operations), then the
-  impersonated value is considered in place of that part of v2. In other
-  words, an impersonator construction that does not redirect any access
-  or mutation (but that includes some impersonator properties) need not
-  be preserved in v1.
+  > (impersonator-of? (impersonate-procedure add1 (λ (x) x))
+                      add1)
+  #t
+  > (impersonator-of? (impersonate-procedure add1 (λ (x) x))
+                      sub1)
+  #f
+  > (impersonator-of? (impersonate-procedure
+                        (impersonate-procedure add1 (λ (x) x)) (λ (x) x))
+                      add1)
+  #t
+  > (impersonator-of? (impersonate-procedure add1 (λ (x) x))
+                      (impersonate-procedure add1 #f))
+  #t
+  > (impersonator-of? (impersonate-procedure add1 (λ (x) x))
+                      (impersonate-procedure add1 (λ (x) x)))
+  #f
+  > (impersonator-of? (list 1 2)
+                      (list 1 2))
+  #t
+  > (impersonator-of? (list (impersonate-procedure add1 (λ (x) x)) sub1)
+                      (list add1 sub1))
+  #t
 
                                         *chaperone-of?*
 (chaperone-of? v1 v2) -> boolean? ~
-  v1 : any/c ~
-  v2 : any/c ~
+  v1 : any/c ~ ~
+  v2 : any/c ~ ~
 
 Indicates whether v1 can be considered equivalent modulo chaperones to
 v2.
 
-For values that include no chaperones, v1 and v2 can be considered
-chaperones of each other if they are equal?, except that the mutability
-of vectors and boxes with v1 and v2 must be the same.
+For values that include no chaperones or other impersonators, v1 and v2
+can be considered chaperones of each other if they are equal?, except
+that corresponding mutable vectors, boxes, strings, byte strings, and
+mutable structures within v1 and v2 must be eq?.
 
-Otherwise, chaperones within v2 must be intact within v1 analogous to
-way that impersonator-of? requires that impersonators are preserved,
-except that prop:impersonator-of has no analog for chaperone-of?.
+Otherwise, chaperones and other impersonators within v2 must be intact
+within v1 analogous to way that impersonator-of? requires that
+impersonators are preserved. Furthermore, v1 must not have any
+non-chaperone impersonators whose corresponding value in v2 is not the
+same impersonator. Note that chaperone-of? implies impersonator-of?, but
+not vice-versa.
 
                                         *impersonator-ephemeron*
 (impersonator-ephemeron v) -> ephemeron? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Produces an ephemeron that can be used to connect the reachability of v
 (in the sense of garbage collection; see [missing]) with the
@@ -165,6 +187,15 @@ reachability of any value for which v is an impersonator. That is, the
 value v will be considered reachable as long as the result ephemeron is
 reachable in addition to any value that v impersonates (including
 itself).
+
+                                        *procedure-impersonator*?*
+(procedure-impersonator*? v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t for any procedure impersonator that either was produced by
+impersonate-procedure* or chaperone-procedure*, or is an
+impersonator/chaperone of a value that was created with
+impersonate-procedure* or chaperone-procedure* (possibly transitively).
 
 1. Impersonator Constructors
 
@@ -175,10 +206,10 @@ itself).
                        prop-val ... 
                        ...)         
  -> (and/c procedure? impersonator?)
-  proc : procedure? ~
-  wrapper-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  proc : procedure? ~ ~
+  wrapper-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator procedure that has the same arity, name, and
 other attributes as proc. When the impersonator procedure is applied,
@@ -191,41 +222,105 @@ keyword arguments of wrapper-proc must be a superset of the allowed
 keywords of proc. The required keyword arguments of wrapper-proc must be
 a subset of the required keywords of proc.
 
-For applications without keywords, the result of wrapper-proc must be
-either the same number of values as supplied to it or one more than the
-number of supplied values, where an extra result is supplied before the
-others. The additional result, if any, must be a procedure that accepts
+For applications without keywords, the result of wrapper-proc must be at
+least the same number of values as supplied to it. Additional results
+can be supplied—before the values that correspond to the supplied
+values—in the following pattern:
+
+* An optional procedure, result-wrapper-proc, which will be applied to
+  the results of proc; followed by
+
+* any number of repetitions of 'mark key val (i.e., three values), where
+  the call proc is wrapped to install a continuation mark key and val.
+
+If result-wrapper-proc is produced, it must be a procedure that accepts
 as many results as produced by proc; it must return the same number of
-results.  If wrapper-proc returns the same number of values as it is
-given (i.e., it does not return a procedure to impersonator proc’s
-result), then proc is called in tail position with respect to the call
-to the impersonator.
+results. If result-wrapper-proc is not supplied, then proc is called in
+tail position with respect to the call to the impersonator.
 
 For applications that include keyword arguments, wrapper-proc must
-return an additional value before any other values but after the
-result-impersonating procedure (if any). The additional value must be a
-list of replacements for the keyword arguments that were supplied to the
-impersonator (i.e., not counting optional arguments that were not
-supplied). The arguments must be ordered according to the sorted order
-of the supplied arguments’ keywords.
+return an additional value before any other values but after
+result-wrapper-proc and 'mark key val sequences (if any). The additional
+value must be a list of replacements for the keyword arguments that were
+supplied to the impersonator (i.e., not counting optional arguments that
+were not supplied). The arguments must be ordered according to the
+sorted order of the supplied arguments’ keywords.
 
-If wrapper is #f, then applying the resulting impersonator is the same
-as applying proc. If wrapper is #f and no prop is provided, then the
-result is proc unimpersonated.
+If wrapper-proc is #f, then applying the resulting impersonator is the
+same as applying proc. If wrapper-proc is #f and no prop is provided,
+then proc is returned and is not impersonated.
 
 Pairs of prop and prop-val (the number of arguments to
-procedure-impersonator must be even) add impersonator properties or
+impersonate-procedure must be even) add impersonator properties or
 override impersonator-property values of proc.
 
 If any prop is impersonator-prop:application-mark and if the associated
 prop-val is a pair, then the call to proc is wrapped with
 with-continuation-mark using (car prop-val) as the mark key and (cdr
-prop-val) as the mark value. In addition, if continuation-mark-set-first
-with (car prop-val) produces a value for the immediate continuation
-frame of the call to the impersonated procedure, the value is also
-installed as an immediate value for (car prop-val) as a mark during the
-call to wrapper-proc (which allows tail-calls of impersonators with
-respect to wrapping impersonators to be detected within wrapper-proc).
+prop-val) as the mark value. In addition, if the immediate continuation
+frame of the call to the impersonated procedure includes a value for
+(car prop-val)—that is, if call-with-immediate-continuation-mark would
+produce a value for (car prop-val) in the call’s continuation—then the
+value is also installed as an immediate value for (car prop-val) as a
+mark during the call to wrapper-proc (which allows tail-calls of
+impersonators with respect to wrapping impersonators to be detected
+within wrapper-proc).
+
+Changed in version 6.3.0.5: Added support for 'mark key val results from
+wrapper-proc.
+
+Examples:
+
+  > (define (add15 x) (+ x 15))
+  > (define add15+print
+      (impersonate-procedure add15
+                             (λ (x)
+                               (printf "called with ~s\n" x)
+                               (values (λ (res)
+                                         (printf "returned ~s\n" res)
+                                         res)
+                                       x))))
+  > (add15 27)
+  42
+  > (add15+print 27)
+  called with 27
+  returned 42
+  42
+  > (define-values (imp-prop:p1 imp-prop:p1? imp-prop:p1-get) ~ ~
+      (make-impersonator-property 'imp-prop:p1)) ~ ~
+  > (define-values (imp-prop:p2 imp-prop:p2? imp-prop:p2-get) ~ ~
+      (make-impersonator-property 'imp-prop:p2)) ~ ~
+  > (define add15.2 (impersonate-procedure add15 #f imp-prop:p1 11)) ~ ~
+  > (add15.2 2)
+  17
+  > (imp-prop:p1? add15.2)
+  #t
+  > (imp-prop:p1-get add15.2)
+  11
+  > (imp-prop:p2? add15.2)
+  #f
+  > (define add15.3 (impersonate-procedure add15.2 #f imp-prop:p2 13)) ~ ~
+  > (add15.3 3)
+  18
+  > (imp-prop:p1? add15.3)
+  #t
+  > (imp-prop:p1-get add15.3)
+  11
+  > (imp-prop:p2? add15.3)
+  #t
+  > (imp-prop:p2-get add15.3)
+  13
+  > (define add15.4 (impersonate-procedure add15.3 #f imp-prop:p1 101)) ~ ~
+  > (add15.4 4)
+  19
+  > (imp-prop:p1? add15.4)
+  #t
+  > (imp-prop:p1-get add15.4)
+  101
+  > (imp-prop:p2? add15.4)
+  #t
+  > (imp-prop:p2-get add15.4)
+  13
 
                                         *impersonate-procedure**
 (impersonate-procedure* proc          ~
@@ -234,14 +329,14 @@ respect to wrapping impersonators to be detected within wrapper-proc).
                         prop-val ... 
                         ...)         
  -> (and/c procedure? impersonator?)
-  proc : procedure? ~
-  wrapper-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  proc : procedure? ~ ~
+  wrapper-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-procedure, except that wrapper-proc receives an
 additional argument before all other arguments. The additional argument
-is the procedure orig-proc that was original applied.
+is the procedure orig-proc that was originally applied.
 
 If the result of impersonate-procedure* is applied directly, then
 orig-proc is that result. If the result is further impersonated before
@@ -262,14 +357,14 @@ Added in version 6.1.1.5.
                      prop                  
                      prop-val ...          
                      ...)              -> any/c
-  v : any/c ~
-  struct-type : struct-type? = unspecified ~
-  orig-proc : (or/c struct-accessor-procedure? ~
+  v : any/c ~ ~
+  struct-type : struct-type? = unspecified ~ ~
+  orig-proc : (or/c struct-accessor-procedure? ~ ~
                     struct-mutator-procedure?
                     struct-type-property-accessor-procedure?)
-  redirect-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  redirect-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of v, which redirects certain operations on the
 impersonated value. The orig-procs indicate the operations to redirect,
@@ -301,13 +396,14 @@ Supplying #f for a redirect-proc is useful to allow its orig-proc to act
 as a “witness” of v’s representation and enable the addition of props.
 
 Pairs of prop and prop-val (the number of arguments to
-impersonate-struct must be odd) add impersonator properties or override
-impersonator-property values of v.
+impersonate-struct must be even if struct-type is provided, odd
+otherwise) add impersonator properties or override impersonator-property
+values of v.
 
 Each orig-proc must indicate a distinct operation. If no struct-type and
 no orig-procs are supplied, then no props must be supplied. If
 orig-procs are supplied only with #f redirect-procs and no props are
-supplied, then v is returned unimpersonated.
+supplied, then v is returned and is not impersonated.
 
 If any orig-proc is itself an impersonator, then a use of the accessor
 or mutator that orig-proc impersonates is redirected for the resulting
@@ -326,28 +422,63 @@ optional struct-type argument.
                     prop-val ... 
                     ...)         
  -> (and/c vector? impersonator?)
-  vec : (and/c vector? (not/c immutable?)) ~
-  ref-proc : (vector? exact-nonnegative-integer? any/c . -> . any/c) ~
-  set-proc : (vector? exact-nonnegative-integer? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  vec : (and/c vector? (not/c immutable?)) ~ ~
+  ref-proc : (or/c (vector? exact-nonnegative-integer? any/c . -> ~ ~
+. any/c) #f)
+  set-proc : (or/c (vector? exact-nonnegative-integer? any/c . -> ~ ~
+. any/c) #f)
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of vec, which redirects the vector-ref and
 vector-set! operations.
 
-The ref-proc must accept vec, an index passed to vector-ref, and the
-value that vector-ref on vec produces for the given index; it must
-produce a replacement for the value, which is the result of vector-ref
-on the impersonator.
+The ref-proc and set-proc arguments must either both be procedures or
+both be #f. If they are #f then impersonate-vector does not interpose on
+vec, but still allows attaching impersonator properties.
 
-The set-proc must accept vec, an index passed to vector-set!, and the
-value passed to vector-set!; it must produce a replacement for the
-value, which is used with vector-set! on the original vec to install the
-value.
+If ref-proc is a procedure it must accept vec, an index passed to
+vector-ref, and the value that vector-ref on vec produces for the given
+index; it must produce a replacement for the value, which is the result
+of vector-ref on the impersonator.
+
+If set-proc is a procedure it must accept vec, an index passed to
+vector-set!, and the value passed to vector-set!; it must produce a
+replacement for the value, which is used with vector-set! on the
+original vec to install the value.
 
 Pairs of prop and prop-val (the number of arguments to
 impersonate-vector must be odd) add impersonator properties or override
 impersonator-property values of vec.
+
+Changed in version 6.9.0.2: Added non-interposing vector impersonators.
+
+                                        *impersonate-vector**
+(impersonate-vector* vec           ~
+                     ref-proc     
+                     set-proc     
+                     prop         
+                     prop-val ... 
+                     ...)         
+ -> (and/c vector? impersonator?)
+  vec : (and/c vector? (not/c immutable?)) ~ ~
+  ref-proc : (or/c (vector? vector? exact-nonnegative-integer? any/c . ~ ~
+-> . any/c) #f)
+  set-proc : (or/c (vector? vector? exact-nonnegative-integer? any/c . ~ ~
+-> . any/c) #f)
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
+
+Like impersonate-vector, except that ref-proc and set-proc each receive
+an additional vector as argument before other arguments. The additional
+argument is the original impersonated vector, access to which triggered
+interposition in the first place.
+
+The additional vector argument might be useful so that ref-proc or
+set-proc can extract impersonator properties that are overridden by
+further impersonators, for example.
+
+Added in version 6.9.0.2.
 
                                         *impersonate-box*
 (impersonate-box box               ~
@@ -356,11 +487,11 @@ impersonator-property values of vec.
                  prop             
                  prop-val ...     
                  ...)         -> (and/c box? impersonator?)
-  box : (and/c box? (not/c immutable?)) ~
-  unbox-proc : (box? any/c . -> . any/c) ~
-  set-proc : (box? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  box : (and/c box? (not/c immutable?)) ~ ~
+  unbox-proc : (box? any/c . -> . any/c) ~ ~
+  set-proc : (box? any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of box, which redirects the unbox and set-box!
 operations.
@@ -378,25 +509,27 @@ must be odd) add impersonator properties or override
 impersonator-property values of box.
 
                                         *impersonate-hash*
-(impersonate-hash  hash              ~
-                   ref-proc         
-                   set-proc         
-                   remove-proc      
-                   key-proc         
-                  [clear-proc]      
-                   prop             
-                   prop-val ...     
-                   ...)         -> (and/c hash? impersonator?)
-  hash : (and/c hash? (not/c immutable?)) ~
-  ref-proc : (hash? any/c . -> . (values ~
+(impersonate-hash  hash                 ~
+                   ref-proc            
+                   set-proc            
+                   remove-proc         
+                   key-proc            
+                  [clear-proc          
+                   equal-key-proc]     
+                   prop                
+                   prop-val ...        
+                   ...)            -> (and/c hash? impersonator?)
+  hash : (and/c hash? (not/c immutable?)) ~ ~
+  ref-proc : (hash? any/c . -> . (values ~ ~
                                   any/c
                                   (hash? any/c any/c . -> . any/c)))
-  set-proc : (hash? any/c any/c . -> . (values any/c any/c)) ~
-  remove-proc : (hash? any/c . -> . any/c) ~
-  key-proc : (hash? any/c . -> . any/c) ~
-  clear-proc : (or/c #f (hash? . -> . any)) = #f ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  set-proc : (hash? any/c any/c . -> . (values any/c any/c)) ~ ~
+  remove-proc : (hash? any/c . -> . any/c) ~ ~
+  key-proc : (hash? any/c . -> . any/c) ~ ~
+  clear-proc : (or/c #f (hash? . -> . any)) = #f ~ ~
+  equal-key-proc : (or/c #f (hash? any/c . -> . any/c)) = #f ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of hash, which redirects the hash-ref, hash-set!
 or hash-set (as applicable), hash-remove or hash-remove! (as
@@ -405,16 +538,19 @@ is not #f) operations. When hash-set, hash-remove or hash-clear is used
 on an impersonator of a hash table, the result is an impersonator with
 the same redirecting procedures. In addition, operations like
 hash-iterate-key or hash-map, which extract keys from the table, use
-key-proc to filter keys extracted from the table. Operations like
-hash-iterate-value or hash-iterate-map implicitly use hash-ref and
-therefore redirect through ref-proc.
+key-proc to replace keys extracted from the table. Operations like
+hash-iterate-value or hash-values implicitly use hash-ref and therefore
+redirect through ref-proc. The hash-ref-key operation uses both ref-proc
+and key-proc, the former to lookup the requested key and the latter to
+extract it.
 
 The ref-proc must accept hash and a key passed to hash-ref. It must
 return a replacement key as well as a procedure. The returned procedure
 is called only if the returned key is found in hash via hash-ref, in
 which case the procedure is called with hash, the previously returned
 key, and the found value. The returned procedure must itself return a
-replacement for the found value.
+replacement for the found value. The returned procedure is ignored by
+hash-ref-key.
 
 The set-proc must accept hash, a key passed to hash-set! or hash-set,
 and the value passed to hash-set! or hash-set; it must produce two
@@ -423,14 +559,14 @@ returned key and value are used with hash-set! or hash-set on the
 original hash to install the value.
 
 The remove-proc must accept hash and a key passed to hash-remove! or
-hash-remove; it must produce the a replacement for the key, which is
-used with hash-remove! or hash-remove on the original hash to remove any
+hash-remove; it must produce a replacement for the key, which is used
+with hash-remove! or hash-remove on the original hash to remove any
 mapping using the (impersonator-replaced) key.
 
 The key-proc must accept hash and a key that has been extracted from
-hash (by hash-iterate-key or other operations that use hash-iterate-key
-internally); it must produce a replacement for the key, which is then
-reported as a key extracted from the table.
+hash (by hash-ref-key, hash-iterate-key, or other operations that use
+hash-iterate-key internally); it must produce a replacement for the key,
+which is then reported as a key extracted from the table.
 
 If clear-proc is not #f, it must accept hash as an argument, and its
 result is ignored. The fact that clear-proc returns (as opposed to
@@ -439,14 +575,33 @@ remove all keys from hash. If clear-proc is #f, then hash-clear or
 hash-clear! on the impersonator is implemented using hash-iterate-key
 and hash-remove or hash-remove!.
 
+If equal-key-proc is not #f, it effectively interposes on calls to
+equal?, equal-hash-code, and equal-secondary-hash-code for the keys of
+hash. The equal-key-proc must accept as its arguments hash and a key
+that is either mapped by hash or passed to hash-ref, etc., where the
+latter has potentially been adjusted by the corresponding ref-proc, etc.
+The result is a value that is passed to equal?, equal-hash-code, and
+equal-secondary-hash-code as needed to hash and compare keys. In the
+case of hash-set! or hash-set, the key that is passed to equal-key-proc
+is the one stored in the hash table for future lookup.
+
 The hash-iterate-value, hash-map, or hash-for-each functions use a
 combination of hash-iterate-key and hash-ref. If a key produced by
 key-proc does not yield a value through hash-ref, then the
 exn:fail:contract exception is raised.
 
-Pairs of prop and prop-val (the number of arguments to impersonate-hash
-must be odd) add impersonator properties or override
+Pairs of prop and prop-val add impersonator properties or override
 impersonator-property values of hash.
+
+In the case of an immutable hash table, two impersonated hash tables
+count as “the same value” (for purposes of impersonator-of?) when their
+redirection procedures were originally attached to a hash table by the
+same call to impersonate-hash or chaperone-hash (and potentially
+propagated by hash-set, hash-remove, or hash-clear), as long as the
+content of the first hash table is impersonator-of? of the second hash
+table.
+
+Changed in version 6.3.0.11: Added the equal-key-proc argument.
 
                                         *impersonate-channel*
 (impersonate-channel channel       ~
@@ -456,11 +611,11 @@ impersonator-property values of hash.
                      prop-val ... 
                      ...)         
  -> (and/c channel? impersonator?)
-  channel : channel? ~
-  get-proc : (channel? . -> . (values channel? (any/c . -> . any/c))) ~
-  put-proc : (channel? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  channel : channel? ~ ~
+  get-proc : (channel? . -> . (values channel? (any/c . -> . any/c))) ~ ~
+  put-proc : (channel? any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of channel, which redirects the channel-get and
 channel-put operations.
@@ -489,14 +644,14 @@ impersonator-property values of channel.
                          prop-val ...             
                          ...)                     
  -> (and/c continuation-prompt-tag? impersonator?)
-  prompt-tag : continuation-prompt-tag? ~
-  handle-proc : procedure? ~
-  abort-proc : procedure? ~
-  cc-guard-proc : procedure? = values ~
-  callcc-impersonate-proc : (procedure? . -> . procedure?) ~
+  prompt-tag : continuation-prompt-tag? ~ ~
+  handle-proc : procedure? ~ ~
+  abort-proc : procedure? ~ ~
+  cc-guard-proc : procedure? = values ~ ~
+  callcc-impersonate-proc : (procedure? . -> . procedure?) ~ ~
                           = (lambda (p) p)
-  prop : impersonator-property? ~
-  prop-val : any ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of prompt-tag, which redirects the
 call-with-continuation-prompt and abort-current-continuation operations.
@@ -534,12 +689,12 @@ impersonate-prompt-tag must be odd) add impersonator properties or
 override impersonator-property values of prompt-tag.
 
 Examples:
+
   > (define tag
       (impersonate-prompt-tag
        (make-continuation-prompt-tag)
        (lambda (n) (* n 2))
        (lambda (n) (+ n 1))))
-
   > (call-with-continuation-prompt
       (lambda ()
         (abort-current-continuation tag 5))
@@ -555,11 +710,11 @@ Examples:
                                    prop-val ... 
                                    ...)         
  -> (and/c continuation-mark? impersonator?)
-  key : continuation-mark-key? ~
-  get-proc : procedure? ~
-  set-proc : procedure? ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  key : continuation-mark-key? ~ ~
+  get-proc : procedure? ~ ~
+  set-proc : procedure? ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of key, which redirects with-continuation-mark
 and continuation mark accessors such as continuation-mark-set->list.
@@ -573,23 +728,23 @@ must produce a replacement value, which is attached to the continuation
 frame.
 
 Pairs of prop and prop-val (the number of arguments to
-impersonate-prompt-tag must be odd) add impersonator properties or
-override impersonator-property values of key.
+impersonate-continuation-mark-key must be odd) add impersonator
+properties or override impersonator-property values of key.
 
 Examples:
+
   > (define mark-key
       (impersonate-continuation-mark-key
        (make-continuation-mark-key)
        (lambda (l) (map char-upcase l))
        (lambda (s) (string->list s))))
-
   > (with-continuation-mark mark-key "quiche"
       (continuation-mark-set-first
        (current-continuation-marks)
        mark-key))
   '(#\Q #\U #\I #\C #\H #\E)
 
-prop:impersonator-of : struct-type-property? ~
+prop:impersonator-of : struct-type-property? ~ ~
 
 A structure type property (see [missing]) that supplies a procedure for
 extracting an impersonated value from a structure that represents an
@@ -614,6 +769,27 @@ the prop:impersonator-of procedure is checked (recursively).
 Changed in version 6.1.1.8: Made impersonator property predicates and
 accessors sensitive to prop:impersonator-of.
 
+prop:authentic : struct-type-property? ~ ~
+
+A structure type property that declares a structure type as authentic.
+The value associated with the property is ignored; the presence of the
+property itself makes the structure type authentic.
+
+Instances of an authentic structure type cannot be impersonated via
+impersonate-struct or chaperoned via chaperone-struct. As a consequence,
+an instance of an authentic structure type can be given a contract (see
+struct/c) only if it is a flat contract.
+
+Declaring a structure type as authentic can prevent unwanted structure
+impersonation, but exposed structure types normally should support
+impersonators or chaperones to facilitate contracts. Declaring a
+structure type as authentic can also slightly improve the performance of
+structure predicates, selectors, and mutators, which can be appropriate
+for data structures that are private and frequently used within a
+library.
+
+Added in version 6.9.0.4.
+
 2. Chaperone Constructors
 
                                         *chaperone-procedure*
@@ -623,10 +799,10 @@ accessors sensitive to prop:impersonator-of.
                      prop-val ... 
                      ...)         
  -> (and/c procedure? chaperone?)
-  proc : procedure? ~
-  wrapper-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  proc : procedure? ~ ~
+  wrapper-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-procedure, but for each value supplied to wrapper-proc,
 the corresponding result must be the same or a chaperone of (in the
@@ -651,10 +827,10 @@ of the supplied arguments’ keywords.
                       prop-val ... 
                       ...)         
  -> (and/c procedure? chaperone?)
-  proc : procedure? ~
-  wrapper-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  proc : procedure? ~ ~
+  wrapper-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like chaperone-procedure, but wrapper-proc receives an extra argument as
 with impersonate-procedure*.
@@ -670,15 +846,15 @@ Added in version 6.1.1.5.
                    prop                  
                    prop-val ...          
                    ...)              -> any/c
-  v : any/c ~
-  struct-type : struct-type? = unspecified ~
-  orig-proc : (or/c struct-accessor-procedure? ~
+  v : any/c ~ ~
+  struct-type : struct-type? = unspecified ~ ~
+  orig-proc : (or/c struct-accessor-procedure? ~ ~
                     struct-mutator-procedure?
                     struct-type-property-accessor-procedure?
                     (one-of/c struct-info))
-  redirect-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  redirect-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-struct, but with the following refinements, where self
 refers to the value to which a orig-proc is originally applied:
@@ -722,17 +898,39 @@ optional struct-type argument.
                   prop             
                   prop-val ...     
                   ...)         -> (and/c vector? chaperone?)
-  vec : vector? ~
-  ref-proc : (vector? exact-nonnegative-integer? any/c . -> . any/c) ~
-  set-proc : (vector? exact-nonnegative-integer? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  vec : vector? ~ ~
+  ref-proc : (or/c (vector? exact-nonnegative-integer? any/c . -> ~ ~
+. any/c) #f)
+  set-proc : (or/c (vector? exact-nonnegative-integer? any/c . -> ~ ~
+. any/c) #f)
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-vector, but with support for immutable vectors. The
 ref-proc procedure must produce the same value or a chaperone of the
 original value, and set-proc must produce the value that is given or a
 chaperone of the value. The set-proc will not be used if vec is
 immutable.
+
+                                        *chaperone-vector**
+(chaperone-vector* vec               ~
+                   ref-proc         
+                   set-proc         
+                   prop             
+                   prop-val ...     
+                   ...)         -> (and/c vector? chaperone?)
+  vec : (and/c vector? (not/c immutable?)) ~ ~
+  ref-proc : (or/c (vector? vector? exact-nonnegative-integer? any/c . ~ ~
+-> . any/c) #f)
+  set-proc : (or/c (vector? vector? exact-nonnegative-integer? any/c . ~ ~
+-> . any/c) #f)
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
+
+Like chaperone-vector, but ref-proc and set-proc receive an extra
+argument as with impersonate-vector*.
+
+Added in version 6.9.0.2.
 
                                         *chaperone-box*
 (chaperone-box box               ~
@@ -741,11 +939,11 @@ immutable.
                prop             
                prop-val ...     
                ...)         -> (and/c box? chaperone?)
-  box : box? ~
-  unbox-proc : (box? any/c . -> . any/c) ~
-  set-proc : (box? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  box : box? ~ ~
+  unbox-proc : (box? any/c . -> . any/c) ~ ~
+  set-proc : (box? any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-box, but with support for immutable boxes. The
 unbox-proc procedure must produce the same value or a chaperone of the
@@ -754,33 +952,37 @@ of the value that it is given.  The set-proc will not be used if box is
 immutable.
 
                                         *chaperone-hash*
-(chaperone-hash  hash              ~
-                 ref-proc         
-                 set-proc         
-                 remove-proc      
-                 key-proc         
-                [clear-proc]      
-                 prop             
-                 prop-val ...     
-                 ...)         -> (and/c hash? chaperone?)
-  hash : hash? ~
-  ref-proc : (hash? any/c . -> . (values ~
+(chaperone-hash  hash                 ~
+                 ref-proc            
+                 set-proc            
+                 remove-proc         
+                 key-proc            
+                [clear-proc          
+                 equal-key-proc]     
+                 prop                
+                 prop-val ...        
+                 ...)            -> (and/c hash? chaperone?)
+  hash : hash? ~ ~
+  ref-proc : (hash? any/c . -> . (values ~ ~
                                   any/c
                                   (hash? any/c any/c . -> . any/c)))
-  set-proc : (hash? any/c any/c . -> . (values any/c any/c)) ~
-  remove-proc : (hash? any/c . -> . any/c) ~
-  key-proc : (hash? any/c . -> . any/c) ~
-  clear-proc : (or/c #f (hash? . -> . any)) = #f ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  set-proc : (hash? any/c any/c . -> . (values any/c any/c)) ~ ~
+  remove-proc : (hash? any/c . -> . any/c) ~ ~
+  key-proc : (hash? any/c . -> . any/c) ~ ~
+  clear-proc : (or/c #f (hash? . -> . any)) = #f ~ ~
+  equal-key-proc : (or/c #f (hash? any/c . -> . any/c)) = #f ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-hash, but with constraints on the given functions and
 support for immutable hashes. The ref-proc procedure must return a found
 value or a chaperone of the value. The set-proc procedure must produce
 two values: the key that it is given or a chaperone of the key and the
-value that it is given or a chaperone of the value. The remove-proc and
-key-proc procedures must produce the given key or a chaperone of the
-key.
+value that it is given or a chaperone of the value. The remove-proc,
+key-proc, and equal-key-proc procedures must produce the given key or a
+chaperone of the key.
+
+Changed in version 6.3.0.11: Added the equal-key-proc argument.
 
                                         *chaperone-struct-type*
 (chaperone-struct-type struct-type            ~
@@ -791,12 +993,12 @@ key.
                        prop-val ...          
                        ...)                  
  -> (and/c struct-type? chaperone?)
-  struct-type : struct-type? ~
-  struct-info-proc : procedure? ~
-  make-constructor-proc : (procedure? . -> . procedure?) ~
-  guard-proc : procedure? ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  struct-type : struct-type? ~ ~
+  struct-info-proc : procedure? ~ ~
+  make-constructor-proc : (procedure? . -> . procedure?) ~ ~
+  guard-proc : procedure? ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns a chaperoned value like struct-type, but with struct-type-info
 and struct-type-make-constructor operations on the chaperoned structure
@@ -816,11 +1018,14 @@ struct-type. It must return the same or a chaperone of the procedure,
 which is used as the result of struct-type-make-constructor on the
 chaperoned structure type.
 
-The guard-proc must accept as many argument as a constructor for
-struct-type; it must return the same number of arguments, each the same
-or a chaperone of the corresponding argument. The guard-proc is added as
-a constructor guard when a subtype is created of the chaperoned
-structure type.
+The guard-proc is like a guard argument to make-struct-type: it must
+accept one more argument than a constructor for struct-type, where the
+last argument is the name the name of the instantiated structure type.
+It must return the number of values needed by the constructor (i.e. one
+value for each argument but the last), and each returned value must be
+the same as or a chaperone of the corresponding argument. The guard-proc
+is added as a constructor guard when a subtype is created of the
+chaperoned structure type.
 
 Pairs of prop and prop-val (the number of arguments to
 chaperone-struct-type must be even) add impersonator properties or
@@ -829,10 +1034,10 @@ override impersonator-property values of struct-type.
                                         *chaperone-evt*
 (chaperone-evt evt proc prop prop-val ... ...) ~
  -> (and/c evt? chaperone?)
-  evt : evt? ~
-  proc : (evt? . -> . (values evt? (any/c . -> . any/c))) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  evt : evt? ~ ~
+  proc : (evt? . -> . (values evt? (any/c . -> . any/c))) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns a chaperoned value like evt, but with proc as an event generator
 when the result is synchronized with functions like sync.
@@ -848,6 +1053,11 @@ Pairs of prop and prop-val (the number of arguments to chaperone-evt
 must be even) add impersonator properties or override
 impersonator-property values of evt.
 
+The result is chaperone-of? the argument evt. However, if evt is a
+thread, semaphore, input port, output port, or will executor, the result
+is not recognized as such. For example, thread? applied to the result of
+chaperone-evt will always produce #f.
+
                                         *chaperone-channel*
 (chaperone-channel channel           ~
                    get-proc         
@@ -855,11 +1065,11 @@ impersonator-property values of evt.
                    prop             
                    prop-val ...     
                    ...)         -> (and/c channel? chaperone?)
-  channel : channel? ~
-  get-proc : (channel? . -> . (values channel? (any/c . -> . any/c))) ~
-  put-proc : (channel? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  channel : channel? ~ ~
+  get-proc : (channel? . -> . (values channel? (any/c . -> . any/c))) ~ ~
+  put-proc : (channel? any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-channel, but with restrictions on the get-proc and
 put-proc procedures.
@@ -886,14 +1096,14 @@ impersonator-property values of channel.
                        prop-val ...           
                        ...)                   
  -> (and/c continuation-prompt-tag? chaperone?)
-  prompt-tag : continuation-prompt-tag? ~
-  handle-proc : procedure? ~
-  abort-proc : procedure? ~
-  cc-guard-proc : procedure? = values ~
-  callcc-chaperone-proc : (procedure? . -> . procedure?) ~
+  prompt-tag : continuation-prompt-tag? ~ ~
+  handle-proc : procedure? ~ ~
+  abort-proc : procedure? ~ ~
+  cc-guard-proc : procedure? = values ~ ~
+  callcc-chaperone-proc : (procedure? . -> . procedure?) ~ ~
                         = (lambda (p) p)
-  prop : impersonator-property? ~
-  prop-val : any ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-prompt-tag, but produces a chaperoned value. The
 handle-proc procedure must produce the same values or chaperones of the
@@ -904,12 +1114,12 @@ callcc-chaperone-proc must produce a procedure that is a chaperone or
 the same as the given procedure.
 
 Examples:
+
   > (define bad-chaperone
       (chaperone-prompt-tag
        (make-continuation-prompt-tag)
        (lambda (n) (* n 2))
        (lambda (n) (+ n 1))))
-
   > (call-with-continuation-prompt
       (lambda ()
         (abort-current-continuation bad-chaperone 5))
@@ -918,14 +1128,13 @@ Examples:
   abort-current-continuation: non-chaperone result;
    received a value that is not a chaperone of the original
   value
-    original: 5 ~
-    received: 6 ~
+    original: 5 ~ ~
+    received: 6 ~ ~
   > (define good-chaperone
       (chaperone-prompt-tag
        (make-continuation-prompt-tag)
        (lambda (n) (if (even? n) n (error "not even")))
        (lambda (n) (if (even? n) n (error "not even")))))
-
   > (call-with-continuation-prompt
       (lambda ()
         (abort-current-continuation good-chaperone 2))
@@ -941,11 +1150,11 @@ Examples:
                                  prop-val ... 
                                  ...)         
  -> (and/c continuation-mark-key? chaperone?)
-  key : continuation-mark-key? ~
-  get-proc : procedure? ~
-  set-proc : procedure? ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  key : continuation-mark-key? ~ ~
+  get-proc : procedure? ~ ~
+  set-proc : procedure? ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-continuation-mark-key, but produces a chaperoned value.
 The get-proc procedure must produce the same value or a chaperone of the
@@ -953,12 +1162,12 @@ original value, and set-proc must produce the same value or a chaperone
 of the value that it is given.
 
 Examples:
+
   > (define bad-chaperone
       (chaperone-continuation-mark-key
        (make-continuation-mark-key)
        (lambda (l) (map char-upcase l))
        string->list))
-
   > (with-continuation-mark bad-chaperone "timballo"
       (continuation-mark-set-first
        (current-continuation-marks)
@@ -966,19 +1175,17 @@ Examples:
   with-continuation-mark: non-chaperone result;
    received a value that is not a chaperone of the original
   value
-    original: "timballo" ~
-    received: '(#\t #\i #\m #\b #\a #\l #\l #\o) ~
+    original: "timballo" ~ ~
+    received: '(#\t #\i #\m #\b #\a #\l #\l #\o) ~ ~
   > (define (checker s)
       (if (> (string-length s) 5)
           s
           (error "expected string of length at least 5")))
-
   > (define good-chaperone
       (chaperone-continuation-mark-key
        (make-continuation-mark-key)
        checker
        checker))
-
   > (with-continuation-mark good-chaperone "zabaione"
       (continuation-mark-set-first
        (current-continuation-marks)
@@ -988,10 +1195,11 @@ Examples:
 3. Impersonator Properties
 
                                         *make-impersonator-property*
-(make-impersonator-property name) -> impersonator-property? ~
-                                     (-> any/c boolean?)
-                                     (-> impersonator? any)
-  name : symbol? ~
+(make-impersonator-property name) ~
+ -> impersonator-property?
+    (-> any/c boolean?)
+    (->* (impersonator?) (any/c) any)
+  name : symbol? ~ ~
 
 Creates a new impersonator property and returns three values:
 
@@ -1007,23 +1215,27 @@ Creates a new impersonator property and returns three values:
   associated with an impersonator for the property; if a value given to
   the accessor is not an impersonator or does not have a value for the
   property (i.e. if the corresponding impersonator property predicate
-  returns #f), the exn:fail:contract exception is raised.
+  returns #f), then a second optional argument to the selector
+  determines its response: the exn:fail:contract exception is raised if
+  a second argument is not provided, the second argument is tail-called
+  with zero arguments if it is a procedure, and the second argument is
+  returned otherwise.
 
                                         *impersonator-property?*
 (impersonator-property? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a impersonator property descriptor value, #f
 otherwise.
 
                                         *impersonator-property-accessor-procedure?*
 (impersonator-property-accessor-procedure? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an accessor procedure produced by
 make-impersonator-property, #f otherwise.
 
-impersonator-prop:application-mark : impersonator-property? ~
+impersonator-prop:application-mark : impersonator-property? ~ ~
 
 An impersonator property that is recognized by impersonate-procedure and
 chaperone-procedure.

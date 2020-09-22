@@ -22,14 +22,14 @@ capturing and restoring threads can be different.
 
                                         *thread-cell?*
 (thread-cell? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a thread cell, #f otherwise.
 
                                         *make-thread-cell*
 (make-thread-cell v [preserved?]) -> thread-cell? ~
-  v : any/c ~
-  preserved? : any/c = #f ~
+  v : any/c ~ ~
+  preserved? : any/c = #f ~ ~
 
 Creates and returns a new thread cell. Initially, v is the cell’s value
 for all threads. If preserved? is true, then the cell’s initial value
@@ -38,36 +38,32 @@ otherwise the cell’s value is initially v in all future threads.
 
                                         *thread-cell-ref*
 (thread-cell-ref cell) -> any ~
-  cell : thread-cell? ~
+  cell : thread-cell? ~ ~
 
 Returns the current value of cell for the current thread.
 
                                         *thread-cell-set!*
 (thread-cell-set! cell v) -> any ~
-  cell : thread-cell? ~
-  v : any/c ~
+  cell : thread-cell? ~ ~
+  v : any/c ~ ~
 
 Sets the value in cell to v for the current thread.
 
 Examples:
+
   > (define cnp (make-thread-cell '(nerve) #f))
-
   > (define cp (make-thread-cell '(cancer) #t))
-
   > (thread-cell-ref cnp)
   '(nerve)
   > (thread-cell-ref cp)
   '(cancer)
   > (thread-cell-set! cnp '(nerve nerve))
-
   > (thread-cell-set! cp '(cancer cancer))
-
   > (thread-cell-ref cnp)
   '(nerve nerve)
   > (thread-cell-ref cp)
   '(cancer cancer)
   > (define ch (make-channel))
-
   > (thread (lambda ()
               (channel-put ch (thread-cell-ref cnp))
               (channel-put ch (thread-cell-ref cp))
@@ -79,18 +75,16 @@ Examples:
   > (channel-get ch)
   '(cancer cancer)
   > (thread-cell-set! cp '(cancer cancer cancer))
-
   > (thread-cell-ref cp)
   '(cancer cancer cancer)
   > (channel-put ch 'ok)
-
   > (channel-get ch)
   '(cancer cancer)
 
                                         *current-preserved-thread-cell-values*
 (current-preserved-thread-cell-values) -> thread-cell-values? ~
 (current-preserved-thread-cell-values thread-cell-vals) -> void?
-  thread-cell-vals : thread-cell-values? ~
+  thread-cell-vals : thread-cell-values? ~ ~
 
 When called with no arguments, this procedure produces a
 thread-cell-vals that represents the current values (in the current
@@ -105,7 +99,7 @@ current thread reverts to its initial value.
 
                                         *thread-cell-values?*
 (thread-cell-values? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a set of thread cell values produced by
 current-preserved-thread-cell-values, #f otherwise.

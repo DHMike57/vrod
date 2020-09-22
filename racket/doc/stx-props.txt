@@ -1,22 +1,24 @@
 Syntax Object Properties
 
 Every syntax object has an associated syntax property list, which can be
-queried or extended with syntax-property. Properties are not preserved
-for a syntax-quoted syntax object in a compiled form that is marshaled
-to a byte string.
+queried or extended with syntax-property. A property is set as preserved
+or not; a preserved property is maintained for a syntax object in a
+compiled form that is marshaled to a byte string or ".zo" file, and
+other properties are discarded when marshaling.
 
-In read-syntax, the reader attaches a 'paren-shape property to any pair
-or vector syntax object generated from parsing a pair [ and ] or { and
-}; the property value is #\[ in the former case, and #\{ in the latter
-case. The syntax form copies any 'paren-shape property from the source
-of a template to corresponding generated syntax.
+In read-syntax, the reader attaches a preserved 'paren-shape property to
+any pair or vector syntax object generated from parsing a pair [ and ]
+or { and }; the property value is #\[ in the former case, and #\{ in the
+latter case. The syntax form copies any 'paren-shape property from the
+source of a template to corresponding generated syntax.
 
 Both the syntax input to a transformer and the syntax result of a
 transformer may have associated properties. The two sets of properties
 are merged by the syntax expander: each property in the original and not
 present in the result is copied to the result, and the values of
 properties present in both are combined with cons (result value first,
-original value second).
+original value second) and the consed value is preserved if either of
+the values were preserved.
 
 Before performing the merge, however, the syntax expander automatically
 adds a property to the original syntax object using the key 'origin. If
@@ -25,10 +27,11 @@ Then, still before the merge, the identifier that triggered the macro
 expansion (as syntax) is consed onto the 'origin property so far.  The
 'origin property thus records (in reverse order) the sequence of macro
 expansions that produced an expanded expression. Usually, the 'origin
-value is an immutable list of identifiers. However, a transformer might
-return syntax that has already been expanded, in which case an 'origin
-list can contain other lists after a merge. The syntax-track-origin
-procedure implements this tracking.
+value is a list of identifiers. However, a transformer might return
+syntax that has already been expanded, in which case an 'origin list can
+contain other lists after a merge. The syntax-track-origin procedure
+implements this tracking. The 'origin property is added as
+non-preserved.
 
 Besides 'origin tracking for general macro expansion, Racket adds
 properties to expanded syntax (often using syntax-track-origin) to
@@ -79,24 +82,74 @@ information about properties recognized when compiling a procedure. See
 current-compile for information on properties and byte codes.
 
                                         *syntax-property*
-(syntax-property stx key v) -> syntax? ~
-  stx : syntax? ~
-  key : any/c ~
-  v : any/c ~
+(syntax-property stx key v [preserved?]) -> syntax? ~
+  stx : syntax? ~ ~
+  key : (if preserved? (and/c symbol? symbol-interned?) any/c) ~ ~
+  v : any/c ~ ~
+  preserved? : any/c = (eq? key 'paren-shape) ~ ~
 (syntax-property stx key) -> any
-  stx : syntax? ~
-  key : any/c ~
+  stx : syntax? ~ ~
+  key : any/c ~ ~
 
-The three-argument form extends stx by associating an arbitrary property
-value v with the key key; the result is a new syntax object with the
-association (while stx itself is unchanged).
+The three- or four-argument form extends stx by associating an arbitrary
+property value v with the key key; the result is a new syntax object
+with the association (while stx itself is unchanged). The property is
+added as preserved if preserved? is true, in which case key must be an
+interned symbol, and v should be a value as described below that can be
+saved in marshaled bytecode.
 
 The two-argument form returns an arbitrary property value associated to
 stx with the key key, or #f if no value is associated to stx for key.
 
+To support marshaling to bytecode, a value for a preserved syntax
+property must be a non-cyclic value that is either
+
+* a pair containing allowed preserved-property values;
+
+* a vector (unmarshaled as immutable) containing allowed
+  preserved-property values;
+
+* a box (unmarshaled as immutable) containing allowed preserved-property
+  values;
+
+* an immutable prefab structure containing allowed preserved-property
+  values;
+
+* an immutable hash table whose keys and values are allowed
+  preserved-property values;
+
+* a syntax object; or
+
+* an empty list, symbol, number, character, string, byte string, or
+  regexp value.
+
+Any other value for a preserved property triggers an exception at an
+attempt to marshal the owning syntax object to bytecode form.
+
+Changed in version 6.4.0.14: Added the preserved? argument.
+
+                                        *syntax-property-remove*
+(syntax-property-remove stx key) -> syntax? ~
+  stx : syntax? ~ ~
+  key : any/c ~ ~
+
+Returns a syntax object like stx, but without a property (if any) for
+key.
+
+Added in version 6.90.0.20.
+
+                                        *syntax-property-preserved?*
+(syntax-property-preserved? stx key) -> boolean? ~
+  stx : syntax? ~ ~
+  key : (and/c symbol? symbol-interned?) ~ ~
+
+Returns #t if stx has a preserved property value for key, #f otherwise.
+
+Added in version 6.4.0.14.
+
                                         *syntax-property-symbol-keys*
 (syntax-property-symbol-keys stx) -> list? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns a list of all symbols that as keys have associated properties in
 stx. Uninterned symbols (see [missing]) are not included in the result
@@ -106,9 +159,9 @@ list.
 (syntax-track-origin new-stx       ~
                      orig-stx     
                      id-stx)  -> any
-  new-stx : syntax? ~
-  orig-stx : syntax? ~
-  id-stx : syntax? ~
+  new-stx : syntax? ~ ~
+  orig-stx : syntax? ~ ~
+  id-stx : identifier? ~ ~
 
 Adds properties to new-stx in the same way that macro expansion adds
 properties to a transformer result. In particular, it merges the

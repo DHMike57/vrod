@@ -5,7 +5,7 @@ string message, each event logged for a place has a data value that is
 an instance of a place-event prefab structure:
 
   (struct place-event (place-id action value time)
-    #:prefab) ~
+    #:prefab) ~ ~
 
 The place-id field is an exact integer that identifies a place.
 

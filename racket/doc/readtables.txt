@@ -52,7 +52,7 @@ causes the reader to behave as described in [missing].
 
                                         *readtable?*
 (readtable? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a readtable, #f otherwise.
 
@@ -61,20 +61,21 @@ Returns #t if v is a readtable, #f otherwise.
                 key              
                 mode             
                 action ...+) -> readtable?
-  readtable : readtable? ~
-  key : (or/c char? #f) ~
-  mode : (or/c (or/c 'terminating-macro ~
+  readtable : (or/c readtable? #f) ~ ~
+  key : (or/c char? #f) ~ ~
+  mode : (or/c (or/c 'terminating-macro ~ ~
                      'non-terminating-macro
                      'dispatch-macro)
                char?)
-  action : (or/c procedure? ~
+  action : (or/c procedure? ~ ~
                  readtable?)
 
-Creates a new readtable that is like readtable (which can be #f), except
-that the reader’s behavior is modified for each key according to the
-given mode and action. The ...+ for make-readtable applies to all three
-of key, mode, and action; in other words, the total number of arguments
-to make-readtable must be 1 modulo 3.
+Creates a new readtable that is like readtable (which can be #f to
+indicate the default readtable), except that the reader’s behavior is
+modified for each key according to the given mode and action. The ...+
+for make-readtable applies to all three of key, mode, and action; in
+other words, the total number of arguments to make-readtable must be 1
+modulo 3.
 
 The possible combinations for key, mode, and action are as follows:
 
@@ -96,16 +97,17 @@ The possible combinations for key, mode, and action are as follows:
 
 * char like-char readtable — causes char to be parsed in the same way
   that like-char is parsed in readtable, where readtable can be #f to
-  indicate the default readtable. Mapping a character to the same
-  actions as | in the default reader means that the character starts
-  quoting for symbols, and the same character terminates the quote; in
-  contrast, mapping a character to the same action as a " means that the
-  character starts a string, but the string is still terminated with a
-  closing ". Finally, mapping a character to an action in the default
-  readtable means that the character’s behavior is sensitive to
-  parameters that affect the original character; for example, mapping a
-  character to the same action as a curly brace { in the default
-  readtable means that the character is disallowed when the
+  indicate the default readtable. (The mapping of char does not apply
+  after #, which is configured separately via 'dispatch-macro.) Mapping
+  a character to the same actions as | in the default reader means that
+  the character starts quoting for symbols, and the same character
+  terminates the quote; in contrast, mapping a character to the same
+  action as a " means that the character starts a string, but the string
+  is still terminated with a closing ". Finally, mapping a character to
+  an action in the default readtable means that the character’s behavior
+  is sensitive to parameters that affect the original character; for
+  example, mapping a character to the same action as a curly brace { in
+  the default readtable means that the character is disallowed when the
   read-curly-brace-as-paren parameter is set to #f.
 
 * #f 'non-terminating-macro proc — replaces the macro used to parse
@@ -126,8 +128,8 @@ location for already-consumed character(s): the source name, a line
 number or #f, a column number or #f, and a position or #f. When the
 reader macro is triggered by read (or read/recursive), the procedure is
 passed only two arguments if it accepts two arguments, otherwise it is
-passed six arguments where the last four are all #f. See
-Reader-Extension Procedures for information on the procedure’s results.
+passed six arguments where the third is always #f. See Reader-Extension
+Procedures for information on the procedure’s results.
 
 A reader macro normally reads characters from the given input port to
 produce a value to be used as the “reader macro-expansion” of the
@@ -143,8 +145,8 @@ read-syntax/recursive.
                 'non-terminating-macro))
     (or/c #f procedure?)
     (or/c #f procedure?)
-  readtable : readtable? ~
-  char : char? ~
+  readtable : readtable? ~ ~
+  char : char? ~ ~
 
 Produces information about the mappings in readtable for char. The
 result is three values:
@@ -152,7 +154,7 @@ result is three values:
 * either a character (mapping to the same behavior as the character in
   the default readtable), 'terminating-macro, or 'non-terminating-macro;
   this result reports the main (i.e., non-'dispatch-macro) mapping for
-  key. When the result is a character, then key is mapped to the same
+  char. When the result is a character, then char is mapped to the same
   behavior as the returned character in the default readtable.
 
 * either #f or a reader-macro procedure; the result is a procedure when
@@ -167,15 +169,15 @@ directly accessible. To invoke default behaviors, use read/recursive or
 read-syntax/recursive with a character and the #f readtable.
 
 Examples:
+
   ; Provides raise-read-error and raise-read-eof-error
   > (require syntax/readerr)
-
   > (define (skip-whitespace port)
       ; Skips whitespace characters, sensitive to the current
       ; readtable's definition of whitespace
       (let ([ch (peek-char port)])
         (unless (eof-object? ch)
-          ; Consult current readtable: ~
+          ; Consult current readtable: ~ ~
           (let-values ([(like-ch/sym proc dispatch-proc)
                         (readtable-mapping (current-readtable) ch)])
             ; If like-ch/sym is whitespace, then ch is whitespace
@@ -183,7 +185,6 @@ Examples:
                        (char-whitespace? like-ch/sym))
               (read-char port)
               (skip-whitespace port))))))
-
   > (define (skip-comments read-one port src)
       ; Recursive read, but skip comments and detect EOF
       (let loop ()
@@ -195,7 +196,6 @@ Examples:
               (raise-read-eof-error
                "unexpected EOF in tuple" src l c p 1))]
            [else v]))))
-
   > (define (parse port read-one src)
       ; First, check for empty tuple
       (skip-whitespace port)
@@ -205,10 +205,9 @@ Examples:
             (if (special-comment? elem)
                 ; Found a comment, so look for > again
                 (parse port read-one src)
-                ; Non-empty tuple: ~
+                ; Non-empty tuple: ~ ~
                 (cons elem
                       (parse-nonempty port read-one src))))))
-
   > (define (parse-nonempty port read-one src)
       ; Need a comma or closer
       (skip-whitespace port)
@@ -234,8 +233,7 @@ Examples:
              ((if (eof-object? v)
                   raise-read-eof-error
                   raise-read-error)
-              "expected `,' or `>'" src l c p 1)]))]))
-
+              "expected `,` or `>`" src l c p 1)]))]))
   > (define (make-delims-table)
       ; Table to use for recursive reads to disallow delimiters
       ;  (except those in sub-expressions)
@@ -244,26 +242,24 @@ Examples:
                  [(ch port) (misplaced-delimiter ch port #f #f #f #f)]
                  [(ch port src line col pos)
                   (raise-read-error
-                   (format "misplaced `~a' in tuple" ch)
+                   (format "misplaced `~a` in tuple" ch)
                    src line col pos 1)])])
         (make-readtable (current-readtable)
                         #\, 'terminating-macro misplaced-delimiter
                         #\> 'terminating-macro misplaced-delimiter)))
-
   > (define (wrap l)
       `(make-tuple (list ,@l)))
-
   > (define parse-open-tuple
       (case-lambda
        [(ch port)
-        ; ‘read' mode
+        ; ‘read‘ mode
         (wrap (parse port
                      (lambda ()
                        (read/recursive port #f
                                        (make-delims-table)))
                      (object-name port)))]
        [(ch port src line col pos)
-        ; ‘read-syntax' mode
+        ; ‘read-syntax‘ mode
         (datum->syntax
          #f
          (wrap (parse port
@@ -273,10 +269,8 @@ Examples:
                       src))
          (let-values ([(l c p) (port-next-location port)])
            (list src line col pos (and pos (- p pos)))))]))
-
   > (define tuple-readtable
       (make-readtable #f #\< 'terminating-macro parse-open-tuple))
-
   > (parameterize ([current-readtable tuple-readtable])
       (read (open-input-string "<1 , 2 , \"a\">")))
   '(make-tuple (list 1 2 "a"))
@@ -289,7 +283,6 @@ Examples:
                       #\* 'terminating-macro (lambda a
                                                (make-special-comment #f))
                       #\_ #\space #f))
-
   > (parameterize ([current-readtable tuple-readtable+])
       (read (open-input-string "< * 1 __,__  2 __,__ * \"a\" * >")))
   '(make-tuple (list 1 2 "a"))
@@ -336,7 +329,7 @@ value. Graph structure (including cycles) is preserved in the copy.
 
                                         *make-special-comment*
 (make-special-comment v) -> special-comment? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Creates a special-comment value that encapsulates v. The read,
 read-syntax, etc., procedures treat values constructed with
@@ -345,13 +338,13 @@ reader-extension procedure (see Reader-Extension Procedures).
 
                                         *special-comment?*
 (special-comment? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is the result of make-special-comment, #f otherwise.
 
                                         *special-comment-value*
 (special-comment-value sc) -> any ~
-  sc : special-comment? ~
+  sc : special-comment? ~ ~
 
 Returns the value encapsulated by the special-comment value sc. This
 value is never used directly by a reader, but it might be used by the

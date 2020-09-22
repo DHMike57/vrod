@@ -1,6 +1,6 @@
 Unsafe Operations
 
- (require racket/unsafe/ops) package: base ~
+ (require racket/unsafe/ops) package: base ~ ~
 
 All functions and forms provided by racket/base and racket check their
 arguments to ensure that the arguments conform to contracts and other
@@ -22,26 +22,24 @@ adjusting the code inspector (see [missing]).
 1. Unsafe Numeric Operations
 
                                         *unsafe-fx+*
-(unsafe-fx+ a b) -> fixnum? ~
-  a : fixnum? ~
-  b : fixnum? ~
-(unsafe-fx- a b) -> fixnum?
-  a : fixnum? ~
-  b : fixnum? ~
-(unsafe-fx* a b) -> fixnum?
-  a : fixnum? ~
-  b : fixnum? ~
+(unsafe-fx+ a ...) -> fixnum? ~
+  a : fixnum? ~ ~
+(unsafe-fx- a b ...) -> fixnum?
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
+(unsafe-fx* a ...) -> fixnum?
+  a : fixnum? ~ ~
 (unsafe-fxquotient a b) -> fixnum?
-  a : fixnum? ~
-  b : fixnum? ~
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
 (unsafe-fxremainder a b) -> fixnum?
-  a : fixnum? ~
-  b : fixnum? ~
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
 (unsafe-fxmodulo a b) -> fixnum?
-  a : fixnum? ~
-  b : fixnum? ~
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
 (unsafe-fxabs a) -> fixnum?
-  a : fixnum? ~
+  a : fixnum? ~ ~
 
 For fixnums: Like +, -, *, quotient, remainder, modulo, and abs, but
 constrained to consume fixnums and produce a fixnum result. The
@@ -49,24 +47,25 @@ mathematical operation on a and b must be representable as a fixnum. In
 the case of unsafe-fxquotient, unsafe-fxremainder, and unsafe-fxmodulo,
 b must not be 0.
 
+Changed in version 7.0.0.13 of package base: Allow zero or more
+arguments for unsafe-fx+ and unsafe-fx* and allow one or more arguments
+for unsafe-fx-.
+
                                         *unsafe-fxand*
-(unsafe-fxand a b) -> fixnum? ~
-  a : fixnum? ~
-  b : fixnum? ~
-(unsafe-fxior a b) -> fixnum?
-  a : fixnum? ~
-  b : fixnum? ~
-(unsafe-fxxor a b) -> fixnum?
-  a : fixnum? ~
-  b : fixnum? ~
+(unsafe-fxand a ...) -> fixnum? ~
+  a : fixnum? ~ ~
+(unsafe-fxior a ...) -> fixnum?
+  a : fixnum? ~ ~
+(unsafe-fxxor a ...) -> fixnum?
+  a : fixnum? ~ ~
 (unsafe-fxnot a) -> fixnum?
-  a : fixnum? ~
+  a : fixnum? ~ ~
 (unsafe-fxlshift a b) -> fixnum?
-  a : fixnum? ~
-  b : fixnum? ~
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
 (unsafe-fxrshift a b) -> fixnum?
-  a : fixnum? ~
-  b : fixnum? ~
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
 
 For fixnums: Like bitwise-and, bitwise-ior, bitwise-xor, bitwise-not,
 and arithmetic-shift, but constrained to consume fixnums; the result is
@@ -74,89 +73,101 @@ always a fixnum. The unsafe-fxlshift and unsafe-fxrshift operations
 correspond to arithmetic-shift, but require non-negative arguments;
 unsafe-fxlshift is a positive (i.e., left) shift, and unsafe-fxrshift is
 a negative (i.e., right) shift, where the number of bits to shift must
-be less than the number of bits used to represent a fixnum. In the case
-of unsafe-fxlshift, bits in the result beyond the number of bits used to
-represent a fixnum are effectively replaced with a copy of the high bit.
+be no more than the number of bits used to represent a fixnum. In the
+case of unsafe-fxlshift, bits in the result beyond the number of bits
+used to represent a fixnum are effectively replaced with a copy of the
+high bit.
 
-                                        *unsafe-fx*
-(unsafe-fx= a b) -> boolean? ~
-  a : fixnum? ~
-  b : fixnum? ~
-(unsafe-fx< a b) -> boolean?
-  a : fixnum? ~
-  b : fixnum? ~
-(unsafe-fx> a b) -> boolean?
-  a : fixnum? ~
-  b : fixnum? ~
-(unsafe-fx<= a b) -> boolean?
-  a : fixnum? ~
-  b : fixnum? ~
-(unsafe-fx>= a b) -> boolean?
-  a : fixnum? ~
-  b : fixnum? ~
-(unsafe-fxmin a b) -> fixnum?
-  a : fixnum? ~
-  b : fixnum? ~
-(unsafe-fxmax a b) -> fixnum?
-  a : fixnum? ~
-  b : fixnum? ~
+Changed in version 7.0.0.13 of package base: Allow zero or more
+arguments for unsafe-fxand, unsafe-fxior, and unsafe-fxxor.
+
+                                        *unsafe-fx=*
+(unsafe-fx= a b ...) -> boolean? ~
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
+(unsafe-fx< a b ...) -> boolean?
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
+(unsafe-fx> a b ...) -> boolean?
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
+(unsafe-fx<= a b ...) -> boolean?
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
+(unsafe-fx>= a b ...) -> boolean?
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
+(unsafe-fxmin a b ...) -> fixnum?
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
+(unsafe-fxmax a b ...) -> fixnum?
+  a : fixnum? ~ ~
+  b : fixnum? ~ ~
 
 For fixnums: Like =, <, >, <=, >=, min, and max, but constrained to
 consume fixnums.
 
+Changed in version 7.0.0.13 of package base: Allow one or more argument,
+instead of allowing just two.
+
                                         *unsafe-fl+*
-(unsafe-fl+ a b) -> flonum? ~
-  a : flonum? ~
-  b : flonum? ~
-(unsafe-fl- a b) -> flonum?
-  a : flonum? ~
-  b : flonum? ~
-(unsafe-fl* a b) -> flonum?
-  a : flonum? ~
-  b : flonum? ~
-(unsafe-fl/ a b) -> flonum?
-  a : flonum? ~
-  b : flonum? ~
+(unsafe-fl+ a ...) -> flonum? ~
+  a : flonum? ~ ~
+(unsafe-fl- a b ...) -> flonum?
+  a : flonum? ~ ~
+  b : flonum? ~ ~
+(unsafe-fl* a ...) -> flonum?
+  a : flonum? ~ ~
+(unsafe-fl/ a b ...) -> flonum?
+  a : flonum? ~ ~
+  b : flonum? ~ ~
 (unsafe-flabs a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 
 For flonums: Unchecked versions of fl+, fl-, fl*, fl/, and flabs.
 
-                                        *unsafe-fl*
-(unsafe-fl= a b) -> boolean? ~
-  a : flonum? ~
-  b : flonum? ~
-(unsafe-fl< a b) -> boolean?
-  a : flonum? ~
-  b : flonum? ~
-(unsafe-fl> a b) -> boolean?
-  a : flonum? ~
-  b : flonum? ~
-(unsafe-fl<= a b) -> boolean?
-  a : flonum? ~
-  b : flonum? ~
-(unsafe-fl>= a b) -> boolean?
-  a : flonum? ~
-  b : flonum? ~
-(unsafe-flmin a b) -> flonum?
-  a : flonum? ~
-  b : flonum? ~
-(unsafe-flmax a b) -> flonum?
-  a : flonum? ~
-  b : flonum? ~
+Changed in version 7.0.0.13 of package base: Allow zero or more
+arguments for unsafe-fl+ and unsafe-fl* and one or more arguments for
+unsafe-fl- and unsafe-fl/.
+
+                                        *unsafe-fl=*
+(unsafe-fl= a b ...) -> boolean? ~
+  a : flonum? ~ ~
+  b : flonum? ~ ~
+(unsafe-fl< a b ...) -> boolean?
+  a : flonum? ~ ~
+  b : flonum? ~ ~
+(unsafe-fl> a b ...) -> boolean?
+  a : flonum? ~ ~
+  b : flonum? ~ ~
+(unsafe-fl<= a b ...) -> boolean?
+  a : flonum? ~ ~
+  b : flonum? ~ ~
+(unsafe-fl>= a b ...) -> boolean?
+  a : flonum? ~ ~
+  b : flonum? ~ ~
+(unsafe-flmin a b ...) -> flonum?
+  a : flonum? ~ ~
+  b : flonum? ~ ~
+(unsafe-flmax a b ...) -> flonum?
+  a : flonum? ~ ~
+  b : flonum? ~ ~
 
 For flonums: Unchecked versions of fl=, fl<, fl>, fl<=, fl>=, flmin, and
 flmax.
 
+Changed in version 7.0.0.13 of package base: Allow one or more argument,
+instead of allowing just two.
+
                                         *unsafe-flround*
 (unsafe-flround a) -> flonum? ~
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-flfloor a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-flceiling a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-fltruncate a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 
 For flonums: Unchecked (potentially) versions of flround, flfloor,
 flceiling, and fltruncate. Currently, these bindings are simply aliases
@@ -164,26 +175,26 @@ for the corresponding safe bindings.
 
                                         *unsafe-flsin*
 (unsafe-flsin a) -> flonum? ~
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-flcos a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-fltan a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-flasin a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-flacos a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-flatan a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-fllog a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-flexp a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-flsqrt a) -> flonum?
-  a : flonum? ~
+  a : flonum? ~ ~
 (unsafe-flexpt a b) -> flonum?
-  a : flonum? ~
-  b : flonum? ~
+  a : flonum? ~ ~
+  b : flonum? ~ ~
 
 For flonums: Unchecked (potentially) versions of flsin, flcos, fltan,
 flasin, flacos, flatan, fllog, flexp, flsqrt, and flexpt. Currently,
@@ -195,14 +206,14 @@ bindings.
  -> (and/c complex?
            (lambda (c) (flonum? (real-part c)))
            (lambda (c) (flonum? (imag-part c))))
-  a : flonum? ~
-  b : flonum? ~
+  a : flonum? ~ ~
+  b : flonum? ~ ~
 (unsafe-flreal-part a) -> flonum?
-  a : (and/c complex? ~
+  a : (and/c complex? ~ ~
              (lambda (c) (flonum? (real-part c)))
              (lambda (c) (flonum? (imag-part c))))
 (unsafe-flimag-part a) -> flonum?
-  a : (and/c complex? ~
+  a : (and/c complex? ~ ~
              (lambda (c) (flonum? (real-part c)))
              (lambda (c) (flonum? (imag-part c))))
 
@@ -211,55 +222,82 @@ flimag-part.
 
                                         *unsafe-fx->fl*
 (unsafe-fx->fl a) -> flonum? ~
-  a : fixnum? ~
+  a : fixnum? ~ ~
 (unsafe-fl->fx a) -> fixnum?
-  a : flonum? ~
+  a : flonum? ~ ~
 
-Unchecked conversion of a fixnum to an integer flonum and vice versa.
-These are similar to the safe bindings ->fl and fl->exact-integer, but
-further constrained to consume or produce a fixnum.
+Unchecked versions of fx->fl and fl->fx.
+
+Changed in version 7.7.0.8 of package base: Changed unsafe-fl->fx to
+truncate.
 
                                         *unsafe-flrandom*
 (unsafe-flrandom rand-gen) -> (and flonum? (>/c 0) (</c 1)) ~
-  rand-gen : pseudo-random-generator? ~
+  rand-gen : pseudo-random-generator? ~ ~
 
 Unchecked version of flrandom.
 
-2. Unsafe Data Extraction
+2. Unsafe Character Operations
+
+                                        *unsafe-char=?*
+(unsafe-char=? a b ...) -> boolean? ~
+  a : char? ~ ~
+  b : char? ~ ~
+(unsafe-char<? a b ...) -> boolean?
+  a : char? ~ ~
+  b : char? ~ ~
+(unsafe-char>? a b ...) -> boolean?
+  a : char? ~ ~
+  b : char? ~ ~
+(unsafe-char<=? a b ...) -> boolean?
+  a : char? ~ ~
+  b : char? ~ ~
+(unsafe-char>=? a b ...) -> boolean?
+  a : char? ~ ~
+  b : char? ~ ~
+(unsafe-char->integer a) -> fixnum?
+  a : char? ~ ~
+
+Unchecked versions of char=?, char<?, char>?, char<=?, char>=?, and
+char->integer.
+
+Added in version 7.0.0.14 of package base.
+
+3. Unsafe Data Extraction
 
                                         *unsafe-car*
 (unsafe-car p) -> any/c ~
-  p : pair? ~
+  p : pair? ~ ~
 (unsafe-cdr p) -> any/c
-  p : pair? ~
+  p : pair? ~ ~
 (unsafe-mcar p) -> any/c
-  p : mpair? ~
+  p : mpair? ~ ~
 (unsafe-mcdr p) -> any/c
-  p : mpair? ~
+  p : mpair? ~ ~
 (unsafe-set-mcar! p v) -> void?
-  p : mpair? ~
-  v : any/c ~
+  p : mpair? ~ ~
+  v : any/c ~ ~
 (unsafe-set-mcdr! p v) -> void?
-  p : mpair? ~
-  v : any/c ~
+  p : mpair? ~ ~
+  v : any/c ~ ~
 
 Unsafe variants of car, cdr, mcar, mcdr, set-mcar!, and set-mcdr!.
 
                                         *unsafe-cons-list*
 (unsafe-cons-list v rest) -> (and/c pair? list?) ~
-  v : any/c ~
-  rest : list? ~
+  v : any/c ~ ~
+  rest : list? ~ ~
 
 Unsafe variant of cons that produces a pair that claims to be a
 list—without checking whether rest is a list.
 
                                         *unsafe-list-ref*
 (unsafe-list-ref lst pos) -> any/c ~
-  lst : pair? ~
-  pos : (and/c exact-nonnegative-integer? fixnum?) ~
+  lst : pair? ~ ~
+  pos : (and/c exact-nonnegative-integer? fixnum?) ~ ~
 (unsafe-list-tail lst pos) -> any/c
-  lst : any/c ~
-  pos : (and/c exact-nonnegative-integer? fixnum?) ~
+  lst : any/c ~ ~
+  pos : (and/c exact-nonnegative-integer? fixnum?) ~ ~
 
 Unsafe variants of list-ref and list-tail, where pos must be a fixnum,
 and lst must start with at least (add1 pos) (for unsafe-list-ref) or pos
@@ -267,96 +305,149 @@ and lst must start with at least (add1 pos) (for unsafe-list-ref) or pos
 
                                         *unsafe-unbox*
 (unsafe-unbox b) -> fixnum? ~
-  b : box? ~
+  b : box? ~ ~
 (unsafe-set-box! b k) -> void?
-  b : box? ~
-  k : fixnum? ~
+  b : box? ~ ~
+  k : fixnum? ~ ~
 (unsafe-unbox* v) -> any/c
-  v : (and/c box? (not/c impersonator?)) ~
+  v : (and/c box? (not/c impersonator?)) ~ ~
 (unsafe-set-box*! v val) -> void?
-  v : (and/c box? (not/c impersonator?)) ~
-  val : any/c ~
+  v : (and/c box? (not/c impersonator?)) ~ ~
+  val : any/c ~ ~
 
 Unsafe versions of unbox and set-box!, where the box* variants can be
 faster but do not work on impersonators.
 
                                         *unsafe-box*-cas!*
 (unsafe-box*-cas! loc old new) -> boolean? ~
-  loc : box? ~
-  old : any/c ~
-  new : any/c ~
+  loc : box? ~ ~
+  old : any/c ~ ~
+  new : any/c ~ ~
 
 Unsafe version of box-cas!.  Like unsafe-set-box*!, it does not work on
 impersonators.
 
                                         *unsafe-vector-length*
 (unsafe-vector-length v) -> fixnum? ~
-  v : vector? ~
+  v : vector? ~ ~
 (unsafe-vector-ref v k) -> any/c
-  v : vector? ~
-  k : fixnum? ~
+  v : vector? ~ ~
+  k : fixnum? ~ ~
 (unsafe-vector-set! v k val) -> void?
-  v : vector? ~
-  k : fixnum? ~
-  val : any/c ~
+  v : vector? ~ ~
+  k : fixnum? ~ ~
+  val : any/c ~ ~
 (unsafe-vector*-length v) -> fixnum?
-  v : (and/c vector? (not/c impersonator?)) ~
+  v : (and/c vector? (not/c impersonator?)) ~ ~
 (unsafe-vector*-ref v k) -> any/c
-  v : (and/c vector? (not/c impersonator?)) ~
-  k : fixnum? ~
+  v : (and/c vector? (not/c impersonator?)) ~ ~
+  k : fixnum? ~ ~
 (unsafe-vector*-set! v k val) -> void?
-  v : (and/c vector? (not/c impersonator?)) ~
-  k : fixnum? ~
-  val : any/c ~
+  v : (and/c vector? (not/c impersonator?)) ~ ~
+  k : fixnum? ~ ~
+  val : any/c ~ ~
+(unsafe-vector*-cas! v k old-val new-val) -> boolean?
+  v : (and/c vector? (not/c impersonator?)) ~ ~
+  k : fixnum? ~ ~
+  old-val : any/c ~ ~
+  new-val : any/c ~ ~
 
-Unsafe versions of vector-length, vector-ref, and vector-set!, where the
-vector* variants can be faster but do not work on impersonators.
+Unsafe versions of vector-length, vector-ref, vector-set!, and
+vector-cas!, where the vector* variants can be faster but do not work on
+impersonators.
 
 A vector’s size can never be larger than a fixnum, so even vector-length
 always returns a fixnum.
 
+Changed in version 6.11.0.2 of package base: Added unsafe-vector*-cas!.
+
+                                        *unsafe-vector*->immutable-vector!*
+(unsafe-vector*->immutable-vector! v) ~
+ -> (and/c vector? immutable?)
+  v : (and/c vector? (not/c impersonator?)) ~ ~
+
+Similar to vector->immutable-vector, but potentially destroys v and
+reuses it space, so v must not be used after calling
+unsafe-vector*->immutable-vector!.
+
+Added in version 7.7.0.6 of package base.
+
                                         *unsafe-string-length*
 (unsafe-string-length str) -> fixnum? ~
-  str : string? ~
+  str : string? ~ ~
 (unsafe-string-ref str k)
  -> (and/c char? (lambda (ch) (<= 0 (char->integer ch) 255)))
-  str : string? ~
-  k : fixnum? ~
+  str : string? ~ ~
+  k : fixnum? ~ ~
 (unsafe-string-set! str k ch) -> void?
-  str : (and/c string? (not/c immutable?)) ~
-  k : fixnum? ~
-  ch : char? ~
+  str : (and/c string? (not/c immutable?)) ~ ~
+  k : fixnum? ~ ~
+  ch : char? ~ ~
 
 Unsafe versions of string-length, string-ref, and string-set!. The
 unsafe-string-ref procedure can be used only when the result will be a
 Latin-1 character. A string’s size can never be larger than a fixnum (so
 even string-length always returns a fixnum).
 
+                                        *unsafe-string->immutable-string!*
+(unsafe-string->immutable-string! str) ~
+ -> (and/c string? immutable?)
+  str : string? ~ ~
+
+Similar to string->immutable-string, but potentially destroys str and
+reuses it space, so str must not be used after calling
+unsafe-string->immutable-string!.
+
+Added in version 7.7.0.6 of package base.
+
                                         *unsafe-bytes-length*
 (unsafe-bytes-length bstr) -> fixnum? ~
-  bstr : bytes? ~
+  bstr : bytes? ~ ~
 (unsafe-bytes-ref bstr k) -> byte?
-  bstr : bytes? ~
-  k : fixnum? ~
+  bstr : bytes? ~ ~
+  k : fixnum? ~ ~
 (unsafe-bytes-set! bstr k b) -> void?
-  bstr : (and/c bytes? (not/c immutable?)) ~
-  k : fixnum? ~
-  b : byte? ~
+  bstr : (and/c bytes? (not/c immutable?)) ~ ~
+  k : fixnum? ~ ~
+  b : byte? ~ ~
+(unsafe-bytes-copy!  dest           
+                     dest-start     
+                     src            
+                    [src-start      
+                     src-end])  -> void?
+  dest : (and/c bytes? (not/c immutable?)) ~ ~
+  dest-start : fixnum? ~ ~
+  src : bytes? ~ ~
+  src-start : fixnum? = 0 ~ ~
+  src-end : fixnum? = (bytes-length src) ~ ~
 
-Unsafe versions of bytes-length, bytes-ref, and bytes-set!. A bytes’s
-size can never be larger than a fixnum (so even bytes-length always
-returns a fixnum).
+Unsafe versions of bytes-length, bytes-ref, bytes-set!, and bytes-copy!.
+A bytes’s size can never be larger than a fixnum (so even bytes-length
+always returns a fixnum).
+
+Changed in version 7.5.0.15 of package base: Added unsafe-bytes-copy!.
+
+                                        *unsafe-bytes->immutable-bytes!*
+(unsafe-bytes->immutable-bytes! bstr) ~
+ -> (and/c bytes? immutable?)
+  bstr : bytes? ~ ~
+
+Similar to bytes->immutable-bytes, but potentially destroys bstr and
+reuses it space, so bstr must not be used after calling
+unsafe-bytes->immutable-bytes!.
+
+Added in version 7.7.0.6 of package base.
 
                                         *unsafe-fxvector-length*
 (unsafe-fxvector-length v) -> fixnum? ~
-  v : fxvector? ~
+  v : fxvector? ~ ~
 (unsafe-fxvector-ref v k) -> fixnum?
-  v : fxvector? ~
-  k : fixnum? ~
+  v : fxvector? ~ ~
+  k : fixnum? ~ ~
 (unsafe-fxvector-set! v k x) -> void?
-  v : fxvector? ~
-  k : fixnum? ~
-  x : fixnum? ~
+  v : fxvector? ~ ~
+  k : fixnum? ~ ~
+  x : fixnum? ~ ~
 
 Unsafe versions of fxvector-length, fxvector-ref, and fxvector-set!. A
 fxvector’s size can never be larger than a fixnum (so even
@@ -364,129 +455,309 @@ fxvector-length always returns a fixnum).
 
                                         *unsafe-flvector-length*
 (unsafe-flvector-length v) -> fixnum? ~
-  v : flvector? ~
+  v : flvector? ~ ~
 (unsafe-flvector-ref v k) -> flonum?
-  v : flvector? ~
-  k : fixnum? ~
+  v : flvector? ~ ~
+  k : fixnum? ~ ~
 (unsafe-flvector-set! v k x) -> void?
-  v : flvector? ~
-  k : fixnum? ~
-  x : flonum? ~
+  v : flvector? ~ ~
+  k : fixnum? ~ ~
+  x : flonum? ~ ~
 
 Unsafe versions of flvector-length, flvector-ref, and flvector-set!. A
 flvector’s size can never be larger than a fixnum (so even
 flvector-length always returns a fixnum).
 
-                                        *unsafe-f*
+                                        *unsafe-f64vector-ref*
 (unsafe-f64vector-ref vec k) -> flonum? ~
-  vec : f64vector? ~
-  k : fixnum? ~
+  vec : f64vector? ~ ~
+  k : fixnum? ~ ~
 (unsafe-f64vector-set! vec k n) -> void?
-  vec : f64vector? ~
-  k : fixnum? ~
-  n : flonum? ~
+  vec : f64vector? ~ ~
+  k : fixnum? ~ ~
+  n : flonum? ~ ~
 
 Unsafe versions of f64vector-ref and f64vector-set!.
 
-                                        *unsafe-s*
+                                        *unsafe-s16vector-ref*
 (unsafe-s16vector-ref vec k) -> (integer-in -32768 32767) ~
-  vec : s16vector? ~
-  k : fixnum? ~
+  vec : s16vector? ~ ~
+  k : fixnum? ~ ~
 (unsafe-s16vector-set! vec k n) -> void?
-  vec : s16vector? ~
-  k : fixnum? ~
-  n : (integer-in -32768 32767) ~
+  vec : s16vector? ~ ~
+  k : fixnum? ~ ~
+  n : (integer-in -32768 32767) ~ ~
 
 Unsafe versions of s16vector-ref and s16vector-set!.
 
-                                        *unsafe-u*
+                                        *unsafe-u16vector-ref*
 (unsafe-u16vector-ref vec k) -> (integer-in 0 65535) ~
-  vec : u16vector? ~
-  k : fixnum? ~
+  vec : u16vector? ~ ~
+  k : fixnum? ~ ~
 (unsafe-u16vector-set! vec k n) -> void?
-  vec : u16vector? ~
-  k : fixnum? ~
-  n : (integer-in 0 65535) ~
+  vec : u16vector? ~ ~
+  k : fixnum? ~ ~
+  n : (integer-in 0 65535) ~ ~
 
 Unsafe versions of u16vector-ref and u16vector-set!.
 
                                         *unsafe-struct-ref*
 (unsafe-struct-ref v k) -> any/c ~
-  v : any/c ~
-  k : fixnum? ~
+  v : any/c ~ ~
+  k : fixnum? ~ ~
 (unsafe-struct-set! v k val) -> void?
-  v : any/c ~
-  k : fixnum? ~
-  val : any/c ~
+  v : any/c ~ ~
+  k : fixnum? ~ ~
+  val : any/c ~ ~
 (unsafe-struct*-ref v k) -> any/c
-  v : (not/c impersonator?) ~
-  k : fixnum? ~
+  v : (not/c impersonator?) ~ ~
+  k : fixnum? ~ ~
 (unsafe-struct*-set! v k val) -> void?
-  v : (not/c impersonator?) ~
-  k : fixnum? ~
-  val : any/c ~
+  v : (not/c impersonator?) ~ ~
+  k : fixnum? ~ ~
+  val : any/c ~ ~
+(unsafe-struct*-cas! v k old-val new-val) -> boolean?
+  v : (not/c impersonator?) ~ ~
+  k : fixnum? ~ ~
+  old-val : any/c ~ ~
+  new-val : any/c ~ ~
 
 Unsafe field access and update for an instance of a structure type,
 where the struct* variants can be faster but do not work on
 impersonators. The index k must be between 0 (inclusive) and the number
 of fields in the structure (exclusive). In the case of
-unsafe-struct-set!, the field must be mutable.
+unsafe-struct-set!, unsafe-struct*-set!, and unsafe-struct*-cas!, the
+field must be mutable. The unsafe-struct*-cas! operation is analogous to
+box-cas! to perform an atomic compare-and-set.
 
-3. Unsafe Extflonum Operations
+Changed in version 6.11.0.2 of package base: Added unsafe-struct*-cas!.
+
+                                        *unsafe-mutable-hash-iterate-first*
+(unsafe-mutable-hash-iterate-first hash) -> (or/c #f any/c) ~
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+(unsafe-mutable-hash-iterate-next hash pos) -> (or/c #f any/c)
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  pos : any/c ~ ~
+(unsafe-mutable-hash-iterate-key hash pos) -> any/c
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  pos : any/c ~ ~
+(unsafe-mutable-hash-iterate-key hash             
+                                 pos              
+                                 bad-index-v) -> any/c
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+(unsafe-mutable-hash-iterate-value hash     
+                                   pos) -> any/c
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  pos : any/c ~ ~
+(unsafe-mutable-hash-iterate-value hash             
+                                   pos              
+                                   bad-index-v) -> any/c
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+(unsafe-mutable-hash-iterate-key+value hash     
+                                       pos) -> any/c any/c
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  pos : any/c ~ ~
+(unsafe-mutable-hash-iterate-key+value hash         
+                                       pos          
+                                       bad-index-v) 
+ -> any/c any/c
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+(unsafe-mutable-hash-iterate-pair hash pos) -> pair?
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  pos : any/c ~ ~
+(unsafe-mutable-hash-iterate-pair hash             
+                                  pos              
+                                  bad-index-v) -> pair?
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+(unsafe-immutable-hash-iterate-first hash) -> (or/c #f any/c)
+  hash : (and/c hash? immutable?) ~ ~
+(unsafe-immutable-hash-iterate-next hash     
+                                    pos) -> (or/c #f any/c)
+  hash : (and/c hash? immutable?) ~ ~
+  pos : any/c ~ ~
+(unsafe-immutable-hash-iterate-key hash     
+                                   pos) -> any/c
+  hash : (and/c hash? immutable?) ~ ~
+  pos : any/c ~ ~
+(unsafe-immutable-hash-iterate-key hash             
+                                   pos              
+                                   bad-index-v) -> any/c
+  hash : (and/c hash? immutable?) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+(unsafe-immutable-hash-iterate-value hash     
+                                     pos) -> any/c
+  hash : (and/c hash? immutable?) ~ ~
+  pos : any/c ~ ~
+(unsafe-immutable-hash-iterate-value hash             
+                                     pos              
+                                     bad-index-v) -> any/c
+  hash : (and/c hash? immutable?) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+(unsafe-immutable-hash-iterate-key+value hash     
+                                         pos) -> any/c any/c
+  hash : (and/c hash? immutable?) ~ ~
+  pos : any/c ~ ~
+(unsafe-immutable-hash-iterate-key+value hash         
+                                         pos          
+                                         bad-index-v) 
+ -> any/c any/c
+  hash : (and/c hash? immutable?) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+(unsafe-immutable-hash-iterate-pair hash     
+                                    pos) -> pair?
+  hash : (and/c hash? immutable?) ~ ~
+  pos : any/c ~ ~
+(unsafe-immutable-hash-iterate-pair hash             
+                                    pos              
+                                    bad-index-v) -> pair?
+  hash : (and/c hash? immutable?) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+(unsafe-weak-hash-iterate-first hash) -> (or/c #f any/c)
+  hash : (and/c hash? hash-weak?) ~ ~
+(unsafe-weak-hash-iterate-next hash pos) -> (or/c #f any/c)
+  hash : (and/c hash? hash-weak?) ~ ~
+  pos : any/c ~ ~
+(unsafe-weak-hash-iterate-key hash pos) -> any/c
+  hash : (and/c hash? hash-weak?) ~ ~
+  pos : any/c ~ ~
+(unsafe-weak-hash-iterate-key hash             
+                              pos              
+                              bad-index-v) -> any/c
+  hash : (and/c hash? hash-weak?) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+(unsafe-weak-hash-iterate-value hash pos) -> any/c
+  hash : (and/c hash? hash-weak?) ~ ~
+  pos : any/c ~ ~
+(unsafe-weak-hash-iterate-value hash             
+                                pos              
+                                bad-index-v) -> any/c
+  hash : (and/c hash? hash-weak?) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+(unsafe-weak-hash-iterate-key+value hash     
+                                    pos) -> any/c any/c
+  hash : (and/c hash? hash-weak?) ~ ~
+  pos : any/c ~ ~
+(unsafe-weak-hash-iterate-key+value hash             
+                                    pos              
+                                    bad-index-v) -> any/c any/c
+  hash : (and/c hash? hash-weak?) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+(unsafe-weak-hash-iterate-pair hash pos) -> pair?
+  hash : (and/c hash? hash-weak?) ~ ~
+  pos : any/c ~ ~
+(unsafe-weak-hash-iterate-pair hash             
+                               pos              
+                               bad-index-v) -> pair?
+  hash : (and/c hash? hash-weak?) ~ ~
+  pos : any/c ~ ~
+  bad-index-v : any/c ~ ~
+
+Unsafe versions of hash-iterate-key and similar procedures. These
+operations support chaperones and impersonators.
+
+Each unsafe ...-first and ...-next procedure may return, instead of a
+number index, an internal representation of a view into the hash
+structure, enabling faster iteration. The result of these ...-first and
+...-next functions should be given as pos to the corresponding unsafe
+accessor functions.
+
+If the pos provided to an accessor function for a mutable hash was
+formerly a valid hash index but is no longer a valid hash index for
+hash, and if bad-index-v is not provided, then the exn:fail:contract
+exception is raised. No behavior is specified for a pos that was never a
+valid hash index for hash. Note that bad-index-v argument is technically
+not useful for the unsafe-immutable-hash-iterate- functions, since an
+index cannot become invalid for an immutable hash.
+
+Added in version 6.4.0.6 of package base. Changed in version 7.0.0.10:
+Added the optional bad-index-v argument.
+
+                                        *unsafe-make-srcloc*
+(unsafe-make-srcloc source        ~
+                    line         
+                    column       
+                    position     
+                    span)    -> srcloc?
+  source : any/c ~ ~
+  line : (or/c exact-positive-integer? #f) ~ ~
+  column : (or/c exact-nonnegative-integer? #f) ~ ~
+  position : (or/c exact-positive-integer? #f) ~ ~
+  span : (or/c exact-nonnegative-integer? #f) ~ ~
+
+Unsafe version of srcloc.
+
+Added in version 7.2.0.10 of package base.
+
+4. Unsafe Extflonum Operations
 
                                         *unsafe-extfl+*
 (unsafe-extfl+ a b) -> extflonum? ~
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 (unsafe-extfl- a b) -> extflonum?
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 (unsafe-extfl* a b) -> extflonum?
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 (unsafe-extfl/ a b) -> extflonum?
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 (unsafe-extflabs a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 
 Unchecked versions of extfl+, extfl-, extfl*, extfl/, and extflabs.
 
-                                        *unsafe-extfl*
+                                        *unsafe-extfl=*
 (unsafe-extfl= a b) -> boolean? ~
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 (unsafe-extfl< a b) -> boolean?
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 (unsafe-extfl> a b) -> boolean?
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 (unsafe-extfl<= a b) -> boolean?
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 (unsafe-extfl>= a b) -> boolean?
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 (unsafe-extflmin a b) -> extflonum?
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 (unsafe-extflmax a b) -> extflonum?
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 
 Unchecked versions of extfl=, extfl<, extfl>, extfl<=, extfl>=,
 extflmin, and extflmax.
 
                                         *unsafe-extflround*
 (unsafe-extflround a) -> extflonum? ~
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extflfloor a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extflceiling a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extfltruncate a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 
 Unchecked (potentially) versions of extflround, extflfloor,
 extflceiling, and extfltruncate. Currently, these bindings are simply
@@ -494,26 +765,26 @@ aliases for the corresponding safe bindings.
 
                                         *unsafe-extflsin*
 (unsafe-extflsin a) -> extflonum? ~
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extflcos a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extfltan a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extflasin a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extflacos a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extflatan a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extfllog a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extflexp a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extflsqrt a) -> extflonum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 (unsafe-extflexpt a b) -> extflonum?
-  a : extflonum? ~
-  b : extflonum? ~
+  a : extflonum? ~ ~
+  b : extflonum? ~ ~
 
 Unchecked (potentially) versions of extflsin, extflcos, extfltan,
 extflasin, extflacos, extflatan, extfllog, extflexp, extflsqrt, and
@@ -522,32 +793,180 @@ corresponding safe bindings.
 
                                         *unsafe-fx->extfl*
 (unsafe-fx->extfl a) -> extflonum? ~
-  a : fixnum? ~
+  a : fixnum? ~ ~
 (unsafe-extfl->fx a) -> fixnum?
-  a : extflonum? ~
+  a : extflonum? ~ ~
 
-Unchecked conversion of a fixnum to an integer extflonum and vice versa.
-These are similar to the safe bindings ->extfl and extfl->exact-integer,
-but further constrained to consume or produce a fixnum.
+Unchecked (potentially) versions of fx->extfl and extfl->fx.
+
+Changed in version 7.7.0.8 of package base: Changed unsafe-fl->fx to
+truncate.
 
                                         *unsafe-extflvector-length*
 (unsafe-extflvector-length v) -> fixnum? ~
-  v : extflvector? ~
+  v : extflvector? ~ ~
 (unsafe-extflvector-ref v k) -> extflonum?
-  v : extflvector? ~
-  k : fixnum? ~
+  v : extflvector? ~ ~
+  k : fixnum? ~ ~
 (unsafe-extflvector-set! v k x) -> void?
-  v : extflvector? ~
-  k : fixnum? ~
-  x : extflonum? ~
+  v : extflvector? ~ ~
+  k : fixnum? ~ ~
+  x : extflonum? ~ ~
 
 Unchecked versions of extflvector-length, extflvector-ref, and
 extflvector-set!. A extflvector’s size can never be larger than a fixnum
 (so even extflvector-length always returns a fixnum).
 
-4. Unsafe Undefined
+5. Unsafe Impersonators and Chaperones
 
- (require racket/unsafe/undefined) package: base ~
+                                        *unsafe-impersonate-procedure*
+(unsafe-impersonate-procedure proc              ~
+                              replacement-proc 
+                              prop             
+                              prop-val ...     
+                              ...)             
+ -> (and/c procedure? impersonator?)
+  proc : procedure? ~ ~
+  replacement-proc : procedure? ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any ~ ~
+
+Like impersonate-procedure, but assumes that replacement-proc calls proc
+itself. When the result of unsafe-impersonate-procedure is applied to
+arguments, the arguments are passed on to replacement-proc directly,
+ignoring proc. At the same time, impersonator-of? reports #t when given
+the result of unsafe-impersonate-procedure and proc.
+
+If proc is itself an impersonator that is derived from
+impersonate-procedure* or chaperone-procedure*, beware that
+replacement-proc will not be able to call it correctly. Specifically,
+the impersonator produced by unsafe-impersonate-procedure will not get
+passed to a wrapper procedure that was supplied to
+impersonate-procedure* or chaperone-procedure* to generate proc.
+
+Finally, unlike impersonate-procedure, unsafe-impersonate-procedure does
+not specially handle impersonator-prop:application-mark as a prop.
+
+The unsafety of unsafe-impersonate-procedure is limited to the above
+differences from impersonate-procedure. The contracts on the arguments
+of unsafe-impersonate-procedure are checked when the arguments are
+supplied.
+
+As an example, assuming that f accepts a single argument and is not
+derived from impersonate-procedure* or chaperone-procedure*, then
+
+  (λ (f)
+    (unsafe-impersonate-procedure
+     f
+     (λ (x)
+       (if (number? x)
+           (error 'no-numbers!)
+           (f x)))))
+
+is equivalent to
+
+  (λ (f)
+    (impersonate-procedure
+     f
+     (λ (x)
+       (if (number? x)
+           (error 'no-numbers!)
+           x))))
+
+Similarly, with the same assumptions about f, the following two
+procedures wrap-f1 and wrap-f2 are almost equivalent; they differ only
+in the error message produced when their arguments are functions that
+return multiple values (and that they update different global
+variables). The version using unsafe-impersonate-procedure will signal
+an error in the let expression about multiple return values, whereas the
+one using impersonate-procedure signals an error from
+impersonate-procedure about multiple return values.
+
+  (define log1-args '())
+  (define log1-results '())
+  (define wrap-f1
+    (λ (f)
+      (impersonate-procedure
+       f
+       (λ (arg)
+         (set! log1-args (cons arg log1-args))
+         (values (λ (res)
+                   (set! log1-results (cons res log1-results))
+                   res)
+                 arg)))))
+   
+  (define log2-args '())
+  (define log2-results '())
+  (define wrap-f2
+    (λ (f)
+      (unsafe-impersonate-procedure
+       f
+       (λ (arg)
+         (set! log2-args (cons arg log2-args))
+         (let ([res (f arg)])
+           (set! log2-results (cons res log2-results))
+           res)))))
+
+Added in version 6.4.0.4 of package base.
+
+                                        *unsafe-chaperone-procedure*
+(unsafe-chaperone-procedure proc          ~
+                            wrapper-proc 
+                            prop         
+                            prop-val ... 
+                            ...)         
+ -> (and/c procedure? chaperone?)
+  proc : procedure? ~ ~
+  wrapper-proc : procedure? ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any ~ ~
+
+Like unsafe-impersonate-procedure, but creates a chaperone. Since
+wrapper-proc will be called in lieu of proc, wrapper-proc is assumed to
+return a chaperone of the value that proc would return.
+
+Added in version 6.4.0.4 of package base.
+
+                                        *unsafe-impersonate-vector*
+(unsafe-impersonate-vector vec              ~
+                           replacement-vec 
+                           prop            
+                           prop-val ...    
+                           ...)            
+ -> (and/c vector? impersonator?)
+  vec : vector? ~ ~
+  replacement-vec : (and/c vector? (not/c impersonator?)) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
+
+Like impersonate-vector, but instead of going through interposition
+procedures, all accesses to the impersonator are dispatched to
+replacement-vec.
+
+The result of unsafe-impersonate-vector is an impersonator of vec.
+
+Added in version 6.9.0.2 of package base.
+
+                                        *unsafe-chaperone-vector*
+(unsafe-chaperone-vector vec              ~
+                         replacement-vec 
+                         prop            
+                         prop-val ...    
+                         ...)            
+ -> (and/c vector? chaperone?)
+  vec : vector? ~ ~
+  replacement-vec : (and/c vector? (not/c impersonator?)) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
+
+Like unsafe-impersonate-vector, but the result of
+unsafe-chaperone-vector is a chaperone of vec.
+
+Added in version 6.9.0.2 of package base.
+
+6. Unsafe Undefined
+
+ (require racket/unsafe/undefined) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/unsafe/undefined library, not racket/base or racket.
@@ -556,24 +975,29 @@ The constant unsafe-undefined is used internally as a placeholder value.
 For example, it is used by letrec as a value for a variable that has not
 yet been assigned a value.  Unlike the undefined value exported by
 racket/undefined, however, the unsafe-undefined value should not leak as
-the result of a safe expression. Expression results that potentially
-produce unsafe-undefined can be guarded by check-not-unsafe-undefined,
-so that an exception can be raised instead of producing an undefined
-value.
+the result of a safe expression, and it should not be passed as an
+optional argument to a procedure (because it may count as “no value
+provided”). Expression results that potentially produce unsafe-undefined
+can be guarded by check-not-unsafe-undefined, so that an exception can
+be raised instead of producing an undefined value.
 
 The unsafe-undefined value is always eq? to itself.
 
-Added in version 6.0.1.2 of package base.
+Added in version 6.0.1.2 of package base. Changed in version 6.90.0.29:
+Procedures with optional arguments sometimes use the unsafe-undefined
+value internally to mean “no argument supplied.”
 
-unsafe-undefined : any/c ~
+unsafe-undefined : any/c ~ ~
 
 The unsafe “undefined” constant.
+
+See above for important constraints on the use of unsafe-undefined.
 
                                         *check-not-unsafe-undefined*
 (check-not-unsafe-undefined v sym) ~
  -> (and/c any/c (not/c (one-of/c unsafe-undefined)))
-  v : any/c ~
-  sym : symbol? ~
+  v : any/c ~ ~
+  sym : symbol? ~ ~
 
 Checks whether v is unsafe-undefined, and raises
 exn:fail:contract:variable in that case with an error message along the
@@ -583,8 +1007,8 @@ unsafe-undefined, then v is returned.
                                         *check-not-unsafe-undefined/assign*
 (check-not-unsafe-undefined/assign v sym) ~
  -> (and/c any/c (not/c (one-of/c unsafe-undefined)))
-  v : any/c ~
-  sym : symbol? ~
+  v : any/c ~ ~
+  sym : symbol? ~ ~
 
 The same as check-not-unsafe-undefined, except that the error message
 (if any) is along the lines of “sym: undefined; assignment before
@@ -592,7 +1016,7 @@ initialization.”
 
                                         *chaperone-struct-unsafe-undefined*
 (chaperone-struct-unsafe-undefined v) -> any/c ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Chaperones v if it is a structure (as viewed through some inspector).
 Every access of a field in the structure is checked to prevent returning
@@ -611,7 +1035,7 @@ intended to replace the unsafe-undefined value of a field—should be
 wrapped with (with-continuation-mark prop:chaperone-unsafe-undefined
 unsafe-undefined ....).
 
-prop:chaperone-unsafe-undefined : struct-type-property? ~
+prop:chaperone-unsafe-undefined : struct-type-property? ~ ~
 
 A structure type property that causes a structure type’s constructor to
 produce a chaperone of an instance in the same way as

@@ -21,14 +21,20 @@ Running Racket
     5 Debugging
       5.1 Tracing
 
-    6 Kernel Forms and Functions
+    6 Controlling and Inspecting Compilation
+      6.1 Compilation Modes
+        6.1.1 3m and CGC Compilation Modes
+        6.1.2 CS Compilation Modes
+      6.2 Inspecting Compiler Passes
+
+    7 Kernel Forms and Functions
 
 1. Running Racket or GRacket
 
 The core Racket run-time system is available in two main variants:
 
 * Racket, which provides the primitives libraries on which racket/base
-  is implemented. On Unix and Mac OS X, the executable is called racket.
+  is implemented. On Unix and Mac OS, the executable is called racket.
   On Windows, the executable is called Racket.exe.
 
 * GRacket, which is a GUI variant of racket to the degree that the
@@ -37,7 +43,7 @@ The core Racket run-time system is available in two main variants:
   communicated specially to the racket/gui/base library. On Windows, the
   executable is called GRacket.exe, and it is a GUI application (as
   opposed to a console application) that implements single-instance
-  support. On Mac OS X, the gracket script launches GRacket.app.
+  support. On Mac OS, the gracket script launches GRacket.app.
 
 1.1. Initialization
 
@@ -77,45 +83,69 @@ Run-Time Configuration.
 After running all command-line expressions, files, and modules, Racket
 or GRacket then starts a read-eval-print loop for interactive evaluation
 if no command line flags are provided other than configuration options.
-If any command-line argument is provided that is not a configuration
-option, then the read-eval-print-loop is not started, unless the
--i/--repl flag is provided on the command line to specifically re-enable
-it. In addition, just before the command line is started, Racket loads
-the file (find-system-path 'init-file) and GRacket loads the file
-(find-graphical-system-path 'init-file) is loaded, unless the
--q/--no-init-file flag is specified on the command line.
+For Racket, the read-eval-print loop is run by calling
+read-eval-print-loop from racket/repl. For GRacket, the read-eval-print
+loop is run by calling graphical-read-eval-print-loop from
+racket/gui/base. If any command-line argument is provided that is not a
+configuration option, then the read-eval-print-loop is not started,
+unless the -i/--repl flag is provided on the command line to
+specifically re-enable it.
+
+In addition, just before the read-eval-print loop is started, Racket
+runs racket/interactive and GRacket runs racket/gui/interactive, unless
+a different interactive file is specified in the the installation’s
+"config.rktd" file found in (find-config-dir), or the file
+"interactive.rkt" is found in (find-system-path 'addon-dir). If the
+-q/--no-init-file flag is specified on the command line, then no
+interactive file is run.
 
 Finally, before Racket or GRacket exits, it calls the procedure that is
 the current value of executable-yield-handler in the main thread, unless
 the -V/--no-yield command-line flag is specified. Requiring
 racket/gui/base sets this parameter call (racket 'yield).
 
+Changed in version 6.7: Run racket/interactive file rather than directly
+running (find-system-path 'init-file). Changed in version 6.90.0.30: Run
+a read-eval-print loop by using racket/repl or racket/gui/base instead
+of racket/base or racket/gui/init.
+
 1.2. Exit Status
 
 The default exit status for a Racket or GRacket process is non-zero if
 an error occurs during a command-line eval (via -e, etc.), load (via -f,
--r, etc.), or require (via --l, -t, etc.), but only when no
-read-eval-print loop is started. Otherwise, the default exit status is
-0.
+-r, etc.), or require (via -l, -t, etc.)—or, more generally, if the
+abort handler of the prompt surrounding those evalutions is called—but
+only when no read-eval-print loop is started. Otherwise, the default
+exit status is 0.
 
 In all cases, a call to exit (when the default exit handler is in place)
 can end the process with a specific status value.
 
 1.3. Init Libraries
 
- (require racket/init) package: base ~
+ (require racket/init) package: base ~ ~
 
 The racket/init library is the default start-up library for Racket. It
 re-exports the racket, racket/enter and racket/help libraries, and it
 sets current-print to use pretty-print.
 
- (require racket/gui/init) package: gui-lib ~
+ (require racket/interactive) package: base ~ ~
 
-The racket/gui/init library is the default start-up library for GRacket.
-It re-exports the racket/init and racket/gui/base libraries, and it sets
-current-load to use text-editor-load-handler.
+The racket/interactive is the default start up library when the REPL
+begins. It is not run if the -q/--no-init-file is specified. The
+interactive file can be changed by modifying 'interactive-file in the
+"config.rktd" file found in (find-config-dir). Alternative, if the file
+"interactive.rkt" exists in (find-system-path 'addon-dir) it is run
+rather than the installation wide interactive module.
 
- (require racket/language-info) package: base ~
+The default interactive module starts xrepl and runs the
+(find-system-path 'init-file) file in the users home directory. A
+different interactive file can keep this behavior by requiring
+racket/interactive.
+
+Added in version 6.7.
+
+ (require racket/language-info) package: base ~ ~
 
 The racket/language-info library provides a get-info function that takes
 any value and returns another function; the returned function takes a
@@ -129,7 +159,7 @@ The vector '#(racket/language-info get-info #f) is suitable for
 attaching to a module as its language info to get the same language
 information as the racket/base language.
 
- (require racket/runtime-config) package: base ~
+ (require racket/runtime-config) package: base ~ ~
 
 The racket/runtime-config library provides a configure function that
 takes any value and sets print-as-expression to #t.
@@ -174,8 +204,9 @@ flags:
     non-flag arguments.
 
   * -k >n< >m< >p< : Loads code embedded in the executable from file
-    position >n< to >m< and from >m< to >p<. (On Mac OS X, >n<, >m<, and
-    >p< are relative to a __PLTSCHEME segment in the executable.) The
+    position >n< to >m< and from >m< to >p<. (On Mac OS, >n<, >m<, and
+    >p< are relative to a __PLTSCHEME segment in the executable. On
+    Windows, they are relative to a resource of type 257 and ID 1.) The
     first range is loaded in every new place, and any modules declared
     in that range are considered predefined in the sense of
     module-predefined?. This option is normally embedded in a
@@ -208,7 +239,7 @@ flags:
 
   * -v or --version : Shows (banner).
 
-  * -K or --back : GRacket, Mac OS X only; leave application in the
+  * -K or --back : GRacket, Mac OS only; leave application in the
     background.
 
   * -V --no-yield : Skips final executable-yield-handler action, which
@@ -218,7 +249,7 @@ flags:
 * Configuration options:
 
   * -c or --no-compiled : Disables loading of compiled byte-code ".zo"
-    files, by initializing current-compiled-file-paths to null. Use
+    files, by initializing use-compiled-file-paths to null. Use
     judiciously: this effectively ignores the content of all "compiled"
     subdirectories, so that any used modules are compiled on the
     fly—even racket/base and its dependencies—which leads to
@@ -248,11 +279,6 @@ flags:
     -S/--dir flag is supplied multiple times, the search order is as
     supplied.
 
-  * -R >paths< or --compiled >paths< : Sets the initial value of the
-    current-compiled-file-roots parameter, overriding any
-    PLTCOMPILEDROOTS setting. The >paths< argument is parsed in the same
-    way as PLTCOMPILEDROOTS (see current-compiled-file-roots).
-
   * -G >dir< or --config >dir< : Sets the directory that is returned by
     (find-system-path 'config-dir).
 
@@ -263,6 +289,22 @@ flags:
     collections, C libraries, etc. by initializing the
     use-user-specific-search-paths parameter to #f.
 
+  * -A >dir< or --addon >dir< : Sets the directory that is returned by
+    (find-system-path 'addon-dir).
+
+  * -R >paths< or --compiled >paths< : Sets the initial value of the
+    current-compiled-file-roots parameter, overriding any
+    PLTCOMPILEDROOTS setting. The >paths< argument is parsed in the same
+    way as PLTCOMPILEDROOTS (see current-compiled-file-roots).
+
+  * -C or --cross : Select cross-platform build mode, causing
+    (system-type 'cross) to report 'force, and sets the current
+    configuration of (find-system-path 'config-dir) and
+    (find-system-path 'collects-dir) to be the results of
+    (find-system-path 'host-config-dir) and (find-system-path
+    'host-collects-dir), respectively. If -C or --cross is provided
+    multiple times, only the first instance has an effect.
+
   * -N >file< or --name >file< : sets the name of the executable as
     reported by (find-system-path 'run-file) to >file<.
 
@@ -272,6 +314,9 @@ flags:
 
   * -j or --no-jit : Disables the native-code just-in-time compiler by
     setting the eval-jit-enabled parameter to #f.
+
+  * -M or --compile-any : Enables machine-independent bytecode by
+    setting the current-compile-target-machine parameter to #f.
 
   * -d or --no-delay : Disables on-demand parsing of compiled code and
     syntax objects by setting the read-on-demand-source parameter to #f.
@@ -284,6 +329,11 @@ flags:
     events to the original error port. The possible >level< values are
     the same as for the PLTSTDERR environment variable. See [missing]
     for more information.
+
+  * -O >levels< or --stdout >levels< : Sets the logging level for
+    writing events to the original output port. The possible >level<
+    values are the same as for the PLTSTDOUT environment variable. See
+    [missing] for more information.
 
   * -L >levels< or --syslog >levels< : Sets the logging level for
     writing events to the system log. The possible >level< values are
@@ -326,8 +376,8 @@ the insertion of -u/--require-script):
   treated as filenames and sent to the existing GRacket instance via the
   application file handler (see application-file-handler).
 
-Similarly, on Mac OS X, a leading switch starting with -psn_ is treated
-as a special configuration option. It indicates that Finder started the
+Similarly, on Mac OS, a leading switch starting with -psn_ is treated as
+a special configuration option. It indicates that Finder started the
 application, so the current input, output, and error output are
 redirected to a GUI window.
 
@@ -349,6 +399,9 @@ the collapsed set.
 
 Extra arguments following the last option are available from the
 current-command-line-arguments parameter.
+
+Changed in version 6.90.0.17: Added -O/--stdout. Changed in version
+7.1.0.5: Added -M/--compile-any.
 
 1.5. Language Run-Time Configuration
 
@@ -529,8 +582,8 @@ information.
                                         *find-library-collection-paths*
 (find-library-collection-paths [pre-extras         ~
                                 post-extras]) -> (listof path?)
-  pre-extras : (listof path-string?) = null ~
-  post-extras : (listof path-string?) = null ~
+  pre-extras : (listof path-string?) = null ~ ~
+  post-extras : (listof path-string?) = null ~ ~
 
 Produces a list of paths, which is normally used to initialize
 current-library-collection-paths, as follows:
@@ -559,9 +612,9 @@ current-library-collection-paths, as follows:
   default collection path list (as constructed by the first three
   bullets above) is used directly.
 
-  Note that on Unix and Mac OS X, paths are separated by :, and on
-  Windows by ;.  Also, path-list-string->path-list splices the default
-  paths at an empty path, for example, with many Unix shells you can set
+  Note that on Unix and Mac OS, paths are separated by :, and on Windows
+  by ;.  Also, path-list-string->path-list splices the default paths at
+  an empty path, for example, with many Unix shells you can set
   PLTCOLLECTS to ":‘pwd‘", "‘pwd‘:", or "‘pwd‘" to specify search the
   current directory after, before, or instead of the default paths,
   respectively.
@@ -591,24 +644,26 @@ current-library-collection-links, as follows:
                                         *collection-file-path*
 (collection-file-path  file                                 ~
                        collection ...+                     
-                      [#:check-compiled? check-compiled?])  ~
+                      [#:check-compiled? check-compiled?])  ~ ~
  -> path?
-  file : path-string? ~
-  collection : path-string? ~
-  check-compiled? : any/c = (regexp-match? #rx"[.]rkt$" file) ~
+  file : path-string? ~ ~
+  collection : path-string? ~ ~
+  check-compiled? : any/c = (regexp-match? #rx"[.]rkt$" file) ~ ~
 (collection-file-path  file                                    
                        collection ...+                         
-                       #:fail fail-proc                         ~
-                      [#:check-compiled? check-compiled?]) -> any ~
-  file : path-string? ~
-  collection : path-string? ~
-  fail-proc : (string? . -> . any) ~
-  check-compiled? : any/c = (regexp-match? #rx"[.]rkt$" file) ~
+                       #:fail fail-proc                         ~ ~
+                      [#:check-compiled? check-compiled?]) -> any ~ ~
+  file : path-string? ~ ~
+  collection : path-string? ~ ~
+  fail-proc : (string? . -> . any) ~ ~
+  check-compiled? : any/c = (regexp-match? #rx"[.]rkt$" file) ~ ~
 
 Returns the path to the file indicated by file in the collection
 specified by the collections, where the second collection (if any) names
 a sub-collection, and so on.  The search uses the values of
 current-library-collection-links and current-library-collection-paths.
+
+See also collection-search in setup/collection-search.
 
 If file is not found, but file ends in ".rkt" and a file with the suffix
 ".ss" exists, then the directory of the ".ss" file is used. If file is
@@ -630,16 +685,27 @@ the result of collection-file-path.  If fail-proc is not provided and
 the collection is not found, then the exn:fail:filesystem exception is
 raised.
 
+Examples:
+
+  > (collection-file-path "main.rkt" "racket" "base")
+  #<path:path/to/collects/racket/base/main.rkt>
+  > (collection-file-path "sandwich.rkt" "bologna")
+  collection-file-path: collection not found
+    collection: "bologna" ~ ~
+    in collection directories: ~ ~
+     /usr/share/racket/collects
+     ... [171 additional linked and package directories]
+
 Changed in version 6.0.1.12: Added the check-compiled? argument.
 
                                         *collection-path*
 (collection-path collection ...+) -> path? ~
-  collection : path-string? ~
+  collection : path-string? ~ ~
 (collection-path collection            
                  ...+                  
-                 #:fail fail-proc) -> any ~
-  collection : path-string? ~
-  fail-proc : (string? . -> . any) ~
+                 #:fail fail-proc) -> any ~ ~
+  collection : path-string? ~ ~
+  fail-proc : (string? . -> . any) ~ ~
 
   NOTE: This function is deprecated; use collection-file-path, instead.
   Collection splicing implies that a given collection can have multiple
@@ -657,7 +723,7 @@ returned.
 (current-library-collection-paths) ~
  -> (listof (and/c path? complete-path?))
 (current-library-collection-paths paths) -> void?
-  paths : (listof (and/c path-string? complete-path?)) ~
+  paths : (listof (and/c path-string? complete-path?)) ~ ~
 
 Parameter that determines a list of complete directory paths for finding
 libraries (as referenced in require, for example) through the default
@@ -672,7 +738,7 @@ information.
                   (hash/c (or/c (and/c symbol? module-path?) #f)
                           (listof (and/c path? complete-path?)))))
 (current-library-collection-links paths) -> void?
-  paths : (listof (or/c #f ~
+  paths : (listof (or/c #f ~ ~
                         (and/c path-string? complete-path?)
                         (hash/c (or/c (and/c symbol? module-path?) #f)
                                 (listof (and/c path-string? complete-path?)))))
@@ -687,7 +753,7 @@ Configuration for more information.
                                         *use-user-specific-search-paths*
 (use-user-specific-search-paths) -> boolean? ~
 (use-user-specific-search-paths on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 Parameter that determines whether user-specific paths, which are in the
 directory produced by (find-system-path 'addon-dir), are included in
@@ -701,7 +767,7 @@ use-user-specific-search-paths is initialized to #f.
                                         *use-collection-link-paths*
 (use-collection-link-paths) -> boolean? ~
 (use-collection-link-paths on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 Parameter that determines whether collection links files are included in
 the result of find-library-collection-links.
@@ -715,7 +781,7 @@ initialized to #f.
 
 3. Interactive Help
 
- (require racket/help) package: base ~
+ (require racket/help) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/help
 and racket/init libraries, which means that they are available when  the
@@ -725,8 +791,8 @@ not provided by racket/base or racket.
 help
 (help string ...)
 (help id)
-(help id #:from module-path) ~
-(help #:search datum ...) ~
+(help id #:from module-path) ~ ~
+(help #:search datum ...) ~ ~
 
 For general help, see the main documentation page.
 
@@ -772,7 +838,7 @@ The (help id #:from module-path) variant is similar to (help id), but
 using only the exports of module-path. (The module-path module is
 required for-label in a temporary namespace.)
 
-  (help frame% #:from racket/gui) ; equivalent to the above ~
+  (help frame% #:from racket/gui) ; equivalent to the above ~ ~
 
 The (help #:search datum ...) form is similar to (help string ...),
 where any non-string form of datum is converted to a string using
@@ -780,7 +846,7 @@ display. No datum is evaluated as an expression.
 
 For example,
 
-  (help #:search "web browser" firefox) ~
+  (help #:search "web browser" firefox) ~ ~
 
 also searches the documentation index for references that include the
 phrase “web browser” or “firefox.”
@@ -792,7 +858,7 @@ loading, reloading, and using modules.
 
 4.1. Entering Modules
 
- (require racket/enter) package: base ~
+ (require racket/enter) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/enter
 and racket/init libraries, which means that they are available when  the
@@ -804,10 +870,10 @@ not provided by racket/base or racket.
 (enter! #f)
 (enter! module-path flag ...+)
  
-flag = #:quiet ~
-     | #:verbose-reload ~
-     | #:verbose ~
-     | #:dont-re-require-enter ~
+flag = #:quiet ~ ~
+     | #:verbose-reload ~ ~
+     | #:verbose ~ ~
+     | #:dont-re-require-enter ~ ~
 
 Intended for use in a REPL, such as when racket is started in
 interactive mode. When a module-path is provided (in the same sense as
@@ -831,11 +897,11 @@ Additional flags can customize aspects of enter!:
 
                                         *dynamic-enter!*
 (dynamic-enter!  mod                                          ~
-                [#:verbosity verbosity                        ~
-                 #:re-require-enter? re-require-enter?]) -> void? ~
-  mod : (or/c module-path? #f) ~
-  verbosity : (or/c 'all 'reload 'none) = 'reload ~
-  re-require-enter? : any/c = #t ~
+                [#:verbosity verbosity                        ~ ~
+                 #:re-require-enter? re-require-enter?]) -> void? ~ ~
+  mod : (or/c module-path? #f) ~ ~
+  verbosity : (or/c 'all 'reload 'none) = 'reload ~ ~
+  re-require-enter? : any/c = #t ~ ~
 
 Procedure variant of enter!, where verbosity is passed along to
 dynamic-rerequire and re-require-enter?  determines whether
@@ -845,16 +911,16 @@ Added in version 6.0.0.1 of package base.
 
 4.2. Loading and Reloading Modules
 
- (require racket/rerequire) package: base ~
+ (require racket/rerequire) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/rerequire library, not racket/base or racket.
 
                                         *dynamic-rerequire*
 (dynamic-rerequire  module-path                  ~
-                   [#:verbosity verbosity]) -> (listof path?) ~
-  module-path : module-path? ~
-  verbosity : (or/c 'all 'reload 'none) = 'reload ~
+                   [#:verbosity verbosity]) -> (listof path?) ~ ~
+  module-path : module-path? ~ ~
+  verbosity : (or/c 'all 'reload 'none) = 'reload ~ ~
 
 Like (dynamic-require module-path 0), but with reloading support. The
 dynamic-rerequire function is intended for use in an interactive
@@ -881,15 +947,20 @@ re-loaded modules, and 'none disables printouts.
 
 Racket’s built-in debugging support is limited to context (i.e., “stack
 trace”) information that is printed with an exception. In some cases,
-disabling the JIT compiler can affect context information. The
-errortrace library supports more consistent (independent of the JIT
-compiler) and precise context information.  The racket/trace library
+for 3m and CGC variants of Racket, disabling the JIT compiler can affect
+context information. For the CS variant of Racket, setting the
+PLT_CS_DEBUG environment variable causes compilation to record
+expression-level context information, instead of just function-level
+information.
+
+The errortrace library supports more consistent (independent of the
+compiler) and precise context information. The racket/trace library
 provides simple tracing support. Finally, the DrRacket programming
 environment provides much more debugging support.
 
 5.1. Tracing
 
- (require racket/trace) package: base ~
+ (require racket/trace) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/trace
 library, not racket/base or racket.
@@ -927,10 +998,9 @@ procedure.
 The result of a trace expression is #<void>.
 
 Examples:
+
   > (define (f x) (if (zero? x) 0 (add1 (f (sub1 x)))))
-
   > (trace f)
-
   > (f 10)
   >(f 10)
   > (f 9)
@@ -956,6 +1026,29 @@ Examples:
   <10
   10
 
+trace can also be used to debug syntax transformers. This is verbose to
+do directly with trace; refer to trace-define-syntax for a simpler way
+to do this.
+
+Examples:
+
+  > (require (for-syntax racket/trace))
+  > (begin-for-syntax
+      (define let
+        (syntax-rules ()
+          [(_ ([x v]) e) ((lambda (x) e) v)]))
+      (trace let))
+  > (define-syntax let let)
+  > (let ([x 120]) x)
+  >(_let #<syntax:eval:9:0 (let ((x 120)) x)>)
+  <#<syntax:eval:9:0 ((lambda (x) x) 120)>
+  120
+
+When tracing syntax transformers, it may be helpful to modify
+current-trace-print-args and current-trace-print-results to make the
+trace output more readable; see current-trace-print-args for an extended
+example.
+
                                         *trace-define*
 (trace-define id expr) ~
 (trace-define (head args) body ...+)
@@ -964,8 +1057,8 @@ The trace-define form is short-hand for first defining a function then
 tracing it. This form supports all define forms.
 
 Examples:
-  > (trace-define (f x) (if (zero? x) 0 (add1 (f (sub1 x)))))
 
+  > (trace-define (f x) (if (zero? x) 0 (add1 (f (sub1 x)))))
   > (f 5)
   >(f 5)
   > (f 4)
@@ -982,8 +1075,8 @@ Examples:
   5
 
 Examples:
-  > (trace-define ((+n n) x) (+ n x))
 
+  > (trace-define ((+n n) x) (+ n x))
   > (map (+n 5) (list 1 3 4))
   >(+n 5)
   <#<procedure>
@@ -993,49 +1086,30 @@ Examples:
 (trace-define-syntax id expr) ~
 (trace-define-syntax (head args) body ...+)
 
-The trace-define-syntax form is short-hand for first defining a macro
-then tracing it. This form supports all define-syntax forms.
+The trace-define-syntax form is short-hand for first defining a syntax
+transformer then tracing it. This form supports all define-syntax forms.
 
 For example:
 
 Examples:
+
   > (trace-define-syntax fact
       (syntax-rules ()
         [(_ x) 120]))
-
   > (fact 5)
-  >(fact #<syntax:11:0 (fact 5)>)
-  <#<syntax:11:0 120>
+  >(fact #<syntax:eval:15:0 (fact 5)>)
+  <#<syntax:eval:15:0 120>
   120
 
-By default, trace prints out syntax objects when tracing a macro. This
-can result in too much output if you do not need to see, e.g., source
-information. To get more readable output, try this:
-
-Examples:
-  > (require (for-syntax racket/trace))
-
-  > (begin-for-syntax
-      (current-trace-print-args
-        (let ([ctpa (current-trace-print-args)])
-          (lambda (s l kw l2 n)
-            (ctpa s (map syntax->datum l) kw l2 n))))
-      (current-trace-print-results
-        (let ([ctpr (current-trace-print-results)])
-          (lambda (s l n)
-           (ctpr s (map syntax->datum l) n)))))
-
-  > (trace-define-syntax fact
-    (syntax-rules ()
-      [(_ x) #'120]))
-
-  > (fact 5)
-  >(fact '(fact 5))
-  <'#'120
-  #<syntax:14:0 120>
+By default, trace prints out syntax objects when tracing a syntax
+transformer. This can result in too much output if you do not need to
+see, e.g., source information. To get more readable output by printing
+syntax objects as datums, we can modify the current-trace-print-args and
+current-trace-print-results. See current-trace-print-args for an
+example.
 
                                         *trace-lambda*
-(trace-lambda [#:name id] args expr) ~ ~
+(trace-lambda [#:name id] args expr) ~ ~ ~
 
 The trace-lambda form enables tracing an anonymous function. This form
 will attempt to infer a name using syntax-local-infer-name, or a name
@@ -1043,6 +1117,7 @@ can be specified using the optional #:name argument.  A syntax error is
 raised if a name is not given and a name cannot be inferred.
 
 Example:
+
   > ((trace-lambda (x) 120) 5)
   >(eval:16:0 5)
   <120
@@ -1054,6 +1129,7 @@ Example:
 The trace-let form enables tracing a named let.
 
 Example:
+
   > (trace-let f ([x 5])
       (if (zero? x)
           1
@@ -1085,7 +1161,7 @@ The result of an untrace expression is #<void>.
                                         *current-trace-notify*
 (current-trace-notify) -> (string? . -> . any) ~
 (current-trace-notify proc) -> void?
-  proc : (string? . -> . any) ~
+  proc : (string? . -> . any) ~ ~
 
 A parameter that determines the way that trace output is displayed. The
 string given to proc is a trace; it does not end with a newline, but it
@@ -1094,10 +1170,10 @@ string using pretty-print.  The parameter’s default value prints the
 given string followed by a newline to (current-output-port).
 
                                         *trace-call*
-(trace-call id proc #:<kw> kw-arg ...) -> any/c ~ ~
-  id : symbol? ~
-  proc : procedure? ~
-  kw-arg : any/c ~
+(trace-call id proc #:<kw> kw-arg ...) -> any/c ~ ~ ~
+  id : symbol? ~ ~
+  proc : procedure? ~ ~
+  kw-arg : any/c ~ ~
 
 Calls proc with the arguments supplied in args, and possibly using
 keyword arguments. Also prints out the trace information during the
@@ -1112,7 +1188,7 @@ proc.
                                   number?
                                   void?)
 (current-trace-print-args trace-print-args) -> void?
-  trace-print-args : (-> symbol? ~
+  trace-print-args : (-> symbol? ~ ~
                          list?
                          (listof keyword?)
                          list?
@@ -1124,13 +1200,94 @@ traced call. It receives the name of the function, the function’s
 ordinary arguments, its keywords, the values of the keywords, and a
 number indicating the depth of the call.
 
+Modifying this and current-trace-print-results is useful to to get more
+readable or additional output when tracing syntax transformers. For
+example, we can use debug-scopes to add scopes information to the trace,
+(see debug-scopes for an example), or remove source location information
+to just display the shape of the syntax object
+
+In this example, we update the printers current-trace-print-args and
+current-trace-print-results by storing the current printers (ctpa and
+ctpr) to cast syntax objects to datum using syntax->datum and then pass
+the transformed arguments and results to the previous printer. When
+tracing, syntax arguments will be displayed without source location
+information, shortening the output.
+
+Examples:
+
+  > (require (for-syntax racket/trace))
+  > (begin-for-syntax
+      (current-trace-print-args
+        (let ([ctpa (current-trace-print-args)])
+          (lambda (s l kw l2 n)
+            (ctpa s (map syntax->datum l) kw l2 n))))
+      (current-trace-print-results
+        (let ([ctpr (current-trace-print-results)])
+          (lambda (s r n)
+           (ctpr s (map syntax->datum r) n)))))
+  > (trace-define-syntax fact
+      (syntax-rules ()
+        [(_ x) 120]))
+  > (fact 5)
+  >(fact '(fact 5))
+  <120
+  120
+
+We must take care when modifying these parameters, especially when the
+transformation makes assumptions about or changes the type of the
+argument/result of the traced identifier. This modification of
+current-trace-print-args and current-trace-print-results is an
+imperative update, and will affect all traced identifiers. This example
+assumes all arguments and results to all traced functions will be syntax
+objects, which is the case only if you are only tracing syntax
+transformers. If used as-is, the above code could result in type errors
+when tracing both functions and syntax transformers. It would be better
+to use syntax->datum only when the argument or result is actually a
+syntax object, for example, by defining maybe-syntax->datum as follows.
+
+Examples:
+
+  > (require (for-syntax racket/trace))
+  > (begin-for-syntax
+      (define (maybe-syntax->datum syn?)
+        (if (syntax? syn?)
+            (syntax->datum syn?)
+            syn?))
+      (current-trace-print-args
+        (let ([ctpa (current-trace-print-args)])
+          (lambda (s l kw l2 n)
+            (ctpa s (map maybe-syntax->datum l) kw l2 n))))
+      (current-trace-print-results
+        (let ([ctpr (current-trace-print-results)])
+          (lambda (s l n)
+           (ctpr s (map maybe-syntax->datum l) n))))
+    
+    (trace-define (precompute-fact syn n) (datum->syntax syn (apply * (build-list n add1)))))
+  > (trace-define (run-time-fact n) (apply * (build-list n add1)))
+  > (require (for-syntax syntax/parse))
+  > (trace-define-syntax (fact syn)
+      (syntax-parse syn
+        [(_ x:nat) (precompute-fact syn (syntax->datum #'x))] ~ ~
+        [(_ x) #'(run-time-fact x)]))
+  > (fact 5)
+  >(fact '(fact 5))
+  >(precompute-fact '(fact 5) 5)
+  <120
+  120
+  > (fact (+ 2 3))
+  >(fact '(fact (+ 2 3)))
+  <'(run-time-fact (+ 2 3))
+  >(run-time-fact 5)
+  <120
+  120
+
                                         *current-trace-print-results*
 (current-trace-print-results) -> (-> symbol? ~
                                      list?
                                      number?
                                      any)
 (current-trace-print-results trace-print-results) -> void?
-  trace-print-results : (-> symbol? ~
+  trace-print-results : (-> symbol? ~ ~
                             list?
                             number?
                             any)
@@ -1142,7 +1299,7 @@ results, and a number indicating the depth of the call.
                                         *current-prefix-in*
 (current-prefix-in) -> string? ~
 (current-prefix-in prefix) -> void?
-  prefix : string? ~
+  prefix : string? ~ ~
 
 This string is used by the default value of current-trace-print-args
 indicating that the current line is showing the a call to a traced
@@ -1153,16 +1310,126 @@ It defaults to ">".
                                         *current-prefix-out*
 (current-prefix-out) -> string? ~
 (current-prefix-out prefix) -> void?
-  prefix : string? ~
+  prefix : string? ~ ~
 
 This string is used by the default value of current-trace-print-results
 indicating that the current line is showing the result of a traced call.
 
 It defaults to "<".
 
-6. Kernel Forms and Functions
+6. Controlling and Inspecting Compilation
 
- #lang racket/kernel package: base ~
+Racket programs and expressions are compiled automatically and
+on-the-fly. The raco make tool (see [missing]) can compile a Racket
+module to a compiled ".zo" file, but that kind of ahead-to-time
+compilation simply allows a program takes to start more quickly, and it
+does not affect the performance of a Racket program.
+
+6.1. Compilation Modes
+
+All Racket variants suppose a machine-independent compilation mode,
+which generates compiled ".zo" files that work with all Racket variants
+on all platforms. To select machine-independent compilation mode, set
+the current-compile-target-machine parameter to #f or supplying the
+--compile-any/-M flag on startup. See current-compile-target-machine for
+more information.
+
+Other compilation modes depend on the Racket variant (3m/CGC versus CS).
+
+6.1.1. 3m and CGC Compilation Modes
+
+The 3m and CGC variants of Racket support two compilation modes:
+bytecode and machine-independent. The bytecode format is also
+machine-independent in the sense that it works the same on all operating
+systems for the 3m and/or CGC variants of Racket, but it does not work
+with the CS variant of Racket.
+
+Bytecode is further compiled to machine code at run time, unless the JIT
+compiler is disabled. See eval-jit-enabled.
+
+6.1.2. CS Compilation Modes
+
+The CS variant of Racket supports several compilation modes: machine
+code, machine-independent, interpreted, and JIT. Machine code is the
+primay mode, and the machine-independent mode is the same as for 3m and
+CGC. Interpreted mode uses an interpreter at the level of core linklet
+forms with no compilation. JIT mode triggers compilation of individual
+function forms on demand.
+
+The default mode is a hybrid of machine-code and interpreter modes,
+where interpreter mode is used only for the outer contour of an
+especially large linklet, and machine-code mode is used for functions
+that are small enough within that outer contour. “Small enough” is
+determined by the PLT_CS_COMPILE_LIMIT environment variable, and the
+default value of 10000 means that most Racket modules have no
+interpreted component.
+
+JIT compilation mode is used only if the PLT_CS_JIT environment variable
+is set on startup, otherwise pure interpreter mode is used only if
+PLT_CS_INTERP is set on startup, and the default hybrid machine code and
+interpreter mode is used if PLT_CS_MACH is set and PLT_CS_JIT is not set
+or if none of those environment variables is set. A module compiled in
+any mode can be loaded into the CS variant of Racket independent of the
+current compilation mode.
+
+The PLT_CS_DEBUG environment variable, as described in Debugging,
+affects only compilation in machine-code mode. Generated machine code is
+much larger when PLT_CS_DEBUG is enabled, but performance is not
+otherwise affected.
+
+6.2. Inspecting Compiler Passes
+
+When the PLT_LINKLET_SHOW environment variable is set on startup, the
+Racket process’s standard output shows intermediate compiled forms
+whenever a Racket form is compiled. For all Racket variants, the output
+shows one or more linklets that are generated from the original Racket
+form.
+
+For the CS variant of Racket, a “schemified” version of the linklet is
+also shown as the translation of the linklet form to a Chez Scheme
+procedure form. The following environment variables imply
+PLT_LINKLET_SHOW and show additional intermediate compiled forms or
+adjust the way forms are displayed:
+
+* PLT_LINKLET_SHOW_GENSYM — prints full generated names, instead of
+  abbreviations that may conflate different symbols
+
+* PLT_LINKLET_SHOW_PRE_LIFT — shows a schemified forms before closure
+  transformations are applied
+
+* PLT_LINKLET_SHOW_PRE_JIT — shows a schemified forms before a
+  transformation to JIT mode, which applies only when PLT_CS_JIT is set
+
+* PLT_LINKLET_SHOW_LAMBDA — shows individual schemified forms that are
+  compiled within a larger form that has an interpreted outer contour
+
+* PLT_LINKLET_SHOW_POST_LAMBDA — shows an outer form after inner
+  individual forms are compiled
+
+* PLT_LINKLET_SHOW_POST_INTERP — shows an outer form after its
+  transformation to interpretable form
+
+* PLT_LINKLET_SHOW_JIT_DEMAND — shows JIT compilation of form that were
+  previously prepared by compilation with PLT_CS_JIT set
+
+* PLT_LINKLET_SHOW_KNOWN — show recorded known-binding information
+  alongside a schemified form
+
+* PLT_LINKLET_SHOW_CP0 — show a schemified form after transformation by
+  Chez Scheme’s front-end optimizer
+
+* PLT_LINKLET_SHOW_ASSEMBLY — show the compiled form of a schemified
+  linklet in Chez Scheme’s abstraction of machine instructions
+
+When the PLT_LINKLET_TIMES environment variable is set on startup, then
+Racket prints cumulative timing information about compilation and
+evaluation times on exit. When the PLT_EXPANDER_TIMES environment
+variable is set, information about macro-expansion time is printed on
+exit.
+
+7. Kernel Forms and Functions
+
+ #lang racket/kernel package: base ~ ~
 
 The racket/kernel library is a cross-phase persistent module that
 provides a minimal set of syntactic forms and functions.
@@ -1186,7 +1453,7 @@ by racket/base because racket/base exports improved variants. The exact
 set of function bindings exported by racket/kernel is unspecified and
 subject to change across versions.
 
- (require racket/kernel/init) package: base ~
+ (require racket/kernel/init) package: base ~ ~
 
 The racket/kernel/init library re-provides all of racket/kernel. It also
 provides #%top-interaction, which makes racket/kernel/init useful with

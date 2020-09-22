@@ -61,7 +61,7 @@ are equal?. (Consequently, equal?  testing for structures may depend on
 the current inspector.) A structure type can override the default equal?
 definition through the gen:equal+hash generic interface.
 
-    1 Defining Structure Types: struct ~
+    1 Defining Structure Types: struct ~ ~
 
     2 Creating Structure Types
 
@@ -72,6 +72,7 @@ definition through the gen:equal+hash generic interface.
     5 Copying and Updating Structures
 
     6 Structure Utilities
+      6.1 Additional Structure Utilities
 
     7 Structure Type Transformer Binding
 
@@ -89,27 +90,28 @@ definition through the gen:equal+hash generic interface.
         field = field-id
               | [field-id field-option ...]
                  
-struct-option = #:mutable ~
-              | #:super super-expr ~
-              | #:inspector inspector-expr ~
-              | #:auto-value auto-expr ~
-              | #:guard guard-expr ~
-              | #:property prop-expr val-expr ~
-              | #:transparent ~
-              | #:prefab ~
-              | #:constructor-name constructor-id ~
-              | #:extra-constructor-name constructor-id ~
-              | #:reflection-name symbol-expr ~
-              | #:methods gen:name method-defs ~
-              | #:omit-define-syntaxes ~
-              | #:omit-define-values ~
+struct-option = #:mutable ~ ~
+              | #:super super-expr ~ ~
+              | #:inspector inspector-expr ~ ~
+              | #:auto-value auto-expr ~ ~
+              | #:guard guard-expr ~ ~
+              | #:property prop-expr val-expr ~ ~
+              | #:transparent ~ ~
+              | #:prefab ~ ~
+              | #:authentic ~ ~
+              | #:name name-id ~ ~
+              | #:extra-name name-id ~ ~
+              | #:constructor-name constructor-id ~ ~
+              | #:extra-constructor-name constructor-id ~ ~
+              | #:reflection-name symbol-expr ~ ~
+              | #:methods gen:name-id method-defs ~ ~
+              | #:omit-define-syntaxes ~ ~
+              | #:omit-define-values ~ ~
                  
- field-option = #:mutable ~
-              | #:auto ~
+ field-option = #:mutable ~ ~
+              | #:auto ~ ~
                  
   method-defs = (definition ...)
- 
-  gen:name : identifier? ~
 
 Creates a new structure type (or uses a pre-existing structure type if
 #:prefab is specified), and binds transformers and variables related to
@@ -124,20 +126,20 @@ A struct form with n fields defines up to 4+2n names:
   takes m arguments and returns a new instance of the structure type,
   where m is the number of fields that do not include an #:auto option.
 
-* id, a transformer binding that encapsulates information about the
-  structure type declaration. This binding is used to define subtypes,
-  and it also works with the shared and match forms. For detailed
-  information about the binding of id, see Structure Type Transformer
-  Binding.
+* name-id (which defaults to id), a transformer binding that
+  encapsulates information about the structure type declaration. This
+  binding is used to define subtypes, and it also works with the shared
+  and match forms. For detailed information about the binding of
+  name-id, see Structure Type Transformer Binding.
 
-  The constructor-id and id can be the same, in which case id performs
-  both roles. In that case, the expansion of id as an expression
-  produces an otherwise inaccessible identifier that is bound to the
-  constructor procedure; the expanded identifier has a 'constructor-for
-  property whose value is an identifier that is free-identifier=? to id
-  as well as a syntax property accessible via
-  syntax-procedure-alias-property with an identifier that is
-  free-identifier=? to id.
+  The constructor-id and name-id can be the same, in which case name-id
+  performs both roles. In that case, the expansion of name-id as an
+  expression produces an otherwise inaccessible identifier that is bound
+  to the constructor procedure; the expanded identifier has a
+  'constructor-for property whose value is an identifier that is
+  free-identifier=? to name-id as well as a syntax property accessible
+  via syntax-procedure-alias-property with an identifier that is
+  free-identifier=? to name-id.
 
 * id?, a predicate procedure that returns #t for instances of the
   structure type (constructed by constructor-id or the constructor for a
@@ -154,7 +156,7 @@ A struct form with n fields defines up to 4+2n names:
   #<void> is returned.
 
 If super-id is provided, it must have a transformer binding of the same
-sort bound to id (see Structure Type Transformer Binding), and it
+sort bound to name-id (see Structure Type Transformer Binding), and it
 specifies a supertype for the structure type. Alternately, the #:super
 option can be used to specify an expression that must produce a
 structure type descriptor. See Structures for more information on
@@ -162,12 +164,10 @@ structure subtypes and supertypes. If both super-id and #:super are
 provided, a syntax error is reported.
 
 Examples:
+
   > (struct document (author title content))
-
   > (struct book document (publisher))
-
-  > (struct paper (journal) #:super struct:document) ~
-
+  > (struct paper (journal) #:super struct:document) ~ ~
 
 If the #:mutable option is specified for an individual field, then the
 field can be mutated in instances of the structure type, and a mutator
@@ -176,12 +176,10 @@ as supplying it for all fields. If #:mutable is specified as both a
 field-option and struct-option, a syntax error is reported.
 
 Examples:
-  > (struct cell ([content #:mutable]) #:transparent) ~
 
+  > (struct cell ([content #:mutable]) #:transparent) ~ ~
   > (define a-cell (cell 0))
-
   > (set-cell-content! a-cell 1)
-
 
 The #:inspector, #:auto-value, and #:guard options specify an inspector,
 value for automatic fields, and guard procedure, respectively. See
@@ -192,17 +190,16 @@ Structure Type Properties for more information on properties. The
 #:transparent option is a shorthand for #:inspector #f.
 
 Examples:
-  > (struct point (x y) #:inspector #f) ~
 
+  > (struct point (x y) #:inspector #f) ~ ~
   > (point 3 5)
   (point 3 5)
-  > (struct celcius (temp)
-      #:guard (λ (temp name) ~
+  > (struct celsius (temp)
+      #:guard (λ (temp name) ~ ~
                 (unless (and (real? temp) (>= temp -273.15))
                   (error "not a valid temperature"))
                 temp))
-
-  > (celcius -275)
+  > (celsius -275)
   not a valid temperature
 
 Use the prop:procedure property to implement an applicable structure,
@@ -214,33 +211,52 @@ The #:prefab option obtains a prefab (pre-defined, globally shared)
 structure type, as opposed to creating a new structure type. Such a
 structure type is inherently transparent and cannot have a guard or
 properties, so using #:prefab with #:transparent, #:inspector, #:guard,
-or #:property is a syntax error. If a supertype is specified, it must
-also be a prefab structure type.
+#:property, #:authentic, or #:methods is a syntax error. If a supertype
+is specified, it must also be a prefab structure type.
 
 Examples:
-  > (struct prefab-point (x y) #:prefab) ~
 
+  > (struct prefab-point (x y) #:prefab) ~ ~
   > (prefab-point 1 2)
   '#s(prefab-point 1 2)
   > (prefab-point? #s(prefab-point 1 2))
   #t
 
-If constructor-id is supplied, then the transformer binding of id
+The #:authentic option is a shorthand for #:property prop:authentic #t,
+which prevents instances of the structure type from being impersonated
+(see impersonate-struct), chaperoned (see chaperone-struct), or
+acquiring a non-flat contract (see struct/c). See prop:authentic for
+more information. If a supertype is specified, it must also have the
+prop:authentic property.
+
+If name-id is supplied via #:extra-name and it is not id, then both
+name-id and id are bound to information about the structure type. Only
+one of #:extra-name and #:name can be provided within a struct form, and
+#:extra-name cannot be combined with #:omit-define-syntaxes.
+
+Examples:
+
+  > (struct ghost (color name) #:prefab #:extra-name GHOST) ~ ~
+  > (match (ghost 'red 'blinky)
+      [(GHOST c n) c])
+  'red
+
+If constructor-id is supplied, then the transformer binding of name-id
 records constructor-id as the constructor binding; as a result, for
 example, struct-out includes constructor-id as an export. If
 constructor-id is supplied via #:extra-constructor-name and it is not
 id, applying object-name on the constructor produces the symbolic form
 of id rather than constructor-id. If constructor-id is supplied via
-#:constructor-name and it is not the same as id, then id does not serve
-as a constructor, and object-name on the constructor produces the
-symbolic form of constructor-id. Only one of #:extra-constructor-name
-and #:constructor-name can be provided within a struct form.
+#:constructor-name and it is not the same as name-id, then name-id does
+not serve as a constructor, and object-name on the constructor produces
+the symbolic form of constructor-id. Only one of
+#:extra-constructor-name and #:constructor-name can be provided within a
+struct form.
 
 Examples:
-  > (struct color (r g b) #:constructor-name -color) ~
 
-  > (struct rectangle (w h color) #:extra-constructor-name rect) ~
-
+  > (struct color (r g b) #:constructor-name -color) ~ ~
+  > (struct rectangle (w h color) #:extra-constructor-name rect) ~ ~
   > (rectangle 13 50 (-color 192 157 235))
   #<rectangle>
   > (rect 50 37 (-color 35 183 252))
@@ -253,54 +269,59 @@ first argument of make-struct-type. Structure printing uses the
 reflective name, as do the various procedures that are bound by struct.
 
 Examples:
-  > (struct circle (radius) #:reflection-name '<circle>) ~
 
+  > (struct circle (radius) #:reflection-name '<circle>) ~ ~
   > (circle 15)
-  #<|<circle>|>
+  #<<circle>>
   > (circle-radius "bad")
   <circle>-radius: contract violation
-    expected: <circle>? ~
-    given: "bad" ~
+    expected: <circle>? ~ ~
+    given: "bad" ~ ~
 
-If #:methods gen:name method-defs is provided, then gen:name must be a
-transformer binding for the static information about a generic interface
-produced by define-generics. The method-defs define the methods of the
-gen:name interface. A define/generic form or auxiliary definitions and
-expressions may also appear in method-defs.
+If #:methods gen:name-id method-defs is provided, then gen:name-id must
+be a transformer binding for the static information about a generic
+interface produced by define-generics. The method-defs define the
+methods of the gen:name-id interface. A define/generic form or auxiliary
+definitions and expressions may also appear in method-defs.
 
 Examples:
+
   > (struct constant-stream (val)
-      #:methods gen:stream ~
+      #:methods gen:stream ~ ~
       [(define (stream-empty? stream) #f)
        (define (stream-first stream)
          (constant-stream-val stream))
        (define (stream-rest stream) stream)])
-
   > (stream-ref (constant-stream 'forever) 0)
   'forever
   > (stream-ref (constant-stream 'forever) 50)
   'forever
 
-If the #:omit-define-syntaxes option is supplied, then id is not bound
-as a transformer. If the #:omit-define-values option is supplied, then
-none of the usual variables are bound, but id is bound. If both are
-supplied, then the struct form is equivalent to (begin).
+If the #:omit-define-syntaxes option is supplied, then name-id (and id,
+if #:extra-name is specified) is not bound as a transformer. If the
+#:omit-define-values option is supplied, then none of the usual
+variables are bound, but id is bound. If both are supplied, then the
+struct form is equivalent to (begin).
 
 Examples:
-  > (struct square (side) #:omit-define-syntaxes) ~
 
+  > (struct square (side) #:omit-define-syntaxes) ~ ~
   > (match (square 5)
       ; fails to match because syntax is omitted
       [(struct square x) x])
-  eval:26:0: match: square does not refer to a structure
+  eval:28:0: match: square does not refer to a structure
   definition
-    at: square ~
-    in: (struct square x) ~
-  > (struct ellipse (width height) #:omit-define-values) ~
-
+    at: square ~ ~
+    in: (struct square x) ~ ~
+  > (struct ellipse (width height) #:omit-define-values) ~ ~
   > ellipse-width
   ellipse-width: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
+
+Expressions supplied to #:auto-value are evaluated once and shared
+between every instance of the structure type. In particular, updates to
+a mutable #:auto-value affect all current and future instances.
 
 If #:auto is supplied as a field-option, then the constructor procedure
 for the structure type does not accept an argument corresponding to the
@@ -316,18 +337,21 @@ field-option or struct-option keyword is repeated, other than
 #:property, a syntax error is reported.
 
 Examples:
-  > (struct posn (x y [z #:auto]) ~
-      #:auto-value 0 ~
-      #:transparent) ~
 
+  (struct posn (x y [z #:auto #:mutable]) ~ ~
+    #:auto-value 0 ~ ~
+    #:transparent) ~ ~
+   
   > (posn 1 2)
   (posn 1 2 0)
   > (posn? (posn 1 2))
   #t
   > (posn-y (posn 1 2))
   2
-
-  (struct color-posn posn (hue) #:mutable) ~
+  > (posn-z (posn 1 2))
+  0
+   
+  (struct color-posn posn (hue) #:mutable) ~ ~
   (define cp (color-posn 1 2 "blue"))
    
   > (color-posn-hue cp)
@@ -335,10 +359,10 @@ Examples:
   > cp
   (color-posn 1 2 0 ...)
   > (set-posn-z! cp 3)
-  set-posn-z!: undefined;
-   cannot reference undefined identifier
 
 For serialization, see define-serializable-struct.
+
+Changed in version 6.9.0.4: Added #:authentic.
 
                                         *struct-field-index*
 (struct-field-index field-id) ~
@@ -350,12 +374,11 @@ exact, non-negative integer that corresponds to the position within the
 structure declaration of the field named by field-id.
 
 Examples:
-  > (struct mood-procedure (base rating)
-      #:property prop:procedure (struct-field-index base)) ~
 
+  (struct mood-procedure (base rating)
+    #:property prop:procedure (struct-field-index base)) ~ ~
   (define happy+ (mood-procedure add1 10))
-
-
+   
   > (happy+ 2)
   3
   > (mood-procedure-rating happy+)
@@ -376,11 +399,11 @@ implicitly supplied via #:extra-constructor-name if neither
 This form is provided for backwards compatibility; struct is preferred.
 
 Examples:
-  (define-struct posn (x y [z #:auto]) ~
-     #:auto-value 0 ~
-     #:transparent) ~
 
-
+  (define-struct posn (x y [z #:auto]) ~ ~
+     #:auto-value 0 ~ ~
+     #:transparent) ~ ~
+   
   > (make-posn 1 2)
   (posn 1 2 0)
   > (posn? (make-posn 1 2))
@@ -388,37 +411,73 @@ Examples:
   > (posn-y (make-posn 1 2))
   2
 
+                                        *struct/derived*
+(struct/derived (id . rest-form) ~
+id (field ...) struct-option ...)
+(struct/derived (id . rest-form)
+id super-id (field ...) struct-option ...)
+
+The same as struct, but with an extra (id . rest-form) sub-form that is
+treated as the overall form for syntax-error reporting and otherwise
+ignored.  The only constraint on the sub-form for error reporting is
+that it starts with id. The struct/derived form is intended for use by
+macros that expand to struct.
+
+Examples:
+
+  (define-syntax (fruit-struct stx)
+    (syntax-case stx ()
+     [(ds name . rest)
+      (with-syntax ([orig stx])
+        #'(struct/derived orig name (seeds color) . rest))]))
+   
+  > (fruit-struct apple)
+  > (apple-seeds (apple 12 "red"))
+  12
+  > (fruit-struct apple #:mutable) ~ ~
+  > (set-apple-seeds! (apple 12 "red") 8)
+  ; this next line will cause an error due to a bad keyword
+  > (fruit-struct apple #:bad-option) ~ ~
+  eval:54:0: fruit-struct: unrecognized struct-specification
+  keyword
+    at: #:bad-option ~ ~
+    in: (fruit-struct apple #:bad-option) ~ ~
+
+Added in version 7.5.0.16.
+
                                         *define-struct/derived*
 (define-struct/derived (id . rest-form) ~
   id-maybe-super (field ...) struct-option ...)
 
-The same as define-struct, but with an extra (id . rest-form) sub-form
-that is treated as the overall form for syntax-error reporting and
-otherwise ignored.  The only constraint on the sub-form for error
-reporting is that it starts with id. The define-struct/derived form is
-intended for use by macros that expand to define-struct.
+Like struct/derived, except that the syntax for supplying a super-id is
+different, and a constructor-id that has a make- prefix on id is
+implicitly supplied via #:extra-constructor-name if neither
+#:extra-constructor-name nor #:constructor-name is provided. The
+define-struct/derived form is intended for use by macros that expand to
+define-struct.
 
 Examples:
-  > (define-syntax (define-xy-struct stx)
-      (syntax-case stx ()
-       [(ds name . rest)
-        (with-syntax ([orig stx])
-          #'(define-struct/derived orig name (x y) . rest))]))
 
+  (define-syntax (define-xy-struct stx)
+    (syntax-case stx ()
+     [(ds name . rest)
+      (with-syntax ([orig stx])
+        #'(define-struct/derived orig name (x y) . rest))]))
+   
   > (define-xy-struct posn)
-
   > (posn-x (make-posn 1 2))
   1
-  > (define-xy-struct posn #:mutable) ~
-
+  > (define-xy-struct posn #:mutable) ~ ~
   > (set-posn-x! (make-posn 1 2) 0)
-
   ; this next line will cause an error due to a bad keyword
-  > (define-xy-struct posn #:bad-option) ~
-  eval:51:0: define-xy-struct: unrecognized
+  > (define-xy-struct posn #:bad-option) ~ ~
+  eval:60:0: define-xy-struct: unrecognized
   struct-specification keyword
-    at: #:bad-option ~
-    in: (define-xy-struct posn #:bad-option) ~
+    at: #:bad-option ~ ~
+    in: (define-xy-struct posn #:bad-option) ~ ~
+
+Changed in version 7.5.0.16: Moved main description to struct/derived
+and replaced with differences.
 
 2. Creating Structure Types
 
@@ -439,20 +498,20 @@ Examples:
     struct-predicate-procedure?
     struct-accessor-procedure?
     struct-mutator-procedure?
-  name : symbol? ~
-  super-type : (or/c struct-type? #f) ~
-  init-field-cnt : exact-nonnegative-integer? ~
-  auto-field-cnt : exact-nonnegative-integer? ~
-  auto-v : any/c = #f ~
-  props : (listof (cons/c struct-type-property? = null ~
+  name : symbol? ~ ~
+  super-type : (or/c struct-type? #f) ~ ~
+  init-field-cnt : exact-nonnegative-integer? ~ ~
+  auto-field-cnt : exact-nonnegative-integer? ~ ~
+  auto-v : any/c = #f ~ ~
+  props : (listof (cons/c struct-type-property? = null ~ ~
                           any/c))
-  inspector : (or/c inspector? #f 'prefab) = (current-inspector) ~
-  proc-spec : (or/c procedure?                 = #f ~
+  inspector : (or/c inspector? #f 'prefab) = (current-inspector) ~ ~
+  proc-spec : (or/c procedure?                 = #f ~ ~
                     exact-nonnegative-integer?
                     #f)
-  immutables : (listof exact-nonnegative-integer?) = null ~
-  guard : (or/c procedure? #f) = #f ~
-  constructor-name : (or/c symbol? #f) = #f ~
+  immutables : (listof exact-nonnegative-integer?) = null ~ ~
+  guard : (or/c procedure? #f) = #f ~ ~
+  constructor-name : (or/c symbol? #f) = #f ~ ~
 
 Creates a new structure type, unless inspector is 'prefab, in which case
 make-struct-type accesses a prefab structure type.  The name argument is
@@ -477,7 +536,8 @@ must be null.
 The inspector argument normally controls access to reflective
 information about the structure type and its instances; see [missing]
 for more information. If inspector is 'prefab, then the resulting prefab
-structure type and its instances are always transparent.
+structure type and its instances are always transparent. If inspector is
+#f, then the structure type’s instances are transparent.
 
 If proc-spec is an integer or procedure, instances of the structure type
 act as procedures. See prop:procedure for further information.
@@ -526,25 +586,23 @@ The result of make-struct-type is five values:
   field value.
 
 Examples:
-  > (define-values (struct:a make-a a? a-ref a-set!) ~
-      (make-struct-type 'a #f 2 1 'uninitialized))
 
-  > (define an-a (make-a 'x 'y))
-
+  (define-values (struct:a make-a a? a-ref a-set!) ~ ~
+    (make-struct-type 'a #f 2 1 'uninitialized))
+  (define an-a (make-a 'x 'y))
+   
   > (a-ref an-a 1)
   'y
   > (a-ref an-a 2)
   'uninitialized
   > (define a-first (make-struct-field-accessor a-ref 0))
-
   > (a-first an-a)
   'x
-
-  > (define-values (struct:b make-b b? b-ref b-set!) ~
-      (make-struct-type 'b struct:a 1 2 'b-uninitialized)) ~
-
-  > (define a-b (make-b 'x 'y 'z))
-
+   
+  (define-values (struct:b make-b b? b-ref b-set!) ~ ~
+    (make-struct-type 'b struct:a 1 2 'b-uninitialized)) ~ ~
+  (define a-b (make-b 'x 'y 'z))
+   
   > (a-ref a-b 1)
   'y
   > (a-ref a-b 2)
@@ -555,29 +613,27 @@ Examples:
   'b-uninitialized
   > (b-ref a-b 2)
   'b-uninitialized
-
-  > (define-values (struct:c make-c c? c-ref c-set!) ~
-      (make-struct-type
-       'c struct:b 0 0 #f null (make-inspector) #f null ~
-       ; guard checks for a number, and makes it inexact
-       (lambda (a1 a2 b1 name)
-         (unless (number? a2)
-           (error (string->symbol (format "make-~a" name))
-                  "second field must be a number"))
-         (values a1 (exact->inexact a2) b1))))
-
+   
+  (define-values (struct:c make-c c? c-ref c-set!) ~ ~
+    (make-struct-type
+     'c struct:b 0 0 #f null (make-inspector) #f null ~ ~
+     ; guard checks for a number, and makes it inexact
+     (lambda (a1 a2 b1 name)
+       (unless (number? a2)
+         (error (string->symbol (format "make-~a" name))
+                "second field must be a number"))
+       (values a1 (exact->inexact a2) b1))))
+   
   > (make-c 'x 'y 'z)
   make-c: second field must be a number
   > (define a-c (make-c 'x 2 'z))
-
   > (a-ref a-c 1)
   2.0
-
-  > (define p1 #s(p a b c))
-
-  > (define-values (struct:p make-p p? p-ref p-set!) ~
-      (make-struct-type 'p #f 3 0 #f null 'prefab #f '(0 1 2)))
-
+   
+  (define p1 #s(p a b c))
+  (define-values (struct:p make-p p? p-ref p-set!) ~ ~
+    (make-struct-type 'p #f 3 0 #f null 'prefab #f '(0 1 2)))
+   
   > (p? p1)
   #t
   > (p-ref p1 0)
@@ -589,9 +645,9 @@ Examples:
 (make-struct-field-accessor  accessor-proc      ~
                              field-pos         
                             [field-name])  -> procedure?
-  accessor-proc : struct-accessor-procedure? ~
-  field-pos : exact-nonnegative-integer? ~
-  field-name : (or/c symbol? #f) ~
+  accessor-proc : struct-accessor-procedure? ~ ~
+  field-pos : exact-nonnegative-integer? ~ ~
+  field-name : (or/c symbol? #f) ~ ~
              = (symbol->string (format "field~a" field-pos))
 
 Returns a field accessor that is equivalent to (lambda (s)
@@ -606,9 +662,9 @@ For examples, see make-struct-type.
 (make-struct-field-mutator  mutator-proc      ~
                             field-pos        
                            [field-name]) -> procedure?
-  mutator-proc : struct-mutator-procedure? ~
-  field-pos : exact-nonnegative-integer? ~
-  field-name : (or/c symbol? #f) ~
+  mutator-proc : struct-mutator-procedure? ~ ~
+  field-pos : exact-nonnegative-integer? ~ ~
+  field-name : (or/c symbol? #f) ~ ~
              = (symbol->string (format "field~a" field-pos))
 
 Returns a field mutator that is equivalent to (lambda (s v)
@@ -640,11 +696,11 @@ override an inherited  property value with a new value.
  -> struct-type-property?
     procedure?
     procedure?
-  name : symbol? ~
-  guard : (or/c procedure? #f 'can-impersonate) = #f ~
-  supers : (listof (cons/c struct-type-property?  = null ~
+  name : symbol? ~ ~
+  guard : (or/c procedure? #f 'can-impersonate) = #f ~ ~
+  supers : (listof (cons/c struct-type-property?  = null ~ ~
                            (any/c . -> . any/c)))
-  can-impersonate? : any/c = #f ~
+  can-impersonate? : any/c = #f ~ ~
 
 Creates a new structure type property and returns three values:
 
@@ -700,57 +756,64 @@ is #f, then redirection is not allowed. Otherwise, the property accessor
 may be redirected by a struct impersonator.
 
 Examples:
-  > (define-values (prop:p p? p-ref) (make-struct-type-property 'p)) ~
 
-  > (define-values (struct:a make-a a? a-ref a-set!) ~
+  > (define-values (prop:p p? p-ref) (make-struct-type-property 'p)) ~ ~
+  > (define-values (struct:a make-a a? a-ref a-set!) ~ ~
       (make-struct-type 'a #f 2 1 'uninitialized
-                        (list (cons prop:p 8)))) ~
-
-  > (p? struct:a) ~
+                        (list (cons prop:p 8)))) ~ ~
+  > (p? struct:a) ~ ~
   #t
   > (p? 13)
   #f
   > (define an-a (make-a 'x 'y))
-
   > (p? an-a)
   #t
   > (p-ref an-a)
   8
-  > (define-values (struct:b make-b b? b-ref b-set!) ~
+  > (define-values (struct:b make-b b? b-ref b-set!) ~ ~
       (make-struct-type 'b #f 0 0 #f))
-
-  > (p? struct:b) ~
+  > (p? struct:b) ~ ~
   #f
-  > (define-values (prop:q q? q-ref) (make-struct-type-property ~
+  > (define-values (prop:q q? q-ref) (make-struct-type-property ~ ~
                                       'q (lambda (v si) (add1 v))
-                                      (list (cons prop:p sqrt)))) ~
-
-  > (define-values (struct:c make-c c? c-ref c-set!) ~
+                                      (list (cons prop:p sqrt)))) ~ ~
+  > (define-values (struct:c make-c c? c-ref c-set!) ~ ~
       (make-struct-type 'c #f 0 0 'uninit
-                        (list (cons prop:q 8)))) ~
-
-  > (q-ref struct:c) ~
+                        (list (cons prop:q 8)))) ~ ~
+  > (q-ref struct:c) ~ ~
   9
-  > (p-ref struct:c) ~
+  > (p-ref struct:c) ~ ~
   3
 
                                         *struct-type-property?*
 (struct-type-property? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a structure type property descriptor value, #f
 otherwise.
 
                                         *struct-type-property-accessor-procedure?*
 (struct-type-property-accessor-procedure? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an accessor procedure produced by
 make-struct-type-property, #f otherwise.
 
+                                        *struct-type-property-predicate-procedure?*
+(struct-type-property-predicate-procedure?  v           ~
+                                           [prop]) -> boolean?
+  v : any/c ~ ~
+  prop : (or/c struct-type-property? #f) = #f ~ ~
+
+Returns #t if v is a predicate procedure produced by
+make-struct-type-property and either prop is #f or it was produced by
+the same call to make-struct-type-property, #f otherwise.
+
+Added in version 7.5.0.11.
+
 4. Generic Interfaces
 
- (require racket/generic) package: base ~
+ (require racket/generic) package: base ~ ~
 
 A generic interface allows per-type methods to be associated with
 generic functions. Generic functions are defined using a define-generics
@@ -763,12 +826,12 @@ form. Method implementations for a structure type are defined using the
   [method-id . kw-formals*] ...
   generics-opt ...)
  
-generics-opt = #:defaults ([default-pred? default-impl ...] ...) ~
-             | #:fast-defaults ([fast-pred? fast-impl ...] ...) ~
-             | #:fallbacks [fallback-impl ...] ~
-             | #:defined-predicate defined-pred-id ~
-             | #:defined-table defined-table-id ~
-             | #:derive-property prop-expr prop-value-expr ~
+generics-opt = #:defaults ([default-pred? default-impl ...] ...) ~ ~
+             | #:fast-defaults ([fast-pred? fast-impl ...] ...) ~ ~
+             | #:fallbacks [fallback-impl ...] ~ ~
+             | #:defined-predicate defined-pred-id ~ ~
+             | #:defined-table defined-table-id ~ ~
+             | #:derive-property prop-expr prop-value-expr ~ ~
                 
  kw-formals* = (arg* ...)
              | (arg* ...+ . rest-id)
@@ -857,30 +920,28 @@ generic method of v.
 
                                         *raise-support-error*
 (raise-support-error name v) -> none/c ~
-  name : symbol? ~
-  v : any/c ~
+  name : symbol? ~ ~
+  v : any/c ~ ~
 
 Raises an exn:fail:support exception for a generic method called name
 that does not support the generic instance v.
 
 Example:
+
   >
   (raise-support-error 'some-method-name '("arbitrary" "instance" "value"))
   some-method-name: not implemented for '("arbitrary"
   "instance" "value")
 
                                         *struct*
-(struct exn:fail:support exn:fail () ~ ~
-    #:transparent) ~
+(struct exn:fail:support exn:fail () ~ ~ ~
+    #:transparent) ~ ~
 
 Raised for generic methods that do not support the given generic
 instance.
 
                                         *define/generic*
 (define/generic local-id method-id) ~
- 
-  local-id : identifier? ~
-  method-id : identifier? ~
 
 When used inside the method definitions associated with the #:methods
 keyword, binds local-id to the generic for method-id. This form is
@@ -891,86 +952,73 @@ Using the define/generic form outside a #:methods specification in
 struct (or define-struct) is an syntax error.
 
 Examples:
+
   > (define-generics printable
       (gen-print printable [port])
       (gen-port-print port printable)
-      (gen-print* printable [port] #:width width #:height [height]) ~
-      #:defaults ([string? ~
+      (gen-print* printable [port] #:width width #:height [height]) ~ ~
+      #:defaults ([string? ~ ~
                    (define/generic super-print gen-print)
                    (define (gen-print s [port (current-output-port)])
-                     (fprintf port "String: ~a" s)) ~
+                     (fprintf port "String: ~a" s)) ~ ~
                    (define (gen-port-print port s)
                      (super-print s port))
                    (define (gen-print* s [port (current-output-port)]
-                                       #:width w #:height [h 0]) ~
-                     (fprintf port "String (~ax~a): ~a" w h s))])) ~
-
+                                       #:width w #:height [h 0]) ~ ~
+                     (fprintf port "String (~ax~a): ~a" w h s))])) ~ ~
   > (define-struct num (v)
-      #:methods gen:printable ~
+      #:methods gen:printable ~ ~
       [(define/generic super-print gen-print)
        (define (gen-print n [port (current-output-port)])
-         (fprintf port "Num: ~a" (num-v n))) ~
+         (fprintf port "Num: ~a" (num-v n))) ~ ~
        (define (gen-port-print port n)
          (super-print n port))
        (define (gen-print* n [port (current-output-port)]
-                           #:width w #:height [h 0]) ~
-         (fprintf port "Num (~ax~a): ~a" w h (num-v n)))]) ~
-
+                           #:width w #:height [h 0]) ~ ~
+         (fprintf port "Num (~ax~a): ~a" w h (num-v n)))]) ~ ~
   > (define-struct bool (v)
-      #:methods gen:printable ~
+      #:methods gen:printable ~ ~
       [(define/generic super-print gen-print)
        (define (gen-print b [port (current-output-port)])
-         (fprintf port "Bool: ~a" ~
+         (fprintf port "Bool: ~a" ~ ~
                   (if (bool-v b) "Yes" "No")))
        (define (gen-port-print port b)
          (super-print b port))
        (define (gen-print* b [port (current-output-port)]
-                           #:width w #:height [h 0]) ~
-         (fprintf port "Bool (~ax~a): ~a" w h ~
+                           #:width w #:height [h 0]) ~ ~
+         (fprintf port "Bool (~ax~a): ~a" w h ~ ~
                   (if (bool-v b) "Yes" "No")))])
-
   > (define x (make-num 10))
-
   > (gen-print x)
   Num: 10
-
   > (gen-port-print (current-output-port) x)
   Num: 10
-
-  > (gen-print* x #:width 100 #:height 90) ~
+  > (gen-print* x #:width 100 #:height 90) ~ ~
   Num (100x90): 10
-
   > (gen-print "Strings are printable too!")
   String: Strings are printable too!
-
   > (define y (make-bool #t))
-
   > (gen-print y)
   Bool: Yes
-
   > (gen-port-print (current-output-port) y)
   Bool: Yes
-
-  > (gen-print* y #:width 100 #:height 90) ~
+  > (gen-print* y #:width 100 #:height 90) ~ ~
   Bool (100x90): Yes
-
   > (define/contract make-num-contracted
       (-> number?
           (printable/c
             [gen-print (->* (printable?) (output-port?) void?)]
             [gen-port-print (-> output-port? printable? void?)]
-            [gen-print* (->* (printable? #:width exact-nonnegative-integer?) ~
-                             (output-port? #:height exact-nonnegative-integer?) ~
+            [gen-print* (->* (printable? #:width exact-nonnegative-integer?) ~ ~
+                             (output-port? #:height exact-nonnegative-integer?) ~ ~
                              void?)]))
        make-num)
-
   > (define z (make-num-contracted 10))
-
-  > (gen-print* z #:width "not a number" #:height 5) ~
+  > (gen-print* z #:width "not a number" #:height 5) ~ ~
   make-num-contracted: contract violation
-    expected: exact-nonnegative-integer? ~
-    given: "not a number" ~
-    in: the #:width argument of ~
+    expected: natural? ~ ~
+    given: "not a number" ~ ~
+    in: the #:width argument of ~ ~
         method gen-print*
         the range of
         (->
@@ -982,23 +1030,19 @@ Examples:
            (-> output-port? printable? void?))
           (gen-print*
            (->*
-            (printable?
-             #:width ~
-             exact-nonnegative-integer?)
-            (output-port?
-             #:height ~
-             exact-nonnegative-integer?)
+            (printable? #:width natural?) ~ ~
+            (output-port? #:height natural?) ~ ~
             void?))))
-    contract from: ~
+    contract from: ~ ~
         (definition make-num-contracted)
-    blaming: top-level ~
+    blaming: top-level ~ ~
      (assuming the contract is correct)
-    at: eval:15.0 ~
+    at: eval:15.0 ~ ~
 
                                         *generic-instance/c*
 (generic-instance/c gen-id [method-id method-ctc] ...) ~
  
-  method-ctc : contract? ~
+  method-ctc : contract? ~ ~
 
 Creates a contract that recognizes structures that implement the generic
 interface gen-id, and constrains their implementations of the specified
@@ -1010,10 +1054,10 @@ method-ids with the corresponding method-ctcs.
   maybe-properties)
  
 maybe-properties = 
-                 | #:properties props-expr ~
+                 | #:properties props-expr ~ ~
  
-  method-proc-expr : (any/c . -> . any/c) ~
-  props-expr : (list/c impersonator-property? any/c ... ...) ~
+  method-proc-expr : (any/c . -> . any/c) ~ ~
+  props-expr : (list/c impersonator-property? any/c ... ...) ~ ~
 
 Creates an impersonator of val-expr, which must be a structure that
 implements the generic interface gen-id.  The impersonator applies the
@@ -1022,7 +1066,7 @@ the corresponding method-ids, and replaces the method implementation
 with the result.
 
 A props-expr can provide properties to attach to the impersonator. The
-result of props-expr bust be an list with an even number of elements,
+result of props-expr must be a list with an even number of elements,
 where the first element of the list is an impersonator property, the
 second element is its value, and so on.
 
@@ -1054,24 +1098,25 @@ mode evaluates to #f, or creates a chaperone of val-expr otherwise.
 (struct-copy id struct-expr fld-id ...) ~
  
 fld-id = [field-id expr]
-       | [field-id #:parent parent-id expr] ~
+       | [field-id #:parent parent-id expr] ~ ~
 
-Creates a new instance of the structure type id with the same field
-values as the structure produced by struct-expr, except that the value
-of each supplied field-id is instead determined by the corresponding
-expr. If #:parent is specified, the parent-id must be bound to a parent
-structure type of id.
+Creates a new instance of the structure type id (which is defined via a
+structure type defining form such as struct) with the same field values
+as the structure produced by struct-expr, except that the value of each
+supplied field-id is instead determined by the corresponding expr. If
+#:parent is specified, the parent-id must be bound to a parent structure
+type of id.
 
 The id must have a transformer binding that encapsulates information
 about a structure type (i.e., like the initial identifier bound by
 struct), and the binding must supply a constructor, a predicate, and all
 field accessors.
 
-Each field-id is combined with id (or parent-id, if present) to form
-id-field-id (using the lexical context of field-id), which must be one
-of the accessor bindings in id. The accessor bindings determined by
-different field-ids must be distinct. The order of the field-ids need
-not match the order of the corresponding fields in the structure type.
+Each field-id must correspond to a field-id in the structure type
+defining forms of id (or parent-id, if present). The accessor bindings
+determined by different field-ids under the same id (or parent-id, if
+present) must be distinct. The order of the field-ids need not match the
+order of the corresponding fields in the structure type.
 
 The struct-expr is evaluated first. The result must be an instance of
 the id structure type, otherwise the exn:fail:contract exception is
@@ -1083,23 +1128,18 @@ The result of struct-expr can be an instance of a sub-type of id, but
 the resulting copy is an immediate instance of id (not the sub-type).
 
 Examples:
-  > (struct fish (color weight) #:transparent) ~
 
+  > (struct fish (color weight) #:transparent) ~ ~
   > (define marlin (fish 'orange-and-white 11))
-
   > (define dory (struct-copy fish marlin
                               [color 'blue]))
-
   > dory
   (fish 'blue 11)
-  > (struct shark fish (weeks-since-eating-fish) #:transparent) ~
-
+  > (struct shark fish (weeks-since-eating-fish) #:transparent) ~ ~
   > (define bruce (shark 'grey 110 3))
-
   > (define chum (struct-copy shark bruce
-                              [weight #:parent fish 90] ~
+                              [weight #:parent fish 90] ~ ~
                               [weeks-since-eating-fish 0]))
-
   > chum
   (shark 'grey 90 0)
   ; subtypes can be copied as if they were supertypes,
@@ -1107,7 +1147,6 @@ Examples:
   > (define not-really-chum
       (struct-copy fish bruce
                    [weight 90]))
-
   > not-really-chum
   (fish 'grey 90)
 
@@ -1115,8 +1154,8 @@ Examples:
 
                                         *struct->vector*
 (struct->vector v [opaque-v]) -> vector? ~
-  v : any/c ~
-  opaque-v : any/c = '... ~
+  v : any/c ~ ~
+  opaque-v : any/c = '... ~ ~
 
 Creates a vector representing v.  The first slot of the result vector
 contains a symbol whose printed name has the form struct:id. Each
@@ -1129,7 +1168,7 @@ inaccessible.)
 
                                         *struct?*
 (struct? v) -> any ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if struct-info exposes any structure types of v with the
 current inspector, #f otherwise.
@@ -1140,53 +1179,52 @@ types of v to contribute zero fields.
 
                                         *struct-type?*
 (struct-type? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a structure type descriptor value, #f otherwise.
 
                                         *struct-constructor-procedure?*
 (struct-constructor-procedure? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a constructor procedure generated by struct or
 make-struct-type, #f otherwise.
 
                                         *struct-predicate-procedure?*
 (struct-predicate-procedure? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a predicate procedure generated by struct or
 make-struct-type, #f otherwise.
 
                                         *struct-accessor-procedure?*
 (struct-accessor-procedure? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an accessor procedure generated by struct,
 make-struct-type, or make-struct-field-accessor, #f otherwise.
 
                                         *struct-mutator-procedure?*
 (struct-mutator-procedure? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a mutator procedure generated by struct,
 make-struct-type, or make-struct-field-mutator, #f otherwise.
 
                                         *prefab-struct-key*
 (prefab-struct-key v) -> (or/c #f symbol? list?) ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #f if v is not an instance of a prefab structure type.
 Otherwise, the result is the shorted key that could be used with
 make-prefab-struct to create an instance of the structure type.
 
 Examples:
+
   > (prefab-struct-key #s(cat "Garfield"))
   'cat
-  > (struct cat (name) #:prefab) ~
-
-  > (struct cute-cat cat (shipping-dest) #:prefab) ~
-
+  > (struct cat (name) #:prefab) ~ ~
+  > (struct cute-cat cat (shipping-dest) #:prefab) ~ ~
   > (cute-cat "Nermel" "Abu Dhabi")
   '#s((cute-cat cat 1) "Nermel" "Abu Dhabi")
   > (prefab-struct-key (cute-cat "Nermel" "Abu Dhabi"))
@@ -1194,8 +1232,8 @@ Examples:
 
                                         *make-prefab-struct*
 (make-prefab-struct key v ...) -> struct? ~
-  key : prefab-key? ~
-  v : any/c ~
+  key : prefab-key? ~ ~
+  v : any/c ~ ~
 
 Creates an instance of a prefab structure type, using the vs as field
 values. The key and the number of vs determine the prefab structure
@@ -1234,6 +1272,7 @@ fields indicated by key is inconsistent with the number of supplied vs,
 the exn:fail:contract exception is raised.
 
 Examples:
+
   > (make-prefab-struct 'clown "Binky" "pie")
   '#s(clown "Binky" "pie")
   > (make-prefab-struct '(clown 2) "Binky" "pie")
@@ -1247,8 +1286,8 @@ Examples:
 
                                         *prefab-key->struct-type*
 (prefab-key->struct-type key field-count) -> struct-type? ~
-  key : prefab-key? ~
-  field-count : (integer-in 0 32768) ~
+  key : prefab-key? ~ ~
+  field-count : (integer-in 0 32768) ~ ~
 
 Returns a structure type descriptor for the prefab structure type
 specified by the combination of key and field-count.
@@ -1258,11 +1297,119 @@ field-count, the exn:fail:contract exception is raised.
 
                                         *prefab-key?*
 (prefab-key? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Return #t if v can be a prefab structure type key, #f otherwise.
 
 See make-prefab-struct for a description of valid key shapes.
+
+6.1. Additional Structure Utilities
+
+ (require racket/struct) package: base ~ ~
+
+The bindings documented in this section are provided by the
+racket/struct library, not racket/base or racket.
+
+                                        *make-constructor-style-printer*
+(make-constructor-style-printer get-constructor  ~
+                                get-contents)   
+ -> (-> any/c output-port? (or/c #t #f 0 1) void?)
+  get-constructor : (-> any/c (or/c symbol? string?)) ~ ~
+  get-contents : (-> any/c sequence?) ~ ~
+
+Produces a function suitable as a value for  gen:custom-write or
+prop:custom-write.  The function prints values in “constructor style.”
+When  the value is printed as an expression, it is shown  as an
+application of the constructor (as returned by  get-constructor) to the
+contents (as returned by  get-contents). When given to write, it is
+shown as an unreadable value with the constructor separated  from the
+contents by a colon.
+
+Examples:
+
+  > (struct point (x y)
+      #:methods gen:custom-write ~ ~
+      [(define write-proc
+         (make-constructor-style-printer
+          (lambda (obj) 'point)
+          (lambda (obj) (list (point-x obj) (point-y obj)))))])
+  > (print (point 1 2))
+  (point 1 2)
+  > (write (point 1 2))
+  #<point: 1 2>
+
+The function also cooperates with pretty-print:
+
+  > (parameterize ((pretty-print-columns 10))
+      (pretty-print (point 3000000 4000000)))
+  (point
+   3000000
+   4000000)
+  > (parameterize ((pretty-print-columns 10))
+      (pretty-write (point 3000000 4000000)))
+  #<point:
+   3000000
+   4000000>
+
+Keyword arguments can be simulated with unquoted-printing-string:
+
+  ; Private implementation
+  > (struct kwpoint-impl (x y)
+      #:methods gen:custom-write ~ ~
+      [(define write-proc
+         (make-constructor-style-printer
+          (lambda (obj) 'kwpoint)
+          (lambda (obj)
+            (list (unquoted-printing-string "#:x") ~ ~
+                  (kwpoint-impl-x obj)
+                  (unquoted-printing-string "#:y") ~ ~
+                  (kwpoint-impl-y obj)))))])
+  ; Public ``constructor''
+  > (define (kwpoint #:x x #:y y) ~ ~
+      (kwpoint-impl x y))
+  ; Example use
+  > (print (kwpoint #:x 1 #:y 2)) ~ ~
+  (kwpoint #:x 1 #:y 2)
+  > (write (kwpoint #:x 3 #:y 4)) ~ ~
+  #<kwpoint: #:x 3 #:y 4>
+
+Added in version 6.3 of package base.
+
+                                        *struct->list*
+(struct->list v [#:on-opaque on-opaque]) -> (or/c list? #f) ~ ~ ~
+  v : any/c ~ ~
+  on-opaque : (or/c 'error 'return-false 'skip) = 'error ~ ~
+
+Returns a list containing the struct instance v’s fields. Unlike
+struct->vector, the struct name itself is not included.
+
+If any fields of v are inaccessible via the current inspector the
+behavior of struct->list is determined by on-opaque. If on-opaque is
+'error (the default), an error is raised. If it is 'return-false,
+struct->list returns #f. If it is 'skip, the inaccessible fields are
+omitted from the list.
+
+Examples:
+
+  > (define-struct open (u v) #:transparent) ~ ~
+  > (struct->list (make-open 'a 'b))
+  '(a b)
+  > (struct->list #s(pre 1 2 3))
+  '(1 2 3)
+  > (define-struct (secret open) (x y))
+  > (struct->list (make-secret 0 1 17 22))
+  struct->list: expected argument of type <non-opaque struct>;
+  given: (secret 0 1 ...)
+  > (struct->list (make-secret 0 1 17 22) #:on-opaque 'return-false) ~ ~
+  #f
+  > (struct->list (make-secret 0 1 17 22) #:on-opaque 'skip) ~ ~
+  '(0 1)
+  > (struct->list 'not-a-struct #:on-opaque 'return-false) ~ ~
+  #f
+  > (struct->list 'not-a-struct #:on-opaque 'skip) ~ ~
+  '()
+
+Added in version 6.3 of package base.
 
 7. Structure Type Transformer Binding
 
@@ -1323,8 +1470,8 @@ structure type property. Finally, the representation can be an instance
 of a structure type derived from struct:struct-info or with the
 prop:struct-info property that also implements prop:procedure, and where
 the instance is further is wrapped by make-set!-transformer. In
-addition, the representation may implement the prop:struct-auto-info
-property.
+addition, the representation may implement the prop:struct-auto-info and
+prop:struct-field-info properties.
 
 Use struct-info? to recognize all allowed forms of the information, and
 use extract-struct-info to obtain a list from any representation.
@@ -1339,14 +1486,14 @@ unit form with an imported structure type, in which case the user is
 expected to know the set of fields that are listed in the signature for
 the structure type.
 
- (require racket/struct-info) package: base ~
+ (require racket/struct-info) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/struct-info library, not racket/base or racket.
 
                                         *struct-info?*
 (struct-info? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is either a six-element list with the correct shape for
 representing structure-type information, a procedure encapsulated by
@@ -1356,7 +1503,7 @@ and wrapped with make-set!-transformer.
 
                                         *checked-struct-info?*
 (checked-struct-info? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a procedure encapsulated by make-struct-info and
 produced by struct, but only when no parent type is specified or the
@@ -1365,19 +1512,20 @@ value.
 
                                         *make-struct-info*
 (make-struct-info thunk) -> struct-info? ~
-  thunk : (-> (and/c struct-info? list?)) ~
+  thunk : (-> (and/c struct-info? list?)) ~ ~
 
 Encapsulates a thunk that returns structure-type information in list
 form. Note that accessors are listed in reverse order, as mentioned in
-Structure Type Transformer Binding.
+Structure Type Transformer Binding. Note that the field names are not
+well-defined for struct-type informations that are created with this
+method, so it is likely not going to work well with forms like
+struct-copy and struct*.
 
 Examples:
+
   > (define (new-pair? x) (displayln "new pair?") (pair? x))
-
   > (define (new-car x) (displayln "new car") (car x))
-
   > (define (new-cdr x) (displayln "new cdr") (cdr x))
-
   > (define-syntax new-list
       (make-struct-info
        (λ () (list #f
@@ -1386,7 +1534,6 @@ Examples:
                    (list #'new-cdr #'new-car)
                    (list #f #f)
                    #t))))
-
   > (match (list 1 2 3)
       [(new-list hd tl) (append tl (list hd))])
   new pair?
@@ -1395,14 +1542,11 @@ Examples:
   '(2 3 1)
 
 Examples:
+
   > (struct A (x y))
-
   > (define (new-A-x a) (displayln "A-x") (A-x a))
-
   > (define (new-A-y a) (displayln "A-y") (A-y a))
-
   > (define (new-A? a) (displayln "A?") (A? a))
-
   > (define-syntax A-info
       (make-struct-info
        (λ () (list #'A
@@ -1411,10 +1555,8 @@ Examples:
                    (list #'new-A-y #'new-A-x)
                    (list #f #f)
                    #t))))
-
   > (define-match-expander B
       (syntax-rules () [(_ x ...) (A-info x ...)]))
-
   > (match (A 10 20)
       [(B x y) (list y x)])
   A?
@@ -1424,31 +1566,31 @@ Examples:
 
                                         *extract-struct-info*
 (extract-struct-info v) -> (and/c struct-info? list?) ~
-  v : struct-info? ~
+  v : struct-info? ~ ~
 
 Extracts the list form of the structure type information represented by
 v.
 
-struct:struct-info : struct-type? ~
+struct:struct-info : struct-type? ~ ~
 
 The structure type descriptor for the structure type returned by
 make-struct-info. This structure type descriptor is mostly useful for
 creating structure subtypes. The structure type includes a guard that
 checks an instance’s first field in the same way as make-struct-info.
 
-prop:struct-info : struct-type-property? ~
+prop:struct-info : struct-type-property? ~ ~
 
 The structure type property for creating new structure types like
 struct:struct-info. The property value must be a procedure of one
 argument that takes an instance structure and returns structure-type
 information in list form.
 
-prop:struct-auto-info : struct-type-property? ~
+prop:struct-auto-info : struct-type-property? ~ ~
 (struct-auto-info? v) -> boolean?
-  v : any/c ~
+  v : any/c ~ ~
 (struct-auto-info-lists sai)
  -> (list/c (listof identifier?) (listof identifier?))
-  sai : struct-auto-info? ~
+  sai : struct-auto-info? ~ ~
 
 The prop:struct-auto-info property is implemented to provide static
 information about which of the accessor and mutator identifiers for a
@@ -1466,3 +1608,34 @@ from a value that implements the prop:struct-auto-info property. The
 first list should be a subset of the accessor identifiers for the
 structure type described by sai, and the second list should be a subset
 of the mutator identifiers. The two subsets correspond to #:auto fields.
+
+prop:struct-field-info : struct-type-property? ~ ~
+(struct-field-info? v) -> boolean?
+  v : any/c ~ ~
+(struct-field-info-list sfi) -> (listof symbol?)
+  sfi : struct-field-info? ~ ~
+
+The prop:struct-field-info property is implemented to provide static
+information about field names in a structure type. The property value
+must be a procedure that accepts an instance structure to which the
+property is given, and the result must be a list of symbols suitable as
+a result from struct-field-info-list.
+
+The struct-field-info? predicate recognizes values that implement the
+prop:struct-field-info property.
+
+The struct-field-info-list function extracts a list of symbols from a
+value that implements the prop:struct-field-info property. The list
+should contain every immediate field name (that is, not including fields
+from its super struct type) in the reverse order.
+
+Examples:
+
+  > (struct foo (x))
+  > (struct bar foo (y z))
+  > (define-syntax (get-bar-field-names stx)
+      #`'#,(struct-field-info-list (syntax-local-value #'bar)))
+  > (get-bar-field-names)
+  '(z y)
+
+Added in version 7.7.0.9 of package base.

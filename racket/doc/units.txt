@@ -9,7 +9,7 @@ addition to placeholders for run-time values. Units with suitably
 matching signatures can be linked together to form a larger unit, and a
 unit with no imports can be invoked to execute its body.
 
- (require racket/unit) package: base ~
+ (require racket/unit) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/unit
 and racket libraries, but not racket/base. The racket/unit module name
@@ -151,14 +151,14 @@ extension-decl = 
                | (sig-form-id . datum)
                   
          field = id
-               | [id #:mutable] ~
+               | [id #:mutable] ~ ~
                   
- struct-option = #:mutable ~
-               | #:constructor-name constructor-id ~
-               | #:extra-constructor-name constructor-id ~
-               | #:omit-constructor ~
-               | #:omit-define-syntaxes ~
-               | #:omit-define-values ~
+ struct-option = #:mutable ~ ~
+               | #:constructor-name constructor-id ~ ~
+               | #:extra-constructor-name constructor-id ~ ~
+               | #:omit-constructor ~ ~
+               | #:omit-define-syntaxes ~ ~
+               | #:omit-define-values ~ ~
 
 Binds an identifier to a signature that specifies a group of bindings
 for import or export:
@@ -327,7 +327,7 @@ define-values/invoke-unit form.
   (export tagged-link-id ...)
   (link linkage-decl ...))
  
-  link-binding = (link-id : tagged-sig-id) ~
+  link-binding = (link-id : tagged-sig-id) ~ ~
                   
 tagged-link-id = (tag id link-id)
                | link-id
@@ -408,7 +408,7 @@ unit-body-expr-or-defn.
   (link infer-linkage-decl ...))
  
 tagged-infer-link-import = tagged-sig-id
-                         | (link-id : tagged-sig-id) ~
+                         | (link-id : tagged-sig-id) ~ ~
                             
 tagged-infer-link-export = (tag id infer-link-export)
                          | infer-link-export
@@ -621,12 +621,12 @@ define-signature has no splicing begin form.)
 (struct/ctc id ([field contract-expr] ...) struct-option ...) ~
  
         field = id
-              | [id #:mutable] ~
+              | [id #:mutable] ~ ~
                  
-struct-option = #:mutable ~
-              | #:omit-constructor ~
-              | #:omit-define-syntaxes ~
-              | #:omit-define-values ~
+struct-option = #:mutable ~ ~
+              | #:omit-constructor ~ ~
+              | #:omit-define-syntaxes ~ ~
+              | #:omit-define-values ~ ~
 
 For use with define-signature. The struct/ctc form works similarly to
 struct, but the constructor, predicate, field accessors, and field
@@ -636,7 +636,7 @@ mutators are contracted appropriately.
 
                                         *unit?*
 (unit? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a unit, #f otherwise.
 
@@ -649,10 +649,21 @@ unit for the grammar of sig-spec.
 9. Unit Contracts
 
                                         *unit/c*
-(unit/c (import sig-block ...) (export sig-block ...)) ~
+(unit/c ~
+  (import sig-block ...)
+  (export sig-block ...)
+  init-depends-decl
+  optional-body-ctc)
  
-sig-block = (tagged-sig-id [id contract] ...)
-          | tagged-sig-id
+        sig-block = (tagged-sig-id [id contract] ...)
+                  | tagged-sig-id
+                     
+init-depends-decl = 
+                  | (init-depend tagged-sig-id ...)
+                     
+optional-body-ctc = 
+                  | contract
+                  | (values contract ...)
 
 A unit contract wraps a unit and checks both its imported and exported
 identifiers to ensure that they match the appropriate contracts. This
@@ -660,22 +671,31 @@ allows the programmer to add contract checks to a single unit value
 without adding contracts to the imported and exported signatures.
 
 The unit value must import a subset of the import signatures and export
-a superset of the export signatures listed in the unit contract.  Any
+a superset of the export signatures listed in the unit contract.
+Additionally, the unit value must declare initialization dependencies
+that are a subset of those specified in the unit contract. Any
 identifier which is not listed for a given signature is left alone.
 Variables used in a given contract expression first refer to other
 variables in the same signature, and then to the context of the unit/c
-expression.
+expression. If a body contract is specified then the result of invoking
+the unit value is wrapped with the given contract, if no body contract
+is supplied then no wrapping occurs when the unit value is invoked.
 
                                         *define-unit/contract*
 (define-unit/contract unit-id ~
   (import sig-spec-block ...)
   (export sig-spec-block ...)
   init-depends-decl
+  optional-body-ctc
   unit-body-expr-or-defn
   ...)
  
-sig-spec-block = (tagged-sig-spec [id contract] ...)
-               | tagged-sig-spec
+   sig-spec-block = (tagged-sig-spec [id contract] ...)
+                  | tagged-sig-spec
+                     
+optional-body-ctc = 
+                  | #:invoke/contract contract ~ ~
+                  | #:invoke/contract (values contract ...) ~ ~
 
 The define-unit/contract form defines a unit compatible with link
 inference whose imports and exports are contracted with a unit contract.
@@ -709,7 +729,7 @@ name serves as base.
 
 11. Single-Signature Modules
 
- #lang racket/signature package: base ~
+ #lang racket/signature package: base ~ ~
 
 The racket/signature language treats a module body as a unit signature.
 
@@ -734,7 +754,7 @@ compatibility.)
 
 12. Transformer Helpers
 
- (require racket/unit-exptime) package: base ~
+ (require racket/unit-exptime) package: base ~ ~
 
 The racket/unit-exptime library provides procedures that are intended
 for use by macro transformers. In particular, the library is typically
@@ -748,8 +768,8 @@ define-syntax.
                     identifier?))
     (list/c (cons/c (or/c symbol? #f)
                     identifier?))
-  unit-identifier : identifier? ~
-  err-syntax : syntax? ~
+  unit-identifier : identifier? ~ ~
+  err-syntax : syntax? ~ ~
 
 If unit-identifier is bound to static unit information via define-unit
 (or other such forms), the result is two values. The first value is for
@@ -770,8 +790,8 @@ used as the detail source location.
                                      (listof identifier?)
                                      (listof identifier?)
                                      (listof identifier?)
-  sig-identifier : identifier? ~
-  err-syntax : syntax? ~
+  sig-identifier : identifier? ~ ~
+  err-syntax : syntax? ~ ~
 
 If sig-identifier is bound to static unit information via
 define-signature (or other such forms), the result is four values:
@@ -788,6 +808,10 @@ define-signature (or other such forms), the result is four values:
 
 * a list of identifiers with syntax definitions in the signature.
 
+Each of the result identifiers is given a lexical context that is based
+on sig-identifier, so the names are suitable for reference or binding in
+the context of sign-identifier.
+
 If sig-identifier is not bound to a signature, then the exn:fail:syntax
 exception is raised. In that case, the given err-syntax argument is used
 as the source of the error, where sig-identifier is used as the detail
@@ -798,8 +822,8 @@ source location.
                                err-syntax)     
  -> (list/c (cons/c (or/c symbol? #f)
                     identifier?))
-  unit-identifier : identifier? ~
-  err-syntax : syntax? ~
+  unit-identifier : identifier? ~ ~
+  err-syntax : syntax? ~ ~
 
 If unit-identifier is bound to static unit information via define-unit
 (or other such forms), the result is a list of pairs. Each pair combines

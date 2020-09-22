@@ -10,7 +10,8 @@ and vice-versa.
     1 Sequences
       1.1 Sequence Predicate and Constructors
       1.2 Sequence Conversion
-      1.3 Sequence Combinations & Contract
+      1.3 Additional Sequence Operations
+        1.3.1 Additional Sequence Constructors
 
     2 Streams
 
@@ -72,8 +73,9 @@ themselves do not fit the stream abstraction, but have index-based
 iterators that can be represented as streams:
 
 Examples:
+
   > (struct unrolled-list-iterator (idx lst)
-      #:methods gen:stream ~
+      #:methods gen:stream ~ ~
       [(define (stream-empty? iter)
          (define lst (unrolled-list-iterator-lst iter))
          (or (null? lst)
@@ -89,16 +91,12 @@ Examples:
          (if (>= idx (sub1 (vector-length (first lst))))
              (unrolled-list-iterator 0 (rest lst))
              (unrolled-list-iterator (add1 idx) lst)))])
-
   > (define (make-unrolled-list-iterator ul)
       (unrolled-list-iterator 0 (unrolled-list-lov ul)))
-
   > (struct unrolled-list (lov)
-      #:property prop:sequence ~
+      #:property prop:sequence ~ ~
       make-unrolled-list-iterator)
-
   > (define ul1 (unrolled-list '(#(cracker biscuit) #(cookie scone))))
-
   > (for/list ([x ul1]) x)
   '(cracker biscuit cookie scone)
 
@@ -130,9 +128,11 @@ the sequence.
 
                                         *sequence?*
 (sequence? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v can be used as a sequence,   #f otherwise.
+
+Examples:
 
   > (sequence? 42)
   #t
@@ -145,11 +145,11 @@ Returns #t if v can be used as a sequence,   #f otherwise.
 
                                         *in-range*
 (in-range end) -> stream? ~
-  end : number? ~
+  end : real? ~ ~
 (in-range start end [step]) -> stream?
-  start : number? ~
-  end : number? ~
-  step : number? = 1 ~
+  start : real? ~ ~
+  end : real? ~ ~
+  step : real? = 1 ~ ~
 
 Returns a sequence (that is also a stream) whose elements are numbers.
 The single-argument case (in-range end) is equivalent to (in-range 0 end
@@ -171,9 +171,13 @@ Example: sum of even numbers
   > (for/sum ([x (in-range 0 100 2)]) x)
   2450
 
+When given zero as step, in-range returns an infinite sequence. It may
+also return infinite sequences when step is a very small number, and
+either step or the sequence elements are floating-point numbers.
+
                                         *in-naturals*
 (in-naturals [start]) -> stream? ~
-  start : exact-nonnegative-integer? = 0 ~
+  start : exact-nonnegative-integer? = 0 ~ ~
 
 Returns an infinite sequence (that is also a stream) of exact integers
 starting with start, where each element is one more than the preceding
@@ -182,6 +186,8 @@ element.
 An in-naturals application can provide better performance for integer
 iteration when it appears directly in a for clause.
 
+Example:
+
   > (for/list ([k (in-naturals)]
                [x (in-range 10)])
       (list k x))
@@ -189,9 +195,9 @@ iteration when it appears directly in a for clause.
 
                                         *in-list*
 (in-list lst) -> stream? ~
-  lst : list? ~
+  lst : list? ~ ~
 
-Returns a sequence (that is also a stream) that is equivalent to using
+Returns a sequence (that is also a stream) that is equivalent   to using
 lst directly as a sequence.
 
 See [missing] for information on using lists as sequences.
@@ -199,13 +205,21 @@ See [missing] for information on using lists as sequences.
 An in-list application can provide better performance for list iteration
 when it appears directly in a for clause.
 
+See for for information on the reachability of list elements during an
+iteration.
+
+Example:
+
   > (for/list ([x (in-list '(3 1 4))])
       `(,x ,(* x x)))
   '((3 9) (1 1) (4 16))
 
+Changed in version 6.7.0.4: Improved element-reachability guarantee for
+lists in for.
+
                                         *in-mlist*
 (in-mlist mlst) -> sequence? ~
-  mlst : mlist? ~
+  mlst : mlist? ~ ~
 
 Returns a sequence equivalent to mlst.
 
@@ -214,16 +228,18 @@ See [missing] for information on using mutable lists as sequences.
 An in-mlist application can provide better performance for mutable list
 iteration when it appears directly in a for clause.
 
+Example:
+
   > (for/list ([x (in-mlist (mcons "RACKET" (mcons "LANG" '())))])
       (string-length x))
   '(6 4)
 
                                         *in-vector*
 (in-vector vec [start stop step]) -> sequence? ~
-  vec : vector? ~
-  start : exact-nonnegative-integer? = 0 ~
-  stop : (or/c exact-integer? #f) = #f ~
-  step : (and/c exact-integer? (not/c zero?)) = 1 ~
+  vec : vector? ~ ~
+  start : exact-nonnegative-integer? = 0 ~ ~
+  stop : (or/c exact-integer? #f) = #f ~ ~
+  step : (and/c exact-integer? (not/c zero?)) = 1 ~ ~
 
 Returns a sequence equivalent to vec when no optional arguments are
 supplied.
@@ -238,30 +254,48 @@ previous element.  The sequence stops before an index that would be
 greater or equal to end if step is non-negative, or less or equal to end
 if step is negative.
 
-If start is not a valid index, or stop is not in [-1, (vector-length
-vec)] then the exn:fail:contract exception is raised.  If start is less
-than stop and step is negative, then the exn:fail:contract:mismatch
-exception is raised.  Similarly, if start is more than stop and step is
-positive, then the exn:fail:contract:mismatch exception is raised.
+If start is not a valid index, then the exn:fail:contract exception is
+raised, except when start, stop, and (vector-length vec) are equal, in
+which case the result is an empty sequence.
+
+Examples:
+
+  > (for ([x (in-vector (vector 1) 1)]) x)
+  > (for ([x (in-vector (vector 1) 2)]) x)
+  in-vector: starting index is out of range
+    starting index: 2 ~ ~
+    valid range: [0, 0] ~ ~
+    vector: '#(1) ~ ~
+  > (for ([x (in-vector (vector) 0 0)]) x)
+  > (for ([x (in-vector (vector 1) 1 1)]) x)
+
+If stop is not in [-1, (vector-length vec)], then the exn:fail:contract
+exception is raised.
+
+If start is less than stop and step is negative, then the
+exn:fail:contract exception is raised.  Similarly, if start is more than
+stop and step is positive, then the exn:fail:contract exception is
+raised.
 
 An in-vector application can provide better performance for vector
 iteration when it appears directly in a for clause.
+
+Examples:
 
   > (define (histogram vector-of-words)
       (define a-hash (make-hash))
       (for ([word (in-vector vector-of-words)])
         (hash-set! a-hash word (add1 (hash-ref a-hash word 0))))
       a-hash)
-
   > (histogram #("hello" "world" "hello" "sunshine"))
-  '#hash(("sunshine" . 1) ("world" . 1) ("hello" . 2))
+  '#hash(("hello" . 2) ("sunshine" . 1) ("world" . 1))
 
                                         *in-string*
 (in-string str [start stop step]) -> sequence? ~
-  str : string? ~
-  start : exact-nonnegative-integer? = 0 ~
-  stop : (or/c exact-integer? #f) = #f ~
-  step : (and/c exact-integer? (not/c zero?)) = 1 ~
+  str : string? ~ ~
+  start : exact-nonnegative-integer? = 0 ~ ~
+  stop : (or/c exact-integer? #f) = #f ~ ~
+  step : (and/c exact-integer? (not/c zero?)) = 1 ~ ~
 
 Returns a sequence equivalent to str when no optional arguments are
 supplied.
@@ -273,19 +307,20 @@ The optional arguments start, stop, and step are as in in-vector.
 An in-string application can provide better performance for string
 iteration when it appears directly in a for clause.
 
+Examples:
+
   > (define (line-count str)
       (for/sum ([ch (in-string str)])
         (if (char=? #\newline ch) 1 0)))
-
   > (line-count "this string\nhas\nthree \nnewlines")
   3
 
                                         *in-bytes*
 (in-bytes bstr [start stop step]) -> sequence? ~
-  bstr : bytes? ~
-  start : exact-nonnegative-integer? = 0 ~
-  stop : (or/c exact-integer? #f) = #f ~
-  step : (and/c exact-integer? (not/c zero?)) = 1 ~
+  bstr : bytes? ~ ~
+  start : exact-nonnegative-integer? = 0 ~ ~
+  stop : (or/c exact-integer? #f) = #f ~ ~
+  step : (and/c exact-integer? (not/c zero?)) = 1 ~ ~
 
 Returns a sequence equivalent to bstr when no optional arguments are
 supplied.
@@ -297,10 +332,11 @@ The optional arguments start, stop, and step are as in in-vector.
 An in-bytes application can provide better performance for byte string
 iteration when it appears directly in a for clause.
 
+Examples:
+
   > (define (has-eof? bs)
       (for/or ([ch (in-bytes bs)])
         (= ch 0)))
-
   > (has-eof? #"this byte string has an \0embedded zero byte")
   #t
   > (has-eof? #"this byte string does not")
@@ -308,29 +344,29 @@ iteration when it appears directly in a for clause.
 
                                         *in-port*
 (in-port [r in]) -> sequence? ~
-  r : (input-port? . -> . any/c) = read ~
-  in : input-port? = (current-input-port) ~
+  r : (input-port? . -> . any/c) = read ~ ~
+  in : input-port? = (current-input-port) ~ ~
 
 Returns a sequence whose elements are produced by calling r on in until
 it produces eof.
 
                                         *in-input-port-bytes*
 (in-input-port-bytes in) -> sequence? ~
-  in : input-port? ~
+  in : input-port? ~ ~
 
 Returns a sequence equivalent to (in-port read-byte in).
 
                                         *in-input-port-chars*
 (in-input-port-chars in) -> sequence? ~
-  in : input-port? ~
+  in : input-port? ~ ~
 
 Returns a sequence whose elements are read as characters from in
 (equivalent to (in-port read-char in)).
 
                                         *in-lines*
 (in-lines [in mode]) -> sequence? ~
-  in : input-port? = (current-input-port) ~
-  mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~
+  in : input-port? = (current-input-port) ~ ~
+  mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~ ~
        = 'any
 
 Returns a sequence equivalent to (in-port (lambda (p) (read-line p
@@ -339,8 +375,8 @@ mode of read-line is 'linefeed.
 
                                         *in-bytes-lines*
 (in-bytes-lines [in mode]) -> sequence? ~
-  in : input-port? = (current-input-port) ~
-  mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~
+  in : input-port? = (current-input-port) ~ ~
+  mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~ ~
        = 'any
 
 Returns a sequence equivalent to (in-port (lambda (p) (read-bytes-line p
@@ -349,72 +385,171 @@ mode of read-bytes-line is 'linefeed.
 
                                         *in-hash*
 (in-hash hash) -> sequence? ~
-  hash : hash? ~
+  hash : hash? ~ ~
+(in-hash hash bad-index-v) -> sequence?
+  hash : hash? ~ ~
+  bad-index-v : any/c ~ ~
 
-Returns a sequence equivalent to hash.
+Returns a sequence equivalent to hash, except when bad-index-v is
+supplied.
+
+If bad-index-v is supplied, then bad-index-v is returned as both the key
+and the value in the case that the hash is modified concurrently so that
+iteration does not have a valid hash index. Providing bad-index-v is
+particularly useful when iterating through a hash table with weakly held
+keys, since entries can be removed asynchronously (i.e., after in-hash
+has committed to another iteration, but before it can access the entry
+for the next iteration).
 
 Examples:
+
   > (define table (hash 'a 1 'b 2))
-
   > (for ([(key value) (in-hash table)])
-      (printf "key: ~a value: ~a\n" key value)) ~
-  key: b value: 2
+      (printf "key: ~a value: ~a\n" key value)) ~ ~
   key: a value: 1
-
+  key: b value: 2
 
 See [missing] for information on using hash tables as sequences.
 
+Changed in version 7.0.0.10: Added the optional bad-index-v argument.
+
                                         *in-hash-keys*
 (in-hash-keys hash) -> sequence? ~
-  hash : hash? ~
+  hash : hash? ~ ~
+(in-hash-keys hash bad-index-v) -> sequence?
+  hash : hash? ~ ~
+  bad-index-v : any/c ~ ~
 
-Returns a sequence whose elements are the keys of hash.
+Returns a sequence whose elements are the keys of hash, using
+bad-index-v in the same way as in-hash.
 
 Examples:
+
   > (define table (hash 'a 1 'b 2))
-
   > (for ([key (in-hash-keys table)])
-      (printf "key: ~a\n" key)) ~
-  key: b
+      (printf "key: ~a\n" key)) ~ ~
   key: a
+  key: b
 
+Changed in version 7.0.0.10: Added the optional bad-index-v argument.
 
                                         *in-hash-values*
 (in-hash-values hash) -> sequence? ~
-  hash : hash? ~
+  hash : hash? ~ ~
+(in-hash-values hash bad-index-v) -> sequence?
+  hash : hash? ~ ~
+  bad-index-v : any/c ~ ~
 
-Returns a sequence whose elements are the values of hash.
+Returns a sequence whose elements are the values of hash, using
+bad-index-v in the same way as in-hash.
 
 Examples:
+
   > (define table (hash 'a 1 'b 2))
-
   > (for ([value (in-hash-values table)])
-      (printf "value: ~a\n" value)) ~
-  value: 2
+      (printf "value: ~a\n" value)) ~ ~
   value: 1
+  value: 2
 
+Changed in version 7.0.0.10: Added the optional bad-index-v argument.
 
                                         *in-hash-pairs*
 (in-hash-pairs hash) -> sequence? ~
-  hash : hash? ~
+  hash : hash? ~ ~
+(in-hash-pairs hash bad-index-v) -> sequence?
+  hash : hash? ~ ~
+  bad-index-v : any/c ~ ~
 
 Returns a sequence whose elements are pairs, each containing a key and
 its value from hash (as opposed to using hash directly as a sequence to
 get the key and value as separate values for each element).
 
+The bad-index-v argument, if supplied, is used in the same way as by
+in-hash. When an invalid index is encountered, the pair in the sequence
+with have bad-index-v as both its car and cdr.
+
 Examples:
+
   > (define table (hash 'a 1 'b 2))
-
   > (for ([key+value (in-hash-pairs table)])
-      (printf "key and value: ~a\n" key+value)) ~
-  key and value: (b . 2)
+      (printf "key and value: ~a\n" key+value)) ~ ~
   key and value: (a . 1)
+  key and value: (b . 2)
 
+Changed in version 7.0.0.10: Added the optional bad-index-v argument.
+
+                                        *in-mutable-hash*
+(in-mutable-hash hash) -> sequence? ~
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+(in-mutable-hash hash bad-index-v) -> sequence?
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  bad-index-v : any/c ~ ~
+(in-mutable-hash-keys hash) -> sequence?
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+(in-mutable-hash-keys hash bad-index-v) -> sequence?
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  bad-index-v : any/c ~ ~
+(in-mutable-hash-values hash) -> sequence?
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+(in-mutable-hash-values hash bad-index-v) -> sequence?
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  bad-index-v : any/c ~ ~
+(in-mutable-hash-pairs hash) -> sequence?
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+(in-mutable-hash-pairs hash bad-index-v) -> sequence?
+  hash : (and/c hash? (not/c immutable?) (not/c hash-weak?)) ~ ~
+  bad-index-v : any/c ~ ~
+(in-immutable-hash hash) -> sequence?
+  hash : (and/c hash? immutable?) ~ ~
+(in-immutable-hash hash bad-index-v) -> sequence?
+  hash : (and/c hash? immutable?) ~ ~
+  bad-index-v : any/c ~ ~
+(in-immutable-hash-keys hash) -> sequence?
+  hash : (and/c hash? immutable?) ~ ~
+(in-immutable-hash-keys hash bad-index-v) -> sequence?
+  hash : (and/c hash? immutable?) ~ ~
+  bad-index-v : any/c ~ ~
+(in-immutable-hash-values hash) -> sequence?
+  hash : (and/c hash? immutable?) ~ ~
+(in-immutable-hash-values hash bad-index-v) -> sequence?
+  hash : (and/c hash? immutable?) ~ ~
+  bad-index-v : any/c ~ ~
+(in-immutable-hash-pairs hash) -> sequence?
+  hash : (and/c hash? immutable?) ~ ~
+(in-immutable-hash-pairs hash bad-index-v) -> sequence?
+  hash : (and/c hash? immutable?) ~ ~
+  bad-index-v : any/c ~ ~
+(in-weak-hash hash) -> sequence?
+  hash : (and/c hash? hash-weak?) ~ ~
+(in-weak-hash hash bad-index-v) -> sequence?
+  hash : (and/c hash? hash-weak?) ~ ~
+  bad-index-v : any/c ~ ~
+(in-weak-hash-keys hash) -> sequence?
+  hash : (and/c hash? hash-weak?) ~ ~
+(in-weak-hash-keys hash bad-index-v) -> sequence?
+  hash : (and/c hash? hash-weak?) ~ ~
+  bad-index-v : any/c ~ ~
+(in-weak-hash-values hash) -> sequence?
+  hash : (and/c hash? hash-weak?) ~ ~
+(in-weak-hash-keys hash bad-index-v) -> sequence?
+  hash : (and/c hash? hash-weak?) ~ ~
+  bad-index-v : any/c ~ ~
+(in-weak-hash-pairs hash) -> sequence?
+  hash : (and/c hash? hash-weak?) ~ ~
+(in-weak-hash-pairs hash bad-index-v) -> sequence?
+  hash : (and/c hash? hash-weak?) ~ ~
+  bad-index-v : any/c ~ ~
+
+Sequence constructors for specific kinds of hash tables. These may
+perform better than the analogous in-hash forms.
+
+Added in version 6.4.0.6. Changed in version 7.0.0.10: Added the
+optional bad-index-v argument.
 
                                         *in-directory*
 (in-directory [dir use-dir?]) -> sequence? ~
-  dir : (or/c #f path-string?) = #f ~
-  use-dir? : ((and/c path? complete-path?) . -> . any/c) ~
+  dir : (or/c #f path-string?) = #f ~ ~
+  use-dir? : ((and/c path? complete-path?) . -> . any/c) ~ ~
            = (lambda (dir-path) #t)
 
 Returns a sequence that produces all of the paths for files,
@@ -428,15 +563,40 @@ An in-directory sequence traverses nested subdirectories   recursively
 immediate   content of a directory, use the result of directory-list as
 a sequence.
 
-Changed in version 6.0.0.1: Added use-dir? argument.
+The immediate content of each directory is reported as sorted by
+path<?, and the content of a subdirectory is reported   before
+subsequent paths within the directory.
+
+Examples:
+
+  > (current-directory (collection-path "info"))
+  > (for/list ([f (in-directory)])
+       f)
+  '(#<path:main.rkt>
+    #<path:compiled> ~ ~
+    #<path:compiled/main_rkt.dep> ~ ~
+    #<path:compiled/main_rkt.zo>) ~ ~
+  > (for/list ([f (in-directory "compiled")])
+      f)
+  '(#<path:main_rkt.dep> #<path:main_rkt.zo>)
+  > (for/list ([f (in-directory "compiled")])
+      f)
+  '(#<path:compiled/main_rkt.dep> #<path:compiled/main_rkt.zo>)
+  > (for/list ([f (in-directory #f (lambda (p)
+                                     (not (regexp-match? #rx"compiled" p))))])
+       f)
+  '(#<path:main.rkt> #<path:compiled>)
+
+Changed in version 6.0.0.1: Added use-dir? argument. Changed in version
+6.6.0.4: Added guarantee of sorted results.
 
                                         *in-producer*
 (in-producer producer) -> sequence? ~
-  producer : procedure? ~
+  producer : procedure? ~ ~
 (in-producer producer stop arg ...) -> sequence?
-  producer : procedure? ~
-  stop : any/c ~
-  arg : any/c ~
+  producer : procedure? ~ ~
+  stop : any/c ~ ~
+  arg : any/c ~ ~
 
 Returns a sequence that contains values from sequential calls to
 producer, which would usually use some state to do its work.
@@ -454,13 +614,13 @@ If additional args are specified, they are passed to every call to
 producer.
 
 Examples:
+
   > (define (counter)
       (define n 0)
       (lambda ([d 1]) (set! n (+ d n)) n))
-
   > (for/list ([x (in-producer (counter))] [y (in-range 4)]) x)
   '(1 2 3 4)
-  > (for/list ([x (in-producer (counter))] #:break (= x 5)) x) ~
+  > (for/list ([x (in-producer (counter))] #:break (= x 5)) x) ~ ~
   '(1 2 3 4)
   > (for/list ([x (in-producer (counter) 5)]) x)
   '(1 2 3 4)
@@ -471,14 +631,14 @@ Examples:
 
                                         *in-value*
 (in-value v) -> sequence? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns a sequence that produces a single value: v.  This form is mostly
 useful for let-like bindings in forms such as for*/list.
 
                                         *in-indexed*
 (in-indexed seq) -> sequence? ~
-  seq : sequence? ~
+  seq : sequence? ~ ~
 
 Returns a sequence where each element has two values: the value produced
 by seq, and a non-negative exact integer starting with 0.  The elements
@@ -486,7 +646,7 @@ of seq must be single-valued.
 
                                         *in-sequences*
 (in-sequences seq ...) -> sequence? ~
-  seq : sequence? ~
+  seq : sequence? ~ ~
 
 Returns a sequence that is made of all input sequences, one after the
 other. Each seq is initiated only after the preceding seq is exhausted.
@@ -495,7 +655,7 @@ elements of each seq must all have the same number of values.
 
                                         *in-cycle*
 (in-cycle seq ...) -> sequence? ~
-  seq : sequence? ~
+  seq : sequence? ~ ~
 
 Similar to in-sequences, but the sequences are repeated in an infinite
 cycle, where each seq is initiated afresh in each iteration. Beware that
@@ -505,7 +665,7 @@ when the sequence is initiated, if all seqs are initially empty.
 
                                         *in-parallel*
 (in-parallel seq ...) -> sequence? ~
-  seq : sequence? ~
+  seq : sequence? ~ ~
 
 Returns a sequence where each element has as many values as the number
 of supplied seqs; the values, in order, are the values of each seq.  The
@@ -513,14 +673,14 @@ elements of each seq must be single-valued.
 
                                         *in-values-sequence*
 (in-values-sequence seq) -> sequence? ~
-  seq : sequence? ~
+  seq : sequence? ~ ~
 
 Returns a sequence that is like seq, but it combines multiple values for
 each element from seq as a list of elements.
 
                                         *in-values*-sequence*
 (in-values*-sequence seq) -> sequence? ~
-  seq : sequence? ~
+  seq : sequence? ~ ~
 
 Returns a sequence that is like seq, but when an element of seq has
 multiple values or a single list value, then the values are combined in
@@ -529,8 +689,8 @@ except that non-list, single-valued elements are not wrapped in a list.
 
                                         *stop-before*
 (stop-before seq pred) -> sequence? ~
-  seq : sequence? ~
-  pred : (any/c . -> . any) ~
+  seq : sequence? ~ ~
+  pred : (any/c . -> . any) ~ ~
 
 Returns a sequence that contains the elements of seq (which must be
 single-valued), but only until the last element for which applying pred
@@ -538,8 +698,8 @@ to the element produces #t, after which the sequence ends.
 
                                         *stop-after*
 (stop-after seq pred) -> sequence? ~
-  seq : sequence? ~
-  pred : (any/c . -> . any) ~
+  seq : sequence? ~ ~
+  pred : (any/c . -> . any) ~ ~
 
 Returns a sequence that contains the elements of seq (which must be
 single-valued), but only until the element (inclusive) for which
@@ -547,56 +707,80 @@ applying pred to the element produces #t, after which the sequence ends.
 
                                         *make-do-sequence*
 (make-do-sequence thunk) -> sequence? ~
-  thunk : (-> (values (any/c . -> . any) ~
-                      (any/c . -> . any/c)
-                      any/c
-                      (or/c (any/c . -> . any/c) #f)
-                      (or/c (() () #:rest list? . ->* . any/c) #f) ~
-                      (or/c ((any/c) () #:rest list? . ->* . any/c) #f))) ~
+  thunk : (or/c (-> (values (any/c . -> . any) ~ ~
+                            (any/c . -> . any/c)
+                            any/c
+                            (or/c (any/c . -> . any/c) #f)
+                            (or/c (() () #:rest list? . ->* . any/c) #f) ~ ~
+                            (or/c ((any/c) () #:rest list? . ->* . any/c) #f))) ~ ~
+                (-> (values (any/c . -> . any)
+                            (or/c (any/c . -> . any/c) #f)
+                            (any/c . -> . any/c)
+                            any/c
+                            (or/c (any/c . -> . any/c) #f)
+                            (or/c (() () #:rest list? . ->* . any/c) #f) ~ ~
+                            (or/c ((any/c) () #:rest list? . ->* . any/c) #f)))) ~ ~
 
-Returns a sequence whose elements are generated by the procedures and
-initial value returned by the thunk, which is called to initiate the
-sequence.  The initiated sequence is defined in terms of a position,
-which is initialized to the third result of the thunk, and the element,
-which may consist of multiple values.
+Returns a sequence whose elements are generated by the procedures   and
+initial value returned by the thunk, which is called to   initiate the
+sequence.  The initiated sequence is defined in   terms of a position,
+which is initialized to the third   result of the thunk, and the
+element, which may consist of   multiple values.
 
 The thunk results define the generated elements as follows:
 
 * The first result is a pos->element procedure that takes the current
   position and returns the value(s) for the current element.
 
-* The second result is a next-pos procedure that takes the current
-  position and returns the next position.
+* The optional second result is an early-next-pos procedure that is
+  described further below. Alternatively, the optional second result can
+  be #f, which is equivalent to the identity function.
 
-* The third result is the initial position.
+* The third (or second) result is a next-pos procedure that takes the
+  current position and returns the next position.
 
-* The fourth result is a continue-with-pos? function that takes the
-  current position and returns a true result if the sequence includes
-  the value(s) for the current position, and false if the sequence
-  should end instead of including the value(s). Alternatively, the
-  fourth result can be #f to indicate that the sequence should always
-  include the current value(s).
+* The fourth (or third) result is the initial position.
 
-* The fifth result is a continue-with-val? function that is like the
-  fourth result, but it takes the current element value(s) instead of
-  the current position.  Alternatively, the fifth result can be #f to
-  indicate that the sequence should always include the value(s) at the
-  current position.
+* The fifth (or fourth) result is a continue-with-pos? function that
+  takes the current position and returns a true result if the sequence
+  includes the value(s) for the current position, and false if the
+  sequence should end instead of including the value(s). Alternatively,
+  the fifth (or fourth) result can be #f to indicate that the sequence
+  should always include the current value(s). This function is checked
+  on each position before pos->element is used.
 
-* The sixth result is a continue-after-pos+val? procedure that takes
-  both the current position and the current element value(s) and
-  determines whether the sequence ends after the current element is
-  already included in the sequence. Alternatively, the sixth result can
-  be #f to indicate that the sequence can always continue after the
-  current value(s).
+* The sixth (or fifth) result is a continue-with-val? function that is
+  like the fourth result, but it takes the current element value(s)
+  instead of the current position.  Alternatively, the sixth (or fifth)
+  result can be #f to indicate that the sequence should always include
+  the value(s) at the current position.
 
-Each of the procedures listed above is called only once per position.
-Among the last three procedures, as soon as one of the procedures
-returns #f, the sequence ends, and none are called again.  Typically,
-one of the functions determines the end condition, and #f is used in
-place of the other two functions.
+* The seventh (or sixth) result is a continue-after-pos+val? procedure
+  that takes both the current position and the current element value(s)
+  and determines whether the sequence ends after the current element is
+  already included in the sequence. Alternatively, the seventh (or
+  sixth) result can be #f to indicate that the sequence can always
+  continue after the current value(s).
 
-prop:sequence : struct-type-property? ~
+The early-next-pos procedure, which is the optional second   result,
+takes the current position and returns an updated position.   This
+updated position is used for next-pos and   continue-after-pos+val?, but
+not with   continue-with-pos? (which uses the original current
+position). The intent of early-next-pos is to support a   sequence where
+the position must be incremented to avoid keeping a   value reachable
+while a loop processes the sequence value, so   early-next-pos is
+applied just after   pos->element.
+
+Each of the procedures listed above is called only once per   position.
+Among the last three procedures, as soon as one of the   procedures
+returns #f, the sequence ends, and none are   called again.  Typically,
+one of the functions determines the end   condition, and #f is used in
+place of the other two   functions.
+
+Changed in version 6.7.0.4: Added support for the optional second
+result.
+
+prop:sequence : struct-type-property? ~ ~
 
 Associates a procedure to a structure type that takes an instance of the
 structure and returns a sequence.  If v is an instance of a structure
@@ -605,24 +789,24 @@ type with this property, then (sequence? v) produces #t.
 Using a pre-existing sequence:
 
 Examples:
+
   > (struct my-set (table)
-      #:property prop:sequence ~
+      #:property prop:sequence ~ ~
       (lambda (s)
         (in-hash-keys (my-set-table s))))
-
   > (define (make-set . xs)
       (my-set (for/hash ([x (in-list xs)])
                 (values x #t))))
-
   > (for/list ([c (make-set 'celeriac 'carrot 'potato)])
       c)
-  '(celeriac carrot potato)
+  '(celeriac potato carrot)
 
 Using make-do-sequence:
 
 Examples:
+
   > (define-struct train (car next)
-      #:property prop:sequence ~
+      #:property prop:sequence ~ ~
       (lambda (t)
         (make-do-sequence
          (lambda ()
@@ -630,7 +814,6 @@ Examples:
                    (lambda (t) t)
                    (lambda (v) #t)
                    (lambda (t v) #t))))))
-
   > (for/list ([c (make-train 'engine
                               (make-train 'boxcar
                                           (make-train 'caboose
@@ -642,7 +825,7 @@ Examples:
 
                                         *sequence->stream*
 (sequence->stream seq) -> stream? ~
-  seq : sequence? ~
+  seq : sequence? ~ ~
 
 Coverts a sequence to a stream, which supports the stream-first and
 stream-rest operations. Creation of the stream eagerly initiates the
@@ -656,7 +839,7 @@ first used to access or skip an element.
 
                                         *sequence-generate*
 (sequence-generate seq) -> (-> boolean?) (-> any) ~
-  seq : sequence? ~
+  seq : sequence? ~ ~
 
 Initiates a sequence and returns two thunks to extract elements from the
 sequence.  The first returns #t if more values are available for the
@@ -668,7 +851,7 @@ exn:fail:contract exception is raised.
 (sequence-generate* seq) ~
  -> (or/c list? #f)
     (-> (values (or/c list? #f) procedure?))
-  seq : sequence? ~
+  seq : sequence? ~ ~
 
 Like sequence-generate, but avoids state (aside from any inherent in the
 sequence) by returning a list of values for the sequence’s first
@@ -679,42 +862,42 @@ on. If the thunk is called when the element result is #f (indicating no
 further values in the sequence), the exn:fail:contract exception is
 raised.
 
-1.3. Sequence Combinations & Contract
+1.3. Additional Sequence Operations
 
- (require racket/sequence) package: base ~
+ (require racket/sequence) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/sequence and racket libraries, but not racket/base.
 
-empty-sequence : sequence? ~
+empty-sequence : sequence? ~ ~
 
 A sequence with no elements.
 
                                         *sequence->list*
 (sequence->list s) -> list? ~
-  s : sequence? ~
+  s : sequence? ~ ~
 
 Returns a list whose elements are the elements of s, each of which must
 be a single value.  If s is infinite, this function does not terminate.
 
                                         *sequence-length*
 (sequence-length s) -> exact-nonnegative-integer? ~
-  s : sequence? ~
+  s : sequence? ~ ~
 
 Returns the number of elements of s by extracting and discarding all of
 them.  If s is infinite, this function does not terminate.
 
                                         *sequence-ref*
 (sequence-ref s i) -> any ~
-  s : sequence? ~
-  i : exact-nonnegative-integer? ~
+  s : sequence? ~ ~
+  i : exact-nonnegative-integer? ~ ~
 
 Returns the ith element of s (which may be multiple values).
 
                                         *sequence-tail*
 (sequence-tail s i) -> sequence? ~
-  s : sequence? ~
-  i : exact-nonnegative-integer? ~
+  s : sequence? ~ ~
+  i : exact-nonnegative-integer? ~ ~
 
 Returns a sequence equivalent to s, except that the first i elements are
 omitted.
@@ -725,7 +908,7 @@ first i elements are extracted from the sequence.
 
                                         *sequence-append*
 (sequence-append s ...) -> sequence? ~
-  s : sequence? ~
+  s : sequence? ~ ~
 
 Returns a sequence that contains all elements of each sequence in the
 order they appear in the original sequences.  The new sequence is
@@ -735,8 +918,8 @@ If all given ss are streams, the result is also a stream.
 
                                         *sequence-map*
 (sequence-map f s) -> sequence? ~
-  f : procedure? ~
-  s : sequence? ~
+  f : procedure? ~ ~
+  s : sequence? ~ ~
 
 Returns a sequence that contains f applied to each element of s.  The
 new sequence is constructed lazily.
@@ -745,8 +928,8 @@ If s is a stream, then the result is also a stream.
 
                                         *sequence-andmap*
 (sequence-andmap f s) -> boolean? ~
-  f : (-> any/c ... boolean?) ~
-  s : sequence? ~
+  f : (-> any/c ... boolean?) ~ ~
+  s : sequence? ~ ~
 
 Returns #t if f returns a true result on every element of s.  If s is
 infinite and f never returns a false result, this function does not
@@ -754,8 +937,8 @@ terminate.
 
                                         *sequence-ormap*
 (sequence-ormap f s) -> boolean? ~
-  f : (-> any/c ... boolean?) ~
-  s : sequence? ~
+  f : (-> any/c ... boolean?) ~ ~
+  s : sequence? ~ ~
 
 Returns #t if f returns a true result on some element of s.  If s is
 infinite and f never returns a true result, this function does not
@@ -763,17 +946,17 @@ terminate.
 
                                         *sequence-for-each*
 (sequence-for-each f s) -> void? ~
-  f : (-> any/c ... any) ~
-  s : sequence? ~
+  f : (-> any/c ... any) ~ ~
+  s : sequence? ~ ~
 
 Applies f to each element of s.  If s is infinite, this function does
 not terminate.
 
                                         *sequence-fold*
 (sequence-fold f i s) -> any/c ~
-  f : (-> any/c any/c ... any/c) ~
-  i : any/c ~
-  s : sequence? ~
+  f : (-> any/c any/c ... any/c) ~ ~
+  i : any/c ~ ~
+  s : sequence? ~ ~
 
 Folds f over each element of s with i as the initial accumulator.  If s
 is infinite, this function does not terminate. The f function takes the
@@ -782,16 +965,16 @@ second.
 
                                         *sequence-count*
 (sequence-count f s) -> exact-nonnegative-integer? ~
-  f : procedure? ~
-  s : sequence? ~
+  f : procedure? ~ ~
+  s : sequence? ~ ~
 
 Returns the number of elements in s for which f returns a true result.
 If s is infinite, this function does not terminate.
 
                                         *sequence-filter*
 (sequence-filter f s) -> sequence? ~
-  f : (-> any/c ... boolean?) ~
-  s : sequence? ~
+  f : (-> any/c ... boolean?) ~ ~
+  s : sequence? ~ ~
 
 Returns a sequence whose elements are the elements of s for which f
 returns a true result.  Although the new sequence is constructed lazily,
@@ -803,8 +986,8 @@ If s is a stream, then the result is also a stream.
 
                                         *sequence-add-between*
 (sequence-add-between s e) -> sequence? ~
-  s : sequence? ~
-  e : any/c ~
+  s : sequence? ~ ~
+  e : any/c ~ ~
 
 Returns a sequence whose elements are the elements of s, but with e
 between each pair of elements in s. The new sequence is constructed
@@ -813,6 +996,7 @@ lazily.
 If s is a stream, then the result is also a stream.
 
 Examples:
+
   > (let* ([all-reds (in-cycle '("red"))]
            [red-and-blues (sequence-add-between all-reds "blue")])
       (for/list ([n (in-range 10)]
@@ -823,54 +1007,107 @@ Examples:
       (display text))
   veni, vidi, duci
 
-
                                         *sequence/c*
-(sequence/c [#:min-count min-count]      ~ ~
+(sequence/c [#:min-count min-count]      ~ ~ ~
              elem/c ...)            -> contract?
-  min-count : (or/c #f exact-nonnegative-integer?) = #f ~
-  elem/c : contract? ~
+  min-count : (or/c #f exact-nonnegative-integer?) = #f ~ ~
+  elem/c : contract? ~ ~
 
-Wraps a sequence, obligating it to produce as many values as there are
-elem/c contracts, and obligating each value to satisfy the corresponding
-elem/c.  The result is not guaranteed to be the same kind of sequence as
-the original value; for instance, a wrapped list is not guaranteed to
-satisfy list?.
+Wraps a sequence, obligating it to produce elements with as many values
+as there are elem/c contracts, and obligating each value to satisfy the
+corresponding elem/c.  The result is not guaranteed to be the same kind
+of sequence as the original value; for instance, a wrapped list is not
+guaranteed to satisfy list?.
 
 If min-count is a number, the stream is required to have at least that
 many elements in it.
 
 Examples:
+
   > (define/contract predicates
       (sequence/c (-> any/c boolean?))
       (in-list (list integer?
                      string->symbol)))
-  sequence/c: undefined;
-   cannot reference undefined identifier
   > (for ([P predicates])
       (printf "~s\n" (P "cat")))
-  predicates: undefined;
-   cannot reference undefined identifier
+  #f
+  predicates: broke its own contract
+    promised: boolean? ~ ~
+    produced: 'cat ~ ~
+    in: an element of ~ ~
+        (sequence/c (-> any/c boolean?))
+    contract from: (definition predicates) ~ ~
+    blaming: (definition predicates) ~ ~
+     (assuming the contract is correct)
+    at: eval:29.0 ~ ~
   > (define/contract numbers&strings
       (sequence/c number? string?)
       (in-dict (list (cons 1 "one")
                      (cons 2 "two")
                      (cons 3 'three))))
-  in-dict: undefined;
-   cannot reference undefined identifier
   > (for ([(N S) numbers&strings])
-      (printf "~s: ~a\n" N S)) ~
-  numbers&strings: undefined;
-   cannot reference undefined identifier
+      (printf "~s: ~a\n" N S)) ~ ~
+  1: one
+  2: two
+  numbers&strings: broke its own contract
+    promised: string? ~ ~
+    produced: 'three ~ ~
+    in: an element of ~ ~
+        (sequence/c number? string?)
+    contract from: (definition numbers&strings) ~ ~
+    blaming: (definition numbers&strings) ~ ~
+     (assuming the contract is correct)
+    at: eval:31.0 ~ ~
   > (define/contract a-sequence
-      (sequence/c #:min-count 2 char?) ~
+      (sequence/c #:min-count 2 char?) ~ ~
       "x")
-  sequence/c: undefined;
-   cannot reference undefined identifier
   > (for ([x a-sequence]
           [i (in-naturals)])
       (printf "~a is ~a\n" i x))
-  a-sequence: undefined;
-   cannot reference undefined identifier
+  0 is x
+  a-sequence: broke its own contract
+    promised: a sequence that contains at least 2 values ~ ~
+    produced: "x" ~ ~
+    in: (sequence/c #:min-count 2 char?) ~ ~
+    contract from: (definition a-sequence) ~ ~
+    blaming: (definition a-sequence) ~ ~
+     (assuming the contract is correct)
+    at: eval:33.0 ~ ~
+
+1.3.1. Additional Sequence Constructors
+
+                                        *in-syntax*
+(in-syntax stx) -> sequence? ~
+  stx : syntax? ~ ~
+
+Produces a sequence whose elements are the successive subparts of   stx.
+Equivalent to (stx->list lst).
+
+An in-syntax application can provide better performance for syntax
+iteration when it appears directly in a for clause.
+
+Example:
+
+  > (for/list ([x (in-syntax #'(1 2 3))])
+      x)
+  '(#<syntax:eval:35:0 1> #<syntax:eval:35:0 2> #<syntax:eval:35:0 3>)
+
+Added in version 6.3 of package base.
+
+                                        *in-slice*
+(in-slice length seq) -> sequence? ~
+  length : exact-positive-integer? ~ ~
+  seq : sequence? ~ ~
+
+Returns a sequence whose elements are lists with the first length
+elements of seq, then the next length and so on.
+
+Example:
+
+  > (for/list ([e (in-slice 3 (in-range 8))]) e)
+  '((0 1 2) (3 4 5) (6 7))
+
+Added in version 6.3 of package base.
 
 2. Streams
 
@@ -879,32 +1116,32 @@ stream-first and stream-rest.  The stream-cons form constructs a lazy
 stream, but plain lists can be used as streams, and functions such as
 in-range and in-naturals also create streams.
 
- (require racket/stream) package: base ~
+ (require racket/stream) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/stream and racket libraries, but not racket/base.
 
                                         *stream?*
 (stream? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v can be used as a stream, #f otherwise.
 
                                         *stream-empty?*
 (stream-empty? s) -> boolean? ~
-  s : stream? ~
+  s : stream? ~ ~
 
 Returns #t if s has no elements, #f otherwise.
 
                                         *stream-first*
 (stream-first s) -> any ~
-  s : (and/c stream? (not/c stream-empty?)) ~
+  s : (and/c stream? (not/c stream-empty?)) ~ ~
 
 Returns the value(s) of the first element in s.
 
                                         *stream-rest*
 (stream-rest s) -> stream? ~
-  s : (and/c stream? (not/c stream-empty?)) ~
+  s : (and/c stream? (not/c stream-empty?)) ~ ~
 
 Returns a stream that is equivalent to s without its first element.
 
@@ -926,35 +1163,43 @@ otherwise the exn:fail:contract? exception is raised.
 A shorthand for nested stream-conses ending with empty-stream.
 
                                         *stream**
-(stream* expr ...) ~
+(stream* expr ... rest-expr) ~
 
-A shorthand for nested stream-conses, but the final expr must be a
+A shorthand for nested stream-conses, but the rest-expr   must be a
 stream, and it is used as the rest of the stream instead of
 empty-stream. Similar to list* but for streams.
 
+Added in version 6.3 of package base.
+
                                         *in-stream*
 (in-stream s) -> sequence? ~
-  s : stream? ~
+  s : stream? ~ ~
 
 Returns a sequence that is equivalent to s.
 
 An in-stream application can provide better performance for streams
 iteration when it appears directly in a for clause.
 
-empty-stream : stream? ~
+See for for information on the reachability of stream elements during an
+iteration.
+
+Changed in version 6.7.0.4 of package base: Improved
+element-reachability guarantee for streams in for.
+
+empty-stream : stream? ~ ~
 
 A stream with no elements.
 
                                         *stream->list*
 (stream->list s) -> list? ~
-  s : stream? ~
+  s : stream? ~ ~
 
 Returns a list whose elements are the elements of s, each of which must
 be a single value.  If s is infinite, this function does not terminate.
 
                                         *stream-length*
 (stream-length s) -> exact-nonnegative-integer? ~
-  s : stream? ~
+  s : stream? ~ ~
 
 Returns the number of elements of s.  If s is infinite, this function
 does not terminate.
@@ -964,15 +1209,15 @@ sub-streams, and not the stream’s elements.
 
                                         *stream-ref*
 (stream-ref s i) -> any ~
-  s : stream? ~
-  i : exact-nonnegative-integer? ~
+  s : stream? ~ ~
+  i : exact-nonnegative-integer? ~ ~
 
 Returns the ith element of s (which may be multiple values).
 
                                         *stream-tail*
 (stream-tail s i) -> stream? ~
-  s : stream? ~
-  i : exact-nonnegative-integer? ~
+  s : stream? ~ ~
+  i : exact-nonnegative-integer? ~ ~
 
 Returns a stream equivalent to s, except that the first i elements are
 omitted.
@@ -981,9 +1226,16 @@ In case extracting elements from s involves a side effect, they will not
 be extracted until the first element is extracted from the resulting
 stream.
 
+                                        *stream-take*
+(stream-take s i) -> stream? ~
+  s : stream? ~ ~
+  i : exact-nonnegative-integer? ~ ~
+
+Returns a stream of the first i elements of s.
+
                                         *stream-append*
 (stream-append s ...) -> stream? ~
-  s : stream? ~
+  s : stream? ~ ~
 
 Returns a stream that contains all elements of each stream in the order
 they appear in the original streams.  The new stream is constructed
@@ -991,16 +1243,16 @@ lazily, while the last given stream is used in the tail of the result.
 
                                         *stream-map*
 (stream-map f s) -> stream? ~
-  f : procedure? ~
-  s : stream? ~
+  f : procedure? ~ ~
+  s : stream? ~ ~
 
 Returns a stream that contains f applied to each element of s.  The new
 stream is constructed lazily.
 
                                         *stream-andmap*
 (stream-andmap f s) -> boolean? ~
-  f : (-> any/c ... boolean?) ~
-  s : stream? ~
+  f : (-> any/c ... boolean?) ~ ~
+  s : stream? ~ ~
 
 Returns #t if f returns a true result on every element of s.  If s is
 infinite and f never returns a false result, this function does not
@@ -1008,8 +1260,8 @@ terminate.
 
                                         *stream-ormap*
 (stream-ormap f s) -> boolean? ~
-  f : (-> any/c ... boolean?) ~
-  s : stream? ~
+  f : (-> any/c ... boolean?) ~ ~
+  s : stream? ~ ~
 
 Returns #t if f returns a true result on some element of s.  If s is
 infinite and f never returns a true result, this function does not
@@ -1017,33 +1269,35 @@ terminate.
 
                                         *stream-for-each*
 (stream-for-each f s) -> void? ~
-  f : (-> any/c ... any) ~
-  s : stream? ~
+  f : (-> any/c ... any) ~ ~
+  s : stream? ~ ~
 
 Applies f to each element of s.  If s is infinite, this function does
 not terminate.
 
                                         *stream-fold*
 (stream-fold f i s) -> any/c ~
-  f : (-> any/c any/c ... any/c) ~
-  i : any/c ~
-  s : stream? ~
+  f : (-> any/c any/c ... any/c) ~ ~
+  i : any/c ~ ~
+  s : stream? ~ ~
 
 Folds f over each element of s with i as the initial accumulator.  If s
-is infinite, this function does not terminate.
+is infinite, this function does not terminate. The f function takes the
+accumulator as its first argument and the next stream element as its
+second.
 
                                         *stream-count*
 (stream-count f s) -> exact-nonnegative-integer? ~
-  f : procedure? ~
-  s : stream? ~
+  f : procedure? ~ ~
+  s : stream? ~ ~
 
 Returns the number of elements in s for which f returns a true result.
 If s is infinite, this function does not terminate.
 
                                         *stream-filter*
 (stream-filter f s) -> stream? ~
-  f : (-> any/c ... boolean?) ~
-  s : stream? ~
+  f : (-> any/c ... boolean?) ~ ~
+  s : stream? ~ ~
 
 Returns a stream whose elements are the elements of s for which f
 returns a true result.  Although the new stream is constructed lazily,
@@ -1053,14 +1307,42 @@ on this stream will not terminate during the infinite sub-stream.
 
                                         *stream-add-between*
 (stream-add-between s e) -> stream? ~
-  s : stream? ~
-  e : any/c ~
+  s : stream? ~ ~
+  e : any/c ~ ~
 
 Returns a stream whose elements are the elements of s, but with e
 between each pair of elements in s.  The new stream is constructed
 lazily.
 
-gen:stream : any/c ~
+                                        *for/stream*
+(for/stream (for-clause ...) body-or-break ... body) ~
+(for*/stream (for-clause ...) body-or-break ... body)
+
+Iterates like for/list and for*/list, respectively, but the results are
+lazily collected into a stream instead of a list.
+
+Unlike most for forms, these forms are evaluated lazily, so each body
+will not be evaluated until the resulting stream is forced. This allows
+for/stream and for*/stream to iterate over infinite sequences, unlike
+their finite counterparts.
+
+Please note that these forms do not support returning multiple values.
+
+Examples:
+
+  > (for/stream ([i '(1 2 3)]) (* i i))
+  #<stream>
+  > (stream->list (for/stream ([i '(1 2 3)]) (* i i)))
+  '(1 4 9)
+  > (stream-ref (for/stream ([i '(1 2 3)]) (displayln i) (* i i)) 1)
+  2
+  4
+  > (stream-ref (for/stream ([i (in-naturals)]) (* i i)) 25)
+  625
+
+Added in version 6.3.0.9 of package base.
+
+gen:stream : any/c ~ ~
 
 Associates three methods to a structure type to implement the generic
 interface (see [missing]) for streams.
@@ -1076,31 +1358,31 @@ implemented:
 * stream-rest : accepts one argument
 
 Examples:
+
   > (define-struct list-stream (v)
-      #:methods gen:stream ~
+      #:methods gen:stream ~ ~
       [(define (stream-empty? stream)
          (empty? (list-stream-v stream)))
        (define (stream-first stream)
          (first (list-stream-v stream)))
        (define (stream-rest stream)
-         (rest (list-stream-v stream)))])
-
+         (list-stream (rest (list-stream-v stream))))])
   > (define l1 (list-stream '(1 2)))
-
   > (stream? l1)
   #t
   > (stream-first l1)
   1
 
-prop:stream : struct-type-property? ~
+prop:stream : struct-type-property? ~ ~
 
-A deprecated structure type property used to define custom extensions to
-the stream API. Use gen:stream instead. Accepts a vector of three
-procedures taking the same arguments as the methods in gen:stream.
+A structure type property used to define custom extensions to the stream
+API. Using the prop:stream property is discouraged; use the gen:stream
+generic interface instead. Accepts a vector of three procedures taking
+the same arguments as the methods in gen:stream.
 
                                         *stream/c*
 (stream/c c) -> contract? ~
-  c : contract? ~
+  c : contract? ~ ~
 
 Returns a contract that recognizes streams. All elements of the stream
 must match c.
@@ -1109,9 +1391,9 @@ If the c argument is a flat contract or a chaperone contract, then the
 result will be a chaperone contract. Otherwise, the result will be an
 impersonator contract.
 
-When an stream/c contract is applied to an asynchronous channel, the
-result is not eq? to the input. The result will be either a chaperone or
-impersonator of the input depending on the type of contract.
+When an stream/c contract is applied to a stream, the result is not eq?
+to the input. The result will be either a chaperone or impersonator of
+the input depending on the type of contract.
 
 Contracts on streams are evaluated lazily by necessity (since streams
 may be infinite). Contract violations will not be raised until the value
@@ -1133,11 +1415,11 @@ incrementing the sequence each time that the generator is called. In
 particular, the generator form implements a generator by evaluating a
 body that calls yield to return values from the generator.
 
- (require racket/generator) package: base ~
+ (require racket/generator) package: base ~ ~
 
                                         *generator?*
 (generator? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Return #t if v is a generator, #f otherwise.
 
@@ -1158,6 +1440,7 @@ that final yield, calling the generator again returns the same values,
 but all such calls must provide 0 arguments to the generator.
 
 Examples:
+
   > (define g (generator ()
                 (let loop ([x '(a b c)])
                   (if (null? x)
@@ -1165,7 +1448,6 @@ Examples:
                       (begin
                         (yield (car x))
                         (loop (cdr x)))))))
-
   > (g)
   'a
   > (g)
@@ -1179,7 +1461,7 @@ Examples:
 
                                         *yield*
 (yield v ...) -> any ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns vs from a generator, saving the point of execution inside a
 generator (i.e., within the dynamic extent of a generator body) to be
@@ -1190,8 +1472,8 @@ When not in the dynamic extent of a generator, infinite-generator, or
 in-generator body, yield raises exn:fail after evaluating its exprs.
 
 Examples:
-  > (define my-generator (generator () (yield 1) (yield 2 3 4)))
 
+  > (define my-generator (generator () (yield 1) (yield 2 3 4)))
   > (my-generator)
   1
   > (my-generator)
@@ -1200,12 +1482,12 @@ Examples:
   4
 
 Examples:
+
   > (define pass-values-generator
       (generator ()
         (let* ([from-user (yield 2)]
                [from-user-again (yield (add1 from-user))])
           (yield from-user-again))))
-
   > (pass-values-generator)
   2
   > (pass-values-generator 5)
@@ -1220,11 +1502,11 @@ Like generator, but repeats evaluation of the bodys when the last body
 completes without implicitly yielding.
 
 Examples:
+
   > (define welcome
       (infinite-generator
         (yield 'hello)
         (yield 'goodbye)))
-
   > (welcome)
   'hello
   > (welcome)
@@ -1238,7 +1520,7 @@ Examples:
 (in-generator maybe-arity body ...+) ~
  
 maybe-arity = 
-            | #:arity arity-k ~
+            | #:arity arity-k ~ ~
 
 Produces a sequence that encapsulates the generator formed by (generator
 () body ...+). The values produced by the generator form the elements of
@@ -1246,6 +1528,7 @@ the sequence, except for the last value produced by the generator (i.e.,
 the values produced by returning).
 
 Example:
+
   > (for/list ([i (in-generator
                     (let loop ([x '(a b c)])
                       (when (not (null? x))
@@ -1262,6 +1545,7 @@ should be declared with an #:arity arity-k clause; the arity-k must be a
 literal, exact, non-negative integer.
 
 Examples:
+
   > (let ([g (in-generator
               (let loop ([n 3])
                 (unless (zero? n) (yield n (add1 n)) (loop (sub1 n)))))])
@@ -1270,12 +1554,12 @@ Examples:
   stop?: arity mismatch;
    the expected number of arguments does not match the given
   number
-    expected: 1 ~
-    given: 2 ~
-    arguments...: ~
+    expected: 1 ~ ~
+    given: 2 ~ ~
+    arguments...: ~ ~
      3
      4
-  > (let ([g (in-generator #:arity 2 ~
+  > (let ([g (in-generator #:arity 2 ~ ~
               (let loop ([n 3])
                 (unless (zero? n) (yield n (add1 n)) (loop (sub1 n)))))])
       (let-values ([(not-empty? next) (sequence-generate g)])
@@ -1288,12 +1572,10 @@ stop-value known for the generator:
   > (define abc-generator (generator ()
                            (for ([x '(a b c)])
                               (yield x))))
-
   > (for/list ([i (in-producer abc-generator (void))])
       i)
   '(a b c)
   > (define my-stop-value (gensym))
-
   > (define my-generator (generator ()
                            (let loop ([x (list 'a (void) 'c)])
                              (if (null? x)
@@ -1301,14 +1583,13 @@ stop-value known for the generator:
                                  (begin
                                    (yield (car x))
                                    (loop (cdr x)))))))
-
   > (for/list ([i (in-producer my-generator my-stop-value)])
       i)
   '(a #<void> c)
 
                                         *generator-state*
 (generator-state g) -> symbol? ~
-  g : generator? ~
+  g : generator? ~ ~
 
 Returns a symbol that describes the state of the generator.
 
@@ -1324,8 +1605,8 @@ Returns a symbol that describes the state of the generator.
   to produce the same result as from the last call.
 
 Examples:
-  > (define my-generator (generator () (yield 1) (yield 2)))
 
+  > (define my-generator (generator () (yield 1) (yield 2)))
   > (generator-state my-generator)
   'fresh
   > (my-generator)
@@ -1337,11 +1618,9 @@ Examples:
   > (generator-state my-generator)
   'suspended
   > (my-generator)
-
   > (generator-state my-generator)
   'done
   > (define introspective-generator (generator () ((yield 1))))
-
   > (introspective-generator)
   1
   > (introspective-generator
@@ -1354,7 +1633,7 @@ Examples:
 
                                         *sequence->generator*
 (sequence->generator s) -> (-> any) ~
-  s : sequence? ~
+  s : sequence? ~ ~
 
 Converts a sequence to a generator. The generator returns the next
 element of the sequence each time the generator is invoked, where each
@@ -1363,7 +1642,7 @@ the generator returns #<void> as its final result.
 
                                         *sequence->repeated-generator*
 (sequence->repeated-generator s) -> (-> any) ~
-  s : sequence? ~
+  s : sequence? ~ ~
 
 Like sequence->generator, but when s has no further values, the
 generator starts the sequence again (so that the generator never stops

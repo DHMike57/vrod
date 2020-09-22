@@ -2,11 +2,12 @@ Syntax Object Content
 
                                         *syntax?*
 (syntax? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a syntax object, #f otherwise. See also [missing].
 
 Examples:
+
   > (syntax? #'quinoa)
   #t
   > (syntax? #'(spelt triticale buckwheat))
@@ -18,11 +19,12 @@ Examples:
 
                                         *identifier?*
 (identifier? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a syntax object and (syntax-e stx) produces a symbol.
 
 Examples:
+
   > (identifier? #'linguine)
   #t
   > (identifier? #'(if wheat? udon soba))
@@ -33,79 +35,83 @@ Examples:
   #f
 
                                         *syntax-source*
-(syntax-source stx) -> any ~
-  stx : syntax? ~
+(syntax-source stx) -> any/c ~
+  stx : syntax? ~ ~
 
 Returns the source for the syntax object stx, or #f if none is known.
 The source is represented by an arbitrary value (e.g., one passed to
-read-syntax), but it is typically a file path string. Source-location
-information is dropped for a syntax object that is marshaled as part of
-compiled code; see also current-compile.
+read-syntax), but it is typically a file path string.
 
                                         *syntax-line*
 (syntax-line stx) -> (or/c exact-positive-integer? #f) ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns the line number (positive exact integer) for the start of the
 syntax object in its source, or #f if the line number or source is
 unknown. The result is #f if and only if (syntax-column stx) produces
-#f. See also [missing], and see syntax-source for information about
-marshaling compiled syntax objects.
+#f. See also [missing].
 
                                         *syntax-column*
 (syntax-column stx) -> (or/c exact-nonnegative-integer? #f) ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns the column number (non-negative exact integer) for the start of
 the syntax object in its source, or #f if the source column is unknown.
 The result is #f if and only if (syntax-line stx) produces #f. See also
-[missing], and see syntax-source for information about marshaling
-compiled syntax objects.
+[missing].
 
                                         *syntax-position*
 (syntax-position stx) -> (or/c exact-positive-integer? #f) ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns the character position (positive exact integer) for the start of
 the syntax object in its source, or #f if the source position is
-unknown. See also [missing], and see syntax-source for information about
-marshaling compiled syntax objects.
+unknown. See also [missing].
 
                                         *syntax-span*
 (syntax-span stx) -> (or/c exact-nonnegative-integer? #f) ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns the span (non-negative exact integer) in characters of the
-syntax object in its source, or #f if the span is unknown. See also
-syntax-source for information about marshaling compiled syntax objects.
+syntax object in its source, or #f if the span is unknown.
 
                                         *syntax-original?*
 (syntax-original? stx) -> boolean? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns #t if stx has the property that read-syntax attaches to the
 syntax objects that they generate (see [missing]), and if stx’s lexical
-information does not indicate that the object was introduced by a syntax
-transformer (see [missing]). The result is #f otherwise. This predicate
-can be used to distinguish syntax objects in an expanded expression that
-were directly present in the original expression, as opposed to syntax
-objects inserted by macros.
+information does not include any macro-introduction scopes (which
+indicate that the object was introduced by a syntax transformer; see
+[missing]). The result is #f otherwise.
+
+This predicate can be used to distinguish syntax objects in an expanded
+expression that were directly present in the original expression, as
+opposed to syntax objects inserted by macros.
+
+The (hidden) property to represent original syntax is dropped for a
+syntax object that is marshaled as part of compiled code; see also
+current-compile.
 
                                         *syntax-source-module*
 (syntax-source-module stx [source?]) ~
  -> (or/c module-path-index? symbol? path? resolved-module-path? #f)
-  stx : syntax? ~
-  source? : any/c = #f ~
+  stx : syntax? ~ ~
+  source? : any/c = #f ~ ~
 
 Returns an indication of the module whose source contains stx, or #f if
-stx has no source module.  If source? is #f, then result is a module
-path index or symbol (see [missing]) or a resolved module path; if
-source? is true, the result is a path or symbol corresponding to the
-loaded module’s source in the sense of current-module-declare-source.
+no source module for stx can be inferred from its lexical context.  If
+source? is #f, then result is a module path index or symbol (see
+[missing]) or a resolved module path; if source? is true, the result is
+a path or symbol corresponding to the loaded module’s source in the
+sense of current-module-declare-source.
+
+Note that syntax-source-module does not consult the source location of
+stx. The result is based on the lexical information of stx.
 
                                         *syntax-e*
-(syntax-e stx) -> any ~
-  stx : syntax? ~
+(syntax-e stx) -> any/c ~
+  stx : syntax? ~ ~
 
 Unwraps the immediate datum structure from a syntax object, leaving
 nested syntax structure (if any) in place.  The result of (syntax-e stx)
@@ -130,19 +136,22 @@ is one of the following:
   interned when datum-intern-literal would convert the value
 
 Examples:
+
   > (syntax-e #'a)
   'a
   > (syntax-e #'(x . y))
-  '(#<syntax:11:0 x> . #<syntax:11:0 y>)
+  '(#<syntax:eval:11:0 x> . #<syntax:eval:11:0 y>)
   > (syntax-e #'#(1 2 (+ 3 4)))
-  '#(#<syntax:12:0 1> #<syntax:12:0 2> #<syntax:12:0 (+ 3 4)>)
+  '#(#<syntax:eval:12:0 1> #<syntax:eval:12:0 2> #<syntax:eval:12:0 (+ 3
+  4)>)
   > (syntax-e #'#&"hello world")
-  '#&#<syntax:13:0 "hello world">
+  '#&#<syntax:eval:13:0 "hello world">
   > (syntax-e #'#hash((imperial . "yellow") (festival . "green")))
-  '#hash((imperial . #<syntax:14:0 "yellow">)
-         (festival . #<syntax:14:0 "green">)) ~
+  '#hash((festival . #<syntax:eval:14:0 "green">)
+         (imperial . #<syntax:eval:14:0 "yellow">)) ~ ~
   > (syntax-e #'#(point 3 4))
-  '#(#<syntax:15:0 point> #<syntax:15:0 3> #<syntax:15:0 4>)
+  '#(#<syntax:eval:15:0 point> #<syntax:eval:15:0 3> #<syntax:eval:15:0
+  4>)
   > (syntax-e #'3)
   3
   > (syntax-e #'"three")
@@ -166,7 +175,7 @@ multiple calls to syntax-e of stx are eq?.
 
                                         *syntax->list*
 (syntax->list stx) -> (or/c list? #f) ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns a list of syntax objects or #f. The result is a list of syntax
 objects when (syntax->datum stx) would produce a list. In other words,
@@ -176,17 +185,20 @@ If stx is tainted or armed, then any syntax object in the result of
 (syntax->list stx) is tainted.
 
 Examples:
+
   > (syntax->list #'())
   '()
   > (syntax->list #'(1 (+ 3 4) 5 6))
-  '(#<syntax:20:0 1> #<syntax:20:0 (+ 3 4)> #<syntax:20:0 5> #<syntax:20:0
-  6>)
+  '(#<syntax:eval:20:0 1>
+    #<syntax:eval:20:0 (+ 3 4)> ~ ~
+    #<syntax:eval:20:0 5> ~ ~
+    #<syntax:eval:20:0 6>) ~ ~
   > (syntax->list #'a)
   #f
 
                                         *syntax->datum*
-(syntax->datum stx) -> any ~
-  stx : syntax? ~
+(syntax->datum stx) -> any/c ~
+  stx : syntax? ~ ~
 
 Returns a datum by stripping the lexical information, source-location
 information, properties, and tamper status from stx. Inside of pairs,
@@ -199,6 +211,7 @@ vectors, boxes, hash tables, and prefab structures as needed to strip
 lexical and source-location information recursively.
 
 Examples:
+
   > (syntax->datum #'a)
   'a
   > (syntax->datum #'(x . y))
@@ -208,7 +221,7 @@ Examples:
   > (syntax->datum #'#&"hello world")
   '#&"hello world"
   > (syntax->datum #'#hash((imperial . "yellow") (festival . "green")))
-  '#hash((imperial . "yellow") (festival . "green"))
+  '#hash((festival . "green") (imperial . "yellow"))
   > (syntax->datum #'#(point 3 4))
   '#(point 3 4)
   > (syntax->datum #'3)
@@ -220,9 +233,9 @@ Examples:
 
                                         *datum->syntax*
 (datum->syntax ctxt v [srcloc prop ignored]) -> syntax? ~
-  ctxt : (or/c syntax? #f) ~
-  v : any/c ~
-  srcloc : (or/c syntax? #f ~
+  ctxt : (or/c syntax? #f) ~ ~
+  v : any/c ~ ~
+  srcloc : (or/c syntax? #f ~ ~
                  (list/c any/c
                          (or/c exact-positive-integer? #f)
                          (or/c exact-nonnegative-integer? #f)
@@ -234,8 +247,8 @@ Examples:
                           (or/c exact-positive-integer? #f)
                           (or/c exact-nonnegative-integer? #f)))
          = #f
-  prop : (or/c syntax? #f) = #f ~
-  ignored : (or/c syntax? #f) = #f ~
+  prop : (or/c syntax? #f) = #f ~ ~
+  ignored : (or/c syntax? #f) = #f ~ ~
 
 Converts the datum v to a syntax object. The contents of pairs, vectors,
 and boxes, the fields of prefab structures, and the values of immutable
@@ -254,7 +267,12 @@ properties (see [missing]) of prop (even the hidden ones that would not
 be visible via syntax-property-symbol-keys); if v is a pair, vector,
 box, immutable hash table, or immutable prefab structure, recursively
 converted values are not given properties. If ctxt is tainted or armed,
-then the resulting syntax object from datum->syntax is tainted.
+then the resulting syntax object from datum->syntax is tainted. The code
+inspector of ctxt, if any, is compared to the code inspector of the
+module for the macro currently being transformed, if any; if both
+inspectors are available and if one is the same as or inferior to the
+other, then the result syntax has the same/inferior inspector, otherwise
+it has no code inspector.
 
 Any of ctxt, srcloc, or prop can be #f, in which case the resulting
 syntax has no lexical context, source information, and/or new
@@ -281,9 +299,56 @@ prefab structures, then the exn:fail:contract exception is raised.
 The ignored argument is allowed for backward compatibility and has no
 effect on the returned syntax object.
 
+                                        *syntax-binding-set?*
+(syntax-binding-set? v) -> boolean? ~
+  v : any/c ~ ~
+(syntax-binding-set) -> syntax-binding-set?
+(syntax-binding-set->syntax binding-set     
+                            datum)      -> syntax?
+  binding-set : syntax-binding-set? ~ ~
+  datum : any/c ~ ~
+(syntax-binding-set-extend                                                
+                            binding-set                                   
+                            symbol                                        
+                            phase                                         
+                            mpi                                           
+                           [#:source-symbol source-symbol                  ~ ~
+                            #:source-phase source-phase                    ~ ~
+                            #:nominal-module nominal-mpi                   ~ ~
+                            #:nominal-phase nominal-phase                  ~ ~
+                            #:nominal-symbol nominal-symbol                ~ ~
+                            #:nominal-require-phase nominal-require-phase  ~ ~
+                            #:inspector inspector])                        ~ ~
+ -> syntax-binding-set?
+  binding-set : syntax-binding-set? ~ ~
+  symbol : symbol? ~ ~
+  phase : (or/c exact-integer? #f) ~ ~
+  mpi : module-path-index? ~ ~
+  source-symbol : symbol? = symbol ~ ~
+  source-phase : (or/c exact-integer? #f) = phase ~ ~
+  nominal-mpi : module-path-index? = mpi ~ ~
+  nominal-phase : (or/c exact-integer? #f) = source-phase ~ ~
+  nominal-symbol : symbol? = source-symbol ~ ~
+  nominal-require-phase : (or/c exact-integer? #f) = 0 ~ ~
+  inspector : (or/c inspector? #f) = #f ~ ~
+
+A syntax binding set supports explicit construction of binding
+information for a syntax object. Start by creating an empty binding set
+with syntax-binding-set, add bindings with syntax-binding-set-extend,
+and create a syntax object that has the bindings as its lexical
+information using syntax-binding-set->syntax.
+
+The first three arguments to syntax-binding-set-extend establish a
+binding of symbol at phase to an identifier that is defined in the
+module referenced by mpi. Supply source-symbol to make the binding of
+symbol refer to a different provided variable from mpi, and so on; the
+optional arguments correspond to the results of identifier-binding.
+
+Added in version 7.0.0.12.
+
                                         *datum-intern-literal*
 (datum-intern-literal v) -> any/c ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Converts some values to be consistent with an interned result produced
 by the default reader in read-syntax mode.
@@ -310,8 +375,8 @@ unreachable, then datum-intern-literal may adopt a new representative.
 
                                         *syntax-shift-phase-level*
 (syntax-shift-phase-level stx shift) -> syntax? ~
-  stx : syntax? ~
-  shift : (or/c exact-integer? #f) ~
+  stx : syntax? ~ ~
+  shift : (or/c exact-integer? #f) ~ ~
 
 Returns a syntax object that is like stx, but with all of its top-level
 and module bindings shifted by shift phase levels. If shift is #f, then
@@ -320,7 +385,7 @@ shift is 0, then the result is stx.
 
                                         *generate-temporaries*
 (generate-temporaries stx-pair) -> (listof identifier?) ~
-  stx-pair : (or syntax? list?) ~
+  stx-pair : (or syntax? list?) ~ ~
 
 Returns a list of identifiers that are distinct from all other
 identifiers. The list contains as many identifiers as stx-pair contains
@@ -334,6 +399,7 @@ The generated identifiers are built with interned symbols (not gensyms);
 see also [missing].
 
 Examples:
+
   > (generate-temporaries '(a b c d))
   '(#<syntax a1> #<syntax b2> #<syntax c3> #<syntax d4>)
   > (generate-temporaries #'(1 2 3 4))
@@ -345,25 +411,31 @@ Examples:
            #'(let-values ([(temp ...) expr])
                (set! id temp) ... (void)))]))
 
-
                                         *identifier-prune-lexical-context*
 (identifier-prune-lexical-context  id-stx      ~
                                   [syms]) -> identifier?
-  id-stx : identifier? ~
-  syms : (listof symbol?) = (list (syntax-e id-stx)) ~
+  id-stx : identifier? ~ ~
+  syms : (listof symbol?) = (list (syntax-e id-stx)) ~ ~
 
 Returns an identifier with the same binding as id-stx, but without
-lexical information from id-stx that does not apply to the symbols in
-syms, where even further extension of the lexical information drops
-information for other symbols. In particular, transferring the lexical
-context via datum->syntax from the result of this function to a symbol
-other than one in syms produces an identifier with no binding.
+possibly lexical information from id-stx that does not apply to the
+symbols in syms, where even further extension of the lexical information
+drops information for other symbols. In particular, transferring the
+lexical context via datum->syntax from the result of this function to a
+symbol other than one in syms may produce an identifier with no binding.
+
+Currently, the result is always id-stx exactly. Pruning was intended
+primarily as a kind of optimization in a previous version of Racket, but
+it is less useful and difficult to implement efficiently in the current
+macro expander.
 
 See also quote-syntax/prune.
 
+Changed in version 6.5: Always return id-stx.
+
                                         *identifier-prune-to-source-module*
 (identifier-prune-to-source-module id-stx) -> identifier? ~
-  id-stx : identifier? ~
+  id-stx : identifier? ~ ~
 
 Returns an identifier with its lexical context minimized to that needed
 for syntax-source-module. The minimized lexical context does not include
@@ -374,18 +446,18 @@ any bindings.
                   old-stx       
                   inspector     
                   key)      -> syntax?
-  new-stx : syntax? ~
-  old-stx : syntax? ~
-  inspector : inspector? ~
-  key : any/c ~
+  new-stx : syntax? ~ ~
+  old-stx : syntax? ~ ~
+  inspector : inspector? ~ ~
+  key : any/c ~ ~
 
 For backward compatibility only; returns new-stx.
 
                                         *syntax-debug-info*
-(syntax-debug-info stx phase [all-bindings?]) -> hash? ~
-  stx : syntax? ~
-  phase : (or/c exact-integer? #f) ~
-  all-bindings? : any/c = #f ~
+(syntax-debug-info stx [phase all-bindings?]) -> hash? ~
+  stx : syntax? ~ ~
+  phase : (or/c exact-integer? #f) = (syntax-local-phase-level) ~ ~
+  all-bindings? : any/c = #f ~ ~
 
 Produces a hash table that describes the lexical information of stx (not
 counting components when (syntax-e stx) would return a compound value).

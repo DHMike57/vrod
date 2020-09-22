@@ -1,15 +1,15 @@
 Loading and Reloading Modules
 
- (require racket/rerequire) package: base ~
+ (require racket/rerequire) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/rerequire library, not racket/base or racket.
 
                                         *dynamic-rerequire*
 (dynamic-rerequire  module-path                  ~
-                   [#:verbosity verbosity]) -> (listof path?) ~
-  module-path : module-path? ~
-  verbosity : (or/c 'all 'reload 'none) = 'reload ~
+                   [#:verbosity verbosity]) -> (listof path?) ~ ~
+  module-path : module-path? ~ ~
+  verbosity : (or/c 'all 'reload 'none) = 'reload ~ ~
 
 Like (dynamic-require module-path 0), but with reloading support. The
 dynamic-rerequire function is intended for use in an interactive

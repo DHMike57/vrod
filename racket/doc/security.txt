@@ -29,9 +29,14 @@ Reflection and Security
     11 Plumbers
 
     12 Sandboxed Evaluation
-      12.1 Customizing Evaluators
-      12.2 Interacting with Evaluators
-      12.3 Miscellaneous
+      12.1 Security Considerations
+      12.2 Customizing Evaluators
+      12.3 Interacting with Evaluators
+      12.4 Miscellaneous
+
+    13 The racket/repl Library
+
+    14 Linklets and the Core Compiler
 
 1. Namespaces
 
@@ -44,7 +49,7 @@ by providing the namespace to procedures such as eval and eval-syntax.
 
                                         *namespace?*
 (namespace? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a namespace value, #f otherwise.
 
@@ -52,23 +57,30 @@ Returns #t if v is a namespace value, #f otherwise.
 (make-empty-namespace) -> namespace? ~
 
 Creates a new namespace that is empty, and whose module registry
-contains no mappings. The namespace’s base phase is the same as the base
-phase of the current namespace. Attach modules from an existing
-namespace to the new one with namespace-attach-module.
+contains only mappings for some internal, predefined modules, such as
+'#%kernel. The namespace’s base phase is the same as the base phase of
+the current namespace. Attach modules from an existing namespace to the
+new one with namespace-attach-module.
+
+The new namespace is associated with a new root namespace, which has the
+same module registry as the returned namespace and has a base phase of
+0. The new root namespace is the same as the returned namespace if both
+have base phase 0.
 
                                         *make-base-empty-namespace*
 (make-base-empty-namespace) -> namespace? ~
 
-Creates a new empty namespace, but with racket/base attached. The
-namespace’s base phase is the same as the phase in which the
-make-base-empty-namespace function was created.
+Creates a new empty namespace like make-empty-namespace, but with
+racket/base attached. The namespace’s base phase is the same as the
+phase in which the make-base-empty-namespace function was created.
 
                                         *make-base-namespace*
 (make-base-namespace) -> namespace? ~
 
-Creates a new namespace with racket/base attached and required into the
-top-level environment. The namespace’s base phase is the same as the
-phase in which the make-base-namespace function was created.
+Creates a new namespace like make-empty-namespace, but with racket/base
+attached and required into the top-level environment. The namespace’s
+base phase is the same as the phase in which the make-base-namespace
+function was created.
 
                                         *define-namespace-anchor*
 (define-namespace-anchor id) ~
@@ -81,17 +93,17 @@ module-context.
 
                                         *namespace-anchor?*
 (namespace-anchor? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a namespace-anchor value, #f otherwise.
 
                                         *namespace-anchor->empty-namespace*
 (namespace-anchor->empty-namespace a) -> namespace? ~
-  a : namespace-anchor? ~
+  a : namespace-anchor? ~ ~
 
-Returns an empty namespace that shares a module registry with the source
-of the anchor, and whose base phase is the phase in which the anchor was
-created.
+Returns an empty namespace that shares a module registry and root
+namespace with the source of the anchor, and whose base phase is the
+phase in which the anchor was created.
 
 If the anchor is from a define-namespace-anchor form in a module
 context, then the source is the namespace in which the containing module
@@ -101,14 +113,15 @@ anchor definition was evaluated.
 
                                         *namespace-anchor->namespace*
 (namespace-anchor->namespace a) -> namespace? ~
-  a : namespace-anchor? ~
+  a : namespace-anchor? ~ ~
 
 Returns a namespace corresponding to the source of the anchor.
 
 If the anchor is from a define-namespace-anchor form in a module
 context, then the result is a namespace for the module’s body in the
 anchor’s phase. The result is the same as a namespace obtained via
-module->namespace.
+module->namespace, and the module is similarly made available if it is
+not available already.
 
 If the anchor is from a define-namespace-anchor form in a top-level
 content, then the result is the namespace in which the anchor definition
@@ -117,13 +130,13 @@ was evaluated.
                                         *current-namespace*
 (current-namespace) -> namespace? ~
 (current-namespace n) -> void?
-  n : namespace? ~
+  n : namespace? ~ ~
 
 A parameter that determines the current namespace.
 
                                         *namespace-symbol->identifier*
 (namespace-symbol->identifier sym) -> identifier? ~
-  sym : symbol? ~
+  sym : symbol? ~ ~
 
 Similar to datum->syntax restricted to symbols. The lexical information
 of the resulting identifier corresponds to the top-level environment of
@@ -132,13 +145,13 @@ properties.
 
                                         *namespace-base-phase*
 (namespace-base-phase [namespace]) -> exact-integer? ~
-  namespace : namespace? = (current-namespace) ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 Returns the base phase of namespace.
 
                                         *namespace-module-identifier*
 (namespace-module-identifier [where]) -> identifier? ~
-  where : (or/c namespace? exact-integer? #f) ~
+  where : (or/c namespace? exact-integer? #f) ~ ~
         = (current-namespace)
 
 Returns an identifier whose binding is module in the base phase of where
@@ -155,10 +168,10 @@ include other bindings.
                           [use-mapping?      
                            failure-thunk     
                            namespace])   -> any
-  sym : symbol? ~
-  use-mapping? : any/c = #t ~
-  failure-thunk : (or/c (-> any) #f) = #f ~
-  namespace : namespace? = (current-namespace) ~
+  sym : symbol? ~ ~
+  use-mapping? : any/c = #t ~ ~
+  failure-thunk : (or/c (-> any) #f) = #f ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 Returns a value for sym in namespace, using namespace’s base phase. The
 returned value depends on use-mapping?:
@@ -182,14 +195,16 @@ to produce the return value in place of raising an
 exn:fail:contract:variable or exn:fail:syntax exception.
 
                                         *namespace-set-variable-value!*
-(namespace-set-variable-value!  sym              ~
-                                v               
-                               [map?            
-                                namespace]) -> void?
-  sym : symbol? ~
-  v : any/c ~
-  map? : any/c = #f ~
-  namespace : namespace? = (current-namespace) ~
+(namespace-set-variable-value!  sym                 ~
+                                v                  
+                               [map?               
+                                namespace          
+                                as-constant?]) -> void?
+  sym : symbol? ~ ~
+  v : any/c ~ ~
+  map? : any/c = #f ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
+  as-constant? : any/c = #f ~ ~
 
 Sets the value of sym in the top-level environment of namespace in the
 base phase, defining sym if it is not already defined.
@@ -198,11 +213,16 @@ If map? is supplied as true, then the namespace’s identifier mapping is
 also adjusted (see [missing]) in the phase level corresponding to the
 base phase, so that sym maps to the variable.
 
+If as-constant? is true, then the variable is made a constant (so future
+assignments are rejected) after v is installed as the value.
+
+Changed in version 6.90.0.14: Added the as-constant? argument.
+
                                         *namespace-undefine-variable!*
 (namespace-undefine-variable!  sym              ~
                               [namespace]) -> void?
-  sym : symbol? ~
-  namespace : namespace? = (current-namespace) ~
+  sym : symbol? ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 Removes the sym variable, if any, in the top-level environment of
 namespace in its base phase. The namespace’s identifier mapping (see
@@ -210,99 +230,141 @@ namespace in its base phase. The namespace’s identifier mapping (see
 
                                         *namespace-mapped-symbols*
 (namespace-mapped-symbols [namespace]) -> (listof symbol?) ~
-  namespace : namespace? = (current-namespace) ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 Returns a list of all symbols that are mapped to variables, syntax, and
 imports in namespace for the phase level corresponding to the
 namespace’s base phase.
 
                                         *namespace-require*
-(namespace-require quoted-raw-require-spec) -> void? ~
-  quoted-raw-require-spec : any/c ~
+(namespace-require  quoted-raw-require-spec      ~
+                   [namespace])             -> void?
+  quoted-raw-require-spec : any/c ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 Performs the import corresponding to quoted-raw-require-spec in the
-top-level environment of the current namespace, like a top-level
-#%require. The quoted-raw-require-spec argument must be a datum that
-corresponds to a quoted raw-require-spec for #%require, which includes
-module paths.
+top-level environment of namespace, like a top-level #%require. The
+quoted-raw-require-spec argument must be either a datum that corresponds
+to a quoted raw-require-spec for #%require, which includes module paths,
+or it can be a resolved module path.
 
 Module paths in quoted-raw-require-spec are resolved with respect to
 current-load-relative-directory or current-directory (if the former is
 #f), even if the current namespace corresponds to a module body.
 
+Changed in version 6.90.0.16: Added the namespace optional argument.
+
                                         *namespace-require/copy*
-(namespace-require/copy quoted-raw-require-spec) -> void? ~
-  quoted-raw-require-spec : any/c ~
+(namespace-require/copy  quoted-raw-require-spec      ~
+                        [namespace])             -> void?
+  quoted-raw-require-spec : any/c ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 Like namespace-require for syntax exported from the module, but exported
 variables at the namespace’s base phase are treated differently: the
-export’s current value is copied to a top-level variable in the current
-namespace.
+export’s current value is copied to a top-level variable in namespace.
+
+Changed in version 6.90.0.16: Added the namespace optional argument.
 
                                         *namespace-require/constant*
-(namespace-require/constant quoted-raw-require-spec) -> void? ~
-  quoted-raw-require-spec : any/c ~
+(namespace-require/constant  quoted-raw-require-spec      ~
+                            [namespace])             -> void?
+  quoted-raw-require-spec : any/c ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 Like namespace-require, but for each exported variable at the
 namespace’s base phase, the export’s value is copied to a corresponding
 top-level variable that is made immutable. Despite setting the top-level
 variable, the corresponding identifier is bound as imported.
 
+Changed in version 6.90.0.16: Added the namespace optional argument.
+
                                         *namespace-require/expansion-time*
-(namespace-require/expansion-time quoted-raw-require-spec) ~
+(namespace-require/expansion-time  quoted-raw-require-spec  ~
+                                  [namespace])             
  -> void?
-  quoted-raw-require-spec : any/c ~
+  quoted-raw-require-spec : any/c ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 Like namespace-require, but only the transformer part of the module is
-executed relative to the namespace’s base phase; that is, the module is
+executed relative to namespace’s base phase; that is, the module is
 merely visited, and not instantiated (see [missing]). If the required
 module has not been instantiated before, the module’s variables remain
 undefined.
+
+Changed in version 6.90.0.16: Added the namespace optional argument.
 
                                         *namespace-attach-module*
 (namespace-attach-module  src-namespace         ~
                           modname              
                          [dest-namespace]) -> void?
-  src-namespace : namespace? ~
-  modname : module-path? ~
-  dest-namespace : namespace? = (current-namespace) ~
+  src-namespace : namespace? ~ ~
+  modname : (or module-path? resolved-module-path?) ~ ~
+  dest-namespace : namespace? = (current-namespace) ~ ~
 
-Attaches the instantiated module named by modname in src-namespace (at
-its base phase) to the module registry of dest-namespace.
+Attaches the instantiated module named by modname  in src-namespace (at
+its base phase) to the  module registry of dest-namespace.
 
-In addition to modname, every module that it imports (directly or
-indirectly) is also recorded in the current namespace’s module registry,
-and instances at the same phase are also attached to dest-namespace
-(while visits at the module’s phase and instances at higher or lower
-phases are not attached, nor even made available for on-demand visits).
-The inspector of the module invocation in dest-namespace is the same as
-inspector of the invocation in src-namespace.
+In addition to modname, every module that it  imports (directly or
+indirectly) is also recorded in the  current namespace’s module
+registry, and instances  at the same phase are also attached to
+dest-namespace (while visits at the  module’s phase and instances at
+higher or lower phases are  not attached, nor even made available for
+on-demand  visits). The inspector of the module invocation in
+dest-namespace is the same as inspector of the  invocation in
+src-namespace.
 
-If modname is not a symbol, the current module name resolver is called
-to resolve the path, but no module is loaded; the resolved form of
-modname is used as the module name in dest-namespace.
+If modname is not a symbol, the current module  name resolver is called
+to resolve the path, but no module  is loaded; the resolved form of
+modname is used as  the module name in dest-namespace.
 
-If modname refers to a submodule or a module with submodules, unless the
-module was loaded from bytecode (i.e., a ".zo" file) independently from
-submodules within the same top-level module, then declarations for all
-submodules within the module’s top-level module are also attached to
-dest-namespace.
+If modname refers to a submodule or a module with  submodules, unless
+the module was loaded from bytecode  (i.e., a ".zo" file) independently
+from submodules  within the same top-level module, then declarations for
+all  submodules within the module’s top-level module are also  attached
+to dest-namespace.
 
-If modname does not refer to an instantiated module in src-namespace, or
-if the name of any module to be attached already has a different
-declaration or same-phase instance in dest-namespace, then the
+If modname does not refer to an  instantiated module in src-namespace,
+or if  the name of any module to be attached already has a  different
+declaration or same-phase instance in  dest-namespace, then the
 exn:fail:contract exception is raised.
 
-If src-namespace and dest-namespace do not have the same base phase,
-then the exn:fail:contract exception is raised.
+If src-namespace and dest-namespace do  not have the same base phase,
+then the  exn:fail:contract exception is raised.
+
+Unlike namespace-require,  namespace-attach-module does not  instantiate
+the module, but copies the module  instance from the source namespace to
+the target namespace.
+
+Examples:
+
+  > (module food racket/base
+      (provide apple)
+      (define apple (list "pie")))
+  > (namespace-require ''food)
+  > (define ns (current-namespace))
+  > (parameterize ([current-namespace (make-base-namespace)])
+      (namespace-require ''food))
+  require: unknown module
+    module name: 'food ~ ~
+  > (parameterize ([current-namespace (make-base-namespace)])
+      (namespace-attach-module ns ''food)
+      (namespace-require ''food)
+      (eq? (eval 'apple) apple))
+  #t
+  > (parameterize ([current-namespace (make-base-namespace)])
+      (namespace-attach-module-declaration ns ''food)
+      (namespace-require ''food)
+      (eq? (eval 'apple) apple))
+  #f
 
                                         *namespace-attach-module-declaration*
 (namespace-attach-module-declaration  src-namespace         ~
                                       modname              
                                      [dest-namespace]) -> void?
-  src-namespace : namespace? ~
-  modname : module-path? ~
-  dest-namespace : namespace? = (current-namespace) ~
+  src-namespace : namespace? ~ ~
+  modname : module-path? ~ ~
+  dest-namespace : namespace? = (current-namespace) ~ ~
 
 Like namespace-attach-module, but the module specified by modname need
 only be declared (and not necessarily instantiated) in src-namespace,
@@ -312,34 +374,35 @@ and the module is merely declared in dest-namespace.
 (namespace-unprotect-module  inspector        ~
                              modname         
                             [namespace]) -> void?
-  inspector : inspector? ~
-  modname : module-path? ~
-  namespace : namespace? = (current-namespace) ~
+  inspector : inspector? ~ ~
+  modname : module-path? ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 Changes the inspector for the instance of the module referenced by
 modname in namespace’s module registry so that it is controlled by the
 current code inspector. The given inspector must currently control the
 invocation of the module in namespace’s module registry, otherwise the
-exn:fail:contract exception is raised. See also Code Inspectors.
+inspector is not changed. See also Code Inspectors.
 
                                         *namespace-module-registry*
 (namespace-module-registry namespace) -> any ~
-  namespace : namespace? ~
+  namespace : namespace? ~ ~
 
 Returns the module registry of the given namespace. This value is useful
 only for identification via eq?.
 
                                         *module->namespace*
-(module->namespace mod) -> namespace? ~
-  mod : (or/c module-path? ~
+(module->namespace mod [src-namespace]) -> namespace? ~
+  mod : (or/c module-path? ~ ~
               resolved-module-path?
               module-path-index?)
+  src-namespace : namespace? = (current-namespace) ~ ~
 
 Returns a namespace that corresponds to the body of an instantiated
-module in the current namespace’s module registry and in the current
-namespace’s base phase, making the module available for on-demand visits
-at the namespace’s base phase. The returned namespace has the same
-module registry as the current namespace. Modifying a binding in the
+module in src-namespace’s module registry and in the src-namespace’s
+base phase, making the module available for on-demand visits at
+src-namespace’s base phase. The returned namespace has the same module
+registry as src-namespace. Modifying a binding in the resulting
 namespace changes the binding seen in modules that require the
 namespace’s module.
 
@@ -347,29 +410,34 @@ Module paths in a top-level require expression are resolved with respect
 to the namespace’s module. New provide declarations are not allowed.
 
 If the current code inspector does not control the invocation of the
-module in the current namespace’s module registry, the exn:fail:contract
+module in src-namespace’s module registry, the exn:fail:contract
 exception is raised; see also Code Inspectors.
 
-Bindings in the namespace cannot be modified if the
+Bindings in the result namespace cannot be modified if the
 compile-enforce-module-constants parameter was true when the module was
 declared, unless the module declaration itself included assignments to
 the binding via set!.
 
-                                        *namespace-syntax-introduce*
-(namespace-syntax-introduce stx) -> syntax? ~
-  stx : syntax? ~
+Changed in version 6.90.0.16: Added the src-namespace optional argument.
 
-Returns a syntax object like stx, except that the current namespace’s
-bindings are included in the syntax object’s lexical information (see
-[missing]). The additional context is overridden by any existing
-top-level bindings in the syntax object’s lexical information, or by any
-existing or future module bindings in the lexical information.
+                                        *namespace-syntax-introduce*
+(namespace-syntax-introduce stx [namespace]) -> syntax? ~
+  stx : syntax? ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
+
+Returns a syntax object like stx, except that namespace’s bindings are
+included in the syntax object’s lexical information (see [missing]). The
+additional context is overridden by any existing top-level bindings in
+the syntax object’s lexical information, or by any existing or future
+module bindings in the lexical information.
+
+Changed in version 6.90.0.16: Added the namespace optional argument.
 
                                         *module-provide-protected?*
 (module-provide-protected? module-path-index      ~
                            sym)              -> boolean?
-  module-path-index : (or/c symbol? module-path-index?) ~
-  sym : symbol? ~
+  module-path-index : (or/c symbol? module-path-index?) ~ ~
+  sym : symbol? ~ ~
 
 Returns #f if the module declaration for module-path-index defines sym
 and exports it unprotected, #t otherwise (which may mean that the symbol
@@ -384,14 +452,14 @@ first two elements of a list produced by identifier-binding.
 
                                         *variable-reference?*
 (variable-reference? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Return #t if v is a variable reference produced by #%variable-reference,
 #f otherwise.
 
                                         *variable-reference-constant?*
 (variable-reference-constant? varref) -> boolean? ~
-  varref : variable-reference? ~
+  varref : variable-reference? ~ ~
 
 Returns #t if the variable represented by varref will retain its current
 value (i.e., varref refers to a variable that cannot be further modified
@@ -399,7 +467,7 @@ by set! or define), #f otherwise.
 
                                         *variable-reference->empty-namespace*
 (variable-reference->empty-namespace varref) -> namespace? ~
-  varref : variable-reference? ~
+  varref : variable-reference? ~ ~
 
 Returns an empty namespace that shares module declarations and instances
 with the namespace in which varref is instantiated, and with the same
@@ -407,11 +475,12 @@ phase as varref.
 
                                         *variable-reference->namespace*
 (variable-reference->namespace varref) -> namespace? ~
-  varref : variable-reference? ~
+  varref : variable-reference? ~ ~
 
 If varref refers to a module-level variable, then the result is a
 namespace for the module’s body in the referenced variable’s phase; the
-result is the same as a namespace obtained via module->namespace.
+result is the same as a namespace obtained via module->namespace, and
+the module is similarly made available if it is not available already.
 
 If varref refers to a top-level variable, then the result is the
 namespace in which the referenced variable is defined.
@@ -419,7 +488,7 @@ namespace in which the referenced variable is defined.
                                         *variable-reference->resolved-module-path*
 (variable-reference->resolved-module-path varref) ~
  -> (or/c resolved-module-path? #f)
-  varref : variable-reference? ~
+  varref : variable-reference? ~ ~
 
 If varref refers to a module-level variable, the result is a resolved
 module path naming the module.
@@ -429,7 +498,7 @@ If varref refers to a top-level variable, then the result is #f.
                                         *variable-reference->module-path-index*
 (variable-reference->module-path-index varref) ~
  -> (or/c module-path-index? #f)
-  varref : variable-reference? ~
+  varref : variable-reference? ~ ~
 
 If varref refers to a module-level variable, the result is a module path
 index naming the module.
@@ -439,7 +508,7 @@ If varref refers to a top-level variable, then the result is #f.
                                         *variable-reference->module-source*
 (variable-reference->module-source varref) ~
  -> (or/c symbol? (and/c path? complete-path?) #f)
-  varref : variable-reference? ~
+  varref : variable-reference? ~ ~
 
 If varref refers to a module-level variable, the result is a path or
 symbol naming the module’s source (which is typically, but not always,
@@ -451,13 +520,13 @@ If varref refers to a top-level variable, then the result is #f.
 
                                         *variable-reference->phase*
 (variable-reference->phase varref) -> exact-nonnegative-integer? ~
-  varref : variable-reference? ~
+  varref : variable-reference? ~ ~
 
 Returns the phase of the variable referenced by varref.
 
                                         *variable-reference->module-base-phase*
 (variable-reference->module-base-phase varref) -> exact-integer? ~
-  varref : variable-reference? ~
+  varref : variable-reference? ~ ~
 
 Returns the phase in which the module is instantiated for the variable
 referenced by varref, or 0 if the variable for varref is not within a
@@ -470,18 +539,45 @@ phase level n within the module.
                                         *variable-reference->module-declaration-inspector*
 (variable-reference->module-declaration-inspector varref) ~
  -> inspector?
-  varref : variable-reference? ~
+  varref : variable-reference? ~ ~
 
 Returns the declaration inspector (see Code Inspectors) for the module
 of varref, where varref must refer to an anonymous module variable as
 produced by (#%variable-reference).
 
+                                        *variable-reference-from-unsafe?*
+(variable-reference-from-unsafe? varref) -> boolean? ~
+  varref : variable-reference? ~ ~
+
+Returns #t if the module of the variable reference itself (not
+necessarily a referenced variable) is compiled in unsafe mode, #f
+otherwise.
+
+The variable-reference-from-unsafe? procedure is intended for use as
+
+  (variable-reference-from-unsafe? (#%variable-reference))
+
+which the compiler can optimize to a literal #t or #f (since the
+enclosing module is being compiled in unsafe mode or not).
+
+Currently unsafe mode can be controlled only through the linklet
+interface, but future changes may make unsafe mode more accessible at
+the module level.
+
+Added in version 6.12.0.4.
+
 2. Evaluation and Compilation
+
++[missing] in [missing] introduces dynamic evaluation.
+
+Racket provides programmatic control over evaluation through eval and
+related functions. See [missing] for information about extra-linguistic
+facilities related to the Racket compiler.
 
                                         *current-eval*
 (current-eval) -> (any/c . -> . any) ~
 (current-eval proc) -> void?
-  proc : (any/c . -> . any) ~
+  proc : (any/c . -> . any) ~ ~
 
 A parameter that determines the current evaluation handler. The
 evaluation handler is a procedure that takes a top-level form and
@@ -505,8 +601,8 @@ evaluate later forms.
 
                                         *eval*
 (eval top-level-form [namespace]) -> any ~
-  top-level-form : any/c ~
-  namespace : namespace? = (current-namespace) ~
+  top-level-form : any/c ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 +See also [missing] in [missing].
 
@@ -533,8 +629,8 @@ bound to #%top-interaction, before passing it to eval.
 
                                         *eval-syntax*
 (eval-syntax stx [namespace]) -> any ~
-  stx : syntax? ~
-  namespace : namespace? = (current-namespace) ~
+  stx : syntax? ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 Like eval, except that stx must be a syntax object, and its lexical
 context is not enriched before it is passed to the evaluation handler.
@@ -548,7 +644,7 @@ context is not enriched before it is passed to the evaluation handler.
            . -> .
            any)
 (current-load proc) -> void?
-  proc : (path? (or/c #f ~
+  proc : (path? (or/c #f ~ ~
                       symbol?
                       (cons/c (or/c #f symbol?)
                               (non-empty-listof symbol?)))
@@ -576,7 +672,9 @@ loaded independently, the load handler should return without loading
 from a file. When the expected module name is a list that starts with a
 symbol, the root module and any other submodules can be loaded from the
 given file, which might be from source, and the load handler still
-should not complain if the expected submodule is not found.
+should not complain if the expected submodule is not found. When loading
+modules from a nonexistent source file, the load handler may raise an
+exception regardless of whether submodules are requested or not.
 
 The default load handler reads forms from the file in read-syntax mode
 with line-counting enabled for the file port, unless the path has a
@@ -632,7 +730,7 @@ of current-directory.
 
                                         *load*
 (load file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 +See also [missing] in [missing].
 
@@ -642,7 +740,7 @@ file, which is resolved relative to the value of current-directory.
 
                                         *load-relative*
 (load-relative file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 Like load/use-compiled, but when file is a relative path, it is resolved
 using the value of current-load-relative-directory instead of the value
@@ -651,39 +749,55 @@ current-directory is used.
 
                                         *load/cd*
 (load/cd file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 Like load, but load/cd sets both current-directory and
 current-load-relative-directory before calling the load handler.
 
                                         *current-load-extension*
 (current-load-extension) ~
- -> (path? (or/c symbol? #f) . -> . any)
+ -> (path? (or/c #f
+                 symbol?
+                 (cons/c (or/c #f symbol?)
+                         (non-empty-listof symbol?)))
+     . -> .
+     any)
 (current-load-extension proc) -> void?
-  proc : (path? (or/c symbol? #f) . -> . any) ~
+  proc : (path? (or/c #f ~ ~
+                      symbol?
+                      (cons/c (or/c #f symbol?)
+                              (non-empty-listof symbol?)))
+          . -> .
+          any)
 
 A parameter that determines a extension-load handler, which is called by
 load-extension and the default compiled-load handler.
 
 An extension-load handler takes the same arguments as a load handler,
 but the file should be a platform-specific dynamic extension, typically
-with the file suffix ".so" (Unix), ".dll" (Windows), or ".dylib" (Mac OS
-X).  The file is loaded using internal, OS-specific primitives. See
+with the file suffix ".so" (Unix), ".dll" (Windows), or ".dylib" (Mac
+OS).  The file is loaded using internal, OS-specific primitives. See
 [missing] for more information on dynamic extensions.
+
+Extensions are supported only when (system-type 'vm) returns 'racket.
 
                                         *load-extension*
 (load-extension file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 Sets current-load-relative-directory like load, and calls the
 extension-load handler in tail position.
 
+Extensions are supported only when (system-type 'vm) returns 'racket.
+
                                         *load-relative-extension*
 (load-relative-extension file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 Like load-extension, but resolves file using
 current-load-relative-directory like load-relative.
+
+Extensions are supported only when (system-type 'vm) returns 'racket.
 
                                         *current-load/use-compiled*
 (current-load/use-compiled) ~
@@ -693,7 +807,7 @@ current-load-relative-directory like load-relative.
                          (non-empty-listof symbol?)))
            . -> . any)
 (current-load/use-compiled proc) -> void?
-  proc : (path? (or/c #f ~
+  proc : (path? (or/c #f ~ ~
                       symbol?
                       (cons/c (or/c #f symbol?)
                               (non-empty-listof symbol?)))
@@ -705,12 +819,22 @@ called by load/use-compiled.
 
 The protocol for a compiled-load handler is the same as for the load
 handler (see current-load), except that a compiled-load handler is
-expected to set current-load-relative-directory itself. The default
-compiled-load handler, however, checks for a ".ss" file when the given
-path ends with ".rkt", no ".rkt" file exists, and when the handler’s
-second argument is a symbol. In addition, the default compiled-load
-handler checks for ".zo" (bytecode) files and ".so" (native Unix),
-".dll" (native Windows), or ".dylib" (native Mac OS X) files.
+expected to set current-load-relative-directory itself. Additionally,
+the default compiled-load handler does the following:
+
+* When the given path ends with ".rkt", no ".rkt" file exists, and when
+  the handler’s second argument is not #f, the default compiled-load
+  handler checks for a ".ss" file.
+
+* The default compiled-load handler checks for the opportunity to load
+  from ".zo" (bytecode) files and, when (system-type 'vm) returns
+  'racket, for ".so" (native Unix), ".dll" (native Windows), or ".dylib"
+  (native Mac OS) files.
+
+* When the default compiled-load handler needs to load from the given
+  path, the given path does not exist, and when the handler’s second
+  argument is not #f, the default compiled-load handler returns without
+  raising an exception.
 
 The check for a compiled file occurs whenever the given path file ends
 with any extension (e.g., ".rkt" or ".scrbl"), and the check consults
@@ -723,17 +847,21 @@ reroot-path and the root as the second argument; if the “root” is a
 relative path, then the relative path is instead suffixed onto the
 directory of file. The roots are tried in order, and the subdirectories
 are checked in order within each root. A ".zo" version of the file
-(whose name is formed by passing file and #".zo" to path-add-suffix) is
-loaded if it exists directly in one of the indicated subdirectories, or
-a ".so"/".dll"/".dylib" version of the file is loaded if it exists
-within a "native" subdirectory of a use-compiled-file-paths directory,
-in an even deeper subdirectory as named by system-library-subpath. A
-compiled file is loaded only if its modification date is not older than
-the date for file. If both ".zo" and ".so"/".dll"/".dylib" files are
-available, the ".so"/".dll"/".dylib" file is used.  If file ends with
-".rkt", no such file exists, the handler’s second argument is a symbol,
-and a ".ss" file exists, then ".zo" and ".so"/".dll"/".dylib" files are
-used only with names based on file with its suffixed replaced by ".ss".
+(whose name is formed by passing file and #".zo" to path-add-extension)
+is loaded if it exists directly in one of the indicated subdirectories,
+or when (system-type 'vm) returns 'racket, then a ".so"/".dll"/".dylib"
+version of the file is loaded if it exists within a "native"
+subdirectory of a use-compiled-file-paths directory, in an even deeper
+subdirectory as named by system-library-subpath. A compiled file is
+loaded only if it checks out according to (use-compiled-file-check);
+with the default parameter value of 'modify-seconds, a compiled file is
+used only if its modification date is not older than the date for file.
+If both ".zo" and ".so"/".dll"/".dylib" files are available when
+(system-type 'vm) returns 'racket, the ".so"/".dll"/".dylib" file is
+used.  If file ends with ".rkt", no such file exists, the handler’s
+second argument is a symbol, and a ".ss" file exists, then ".zo" and
+".so"/".dll"/".dylib" files are used only with names based on file with
+its suffixed replaced by ".ss".
 
 While a ".zo", ".so", ".dll", or ".dylib" file is loaded, the current
 load-relative directory is set to the directory of the original file.
@@ -761,7 +889,7 @@ independent but consistent loading of submodules from bytecode files.
 
                                         *load/use-compiled*
 (load/use-compiled file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 Calls the current compiled-load handler in tail position.
 
@@ -769,7 +897,7 @@ Calls the current compiled-load handler in tail position.
 (current-load-relative-directory) ~
  -> (or/c (and/c path-string? complete-path?) #f)
 (current-load-relative-directory path) -> void?
-  path : (or/c (and/c path-string? complete-path?) #f) ~
+  path : (or/c (and/c path-string? complete-path?) #f) ~ ~
 
 A parameter that is set by load, load-relative, load-extension,
 load-relative-extension, and the default compiled-load handler, and used
@@ -784,16 +912,21 @@ directory need not exist.)
 (use-compiled-file-paths) ~
  -> (listof (and/c path? relative-path?))
 (use-compiled-file-paths paths) -> void?
-  paths : (listof (and/c path-string? relative-path?)) ~
+  paths : (listof (and/c path-string? relative-path?)) ~ ~
 
 A list of relative paths, which defaults to (list (string->path
 "compiled")). It is used by the compiled-load handler (see
 current-load/use-compiled).
 
+If the PLT_ZO_PATH environment variable is set on startup, it supplies a
+path instead of "compiled" to use for the initial parameter value.
+
+Changed in version 7.7.0.9: Added PLT_ZO_PATH.
+
                                         *current-compiled-file-roots*
 (current-compiled-file-roots) -> (listof (or/c path? 'same)) ~
 (current-compiled-file-roots paths) -> void?
-  paths : (listof (or/c path-string? 'same)) ~
+  paths : (listof (or/c path-string? 'same)) ~ ~
 
 A list of paths and 'sames that is is used by the default compiled-load
 handler (see current-load/use-compiled).
@@ -806,6 +939,24 @@ command-line flag, it is parsed by first replacing any @(version) with
 the result of (version), then using path-list-string->path-list with a
 default path list (list (build-path 'same)) to arrive at the parameter’s
 initial value.
+
+                                        *use-compiled-file-check*
+(use-compiled-file-check) -> (or/c 'modify-seconds 'exists) ~
+(use-compiled-file-check check) -> void?
+  check : (or/c 'modify-seconds 'exists) ~ ~
+
+A parameter that determines how a compiled file is checked against its
+source to enable use of the compiled file. By default, the file-check
+mode is 'modify-seconds, which uses a compiled file when its filesystem
+modification date is at least as new as the source file’s. The 'exists
+mode causes a compiled file to be used in place of its source as long as
+the compiled file exists.
+
+If the PLT_COMPILED_FILE_CHECK environment variable is set to
+modify-seconds or exists, then the environment variable’s value
+configures the parameter when Racket starts.
+
+Added in version 6.6.0.3.
 
                                         *read-eval-print-loop*
 (read-eval-print-loop) -> any ~
@@ -826,7 +977,7 @@ current-prompt-read, current-eval, and current-print parameters.
                                         *current-prompt-read*
 (current-prompt-read) -> (-> any) ~
 (current-prompt-read proc) -> void?
-  proc : (-> any) ~
+  proc : (-> any) ~ ~
 
 A parameter that determines a prompt read handler, which is a procedure
 that takes no arguments, displays a prompt string, and returns a
@@ -851,7 +1002,7 @@ set-port-next-location! before returning the read result.
                                         *current-get-interaction-input-port*
 (current-get-interaction-input-port) -> (-> input-port?) ~
 (current-get-interaction-input-port proc) -> void?
-  proc : (-> input-port?) ~
+  proc : (-> input-port?) ~ ~
 
 A parameter that determines the interaction port handler, which returns
 a port to use for read-eval-print-loop inputs.
@@ -867,7 +1018,7 @@ events can be handled when reading from the port blocks.
                                         *current-read-interaction*
 (current-read-interaction) -> (any/c input-port? -> any) ~
 (current-read-interaction proc) -> void?
-  proc : (any/c input-port? -> any) ~
+  proc : (any/c input-port? -> any) ~ ~
 
 A parameter that determines the current read interaction handler, which
 is procedure that takes an arbitrary value and an input port and returns
@@ -882,7 +1033,7 @@ The default read interaction handler accepts src and in and returns
                                         *current-print*
 (current-print) -> (any/c -> any) ~
 (current-print proc) -> void?
-  proc : (any/c -> any) ~
+  proc : (any/c -> any) ~ ~
 
 A parameter that determines the print handler that is called  by
 read-eval-print-loop to print the result of an evaluation  (and the
@@ -896,7 +1047,7 @@ newline,  except that it prints nothing when the value is #<void>.
 (current-compile) ~
  -> (any/c boolean? . -> . compiled-expression?)
 (current-compile proc) -> void?
-  proc : (any/c boolean? . -> . compiled-expression?) ~
+  proc : (any/c boolean? . -> . compiled-expression?) ~ ~
 
 A parameter that determines the current compilation handler. The
 compilation handler is a procedure that takes a top-level form and
@@ -916,32 +1067,46 @@ starts with #~. See [missing] for more information.
 
 For internal testing purposes, when the PLT_VALIDATE_COMPILE environment
 variable is set, the default compilation handler runs a bytecode
-validator on its own compilation results.
+validator immediately on its own compilation results (instead of relying
+only on validation when compiled bytecode is loaded).
 
                                         *compile*
 (compile top-level-form) -> compiled-expression? ~
-  top-level-form : any/c ~
+  top-level-form : any/c ~ ~
 
 Like eval, but calls the current compilation handler in tail position
 with top-level-form.
 
                                         *compile-syntax*
 (compile-syntax stx) -> compiled-expression? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Like eval-syntax, but calls the current compilation handler in tail
 position with stx.
 
+                                        *compiled-expression-recompile*
+(compiled-expression-recompile ce) -> compiled-expression? ~
+  ce : compiled-expression? ~ ~
+
+Recompiles ce. If ce was compiled as machine-independent and
+current-compile-target-machine is not set to #f, then recompiling
+effectively converts to the current machine format. Otherwise,
+recompiling effectively re-runs optimization passes to produce an
+equivalent compiled form with potentially different performance
+characteristics.
+
+Added in version 6.3.
+
                                         *compiled-expression?*
 (compiled-expression? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a compiled form, #f otherwise.
 
                                         *compile-enforce-module-constants*
 (compile-enforce-module-constants) -> boolean? ~
 (compile-enforce-module-constants on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that determines how a module declaration is compiled.
 
@@ -959,7 +1124,7 @@ that skips certain run-time checks.
                                         *compile-allow-set!-undefined*
 (compile-allow-set!-undefined) -> boolean? ~
 (compile-allow-set!-undefined allow?) -> void?
-  allow? : any/c ~
+  allow? : any/c ~ ~
 
 A parameter that determines how a set! expression is compiled when it
 mutates a global variable. If the value of this parameter is a true
@@ -973,7 +1138,7 @@ used when an expression is compiled, not when it is evaluated.
                                         *compile-context-preservation-enabled*
 (compile-context-preservation-enabled) -> boolean? ~
 (compile-context-preservation-enabled on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that determines whether compilation should avoid
 function-call inlining and other optimizations that may cause
@@ -981,28 +1146,68 @@ information to be lost from stack traces (as reported by
 continuation-mark-set->context). The default is #f, which allows such
 optimizations.
 
+                                        *current-compile-target-machine*
+(current-compile-target-machine) ~
+ -> (or/c #f (and/c symbol? compile-target-machine?))
+(current-compile-target-machine target) -> void?
+  target : (or/c #f (and/c symbol? compile-target-machine?)) ~ ~
+
+A parameter that determines the platform and/or virtual machine target
+for a newly compiled expression.
+
+If the target is #f, the the compiled expression writes in a
+machine-independent format (usually in ".zo" files). Machine-independent
+compiled code works for any platform and any Racket virtual machine.
+When the machine-independent compiled expression is read back in, it is
+subject to further compilation for the current platform and virtual
+machine, which can be considerably slower than reading a format that is
+fully compiled for a platform and virtual machine.
+
+The default is something other than #f, unless machine-independent mode
+is enabled through the -M/--compile-any command-line flag to stand-alone
+Racket (or GRacket) or through the PLT_COMPILE_ANY environment variable
+(set to any value).
+
+Added in version 7.1.0.6.
+
+                                        *compile-target-machine?*
+(compile-target-machine? sym) -> boolean? ~
+  sym : symbol? ~ ~
+
+Reports whether sym is a supported compilation target for the currently
+running Racket.
+
+When (system-type 'vm) reports 'racket, then the only target symbol is
+'racket. When (system-type 'vm) reports 'chez-scheme, then a symbol
+corresponding to the current platform is a target, and other targets may
+also be supported. The 'target-machine mode of system-type reports the
+running Racket’s native target machine.
+
+Added in version 7.1.0.6.
+
                                         *eval-jit-enabled*
 (eval-jit-enabled) -> boolean? ~
 (eval-jit-enabled on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 +See also [missing] in [missing].
 
 A parameter that determines whether the native-code just-in-time
 compiler (JIT) is enabled for code (compiled or not) that is passed to
 the default evaluation handler. A true parameter value is effective only
-on platforms for which the JIT is supported, and changing the value from
-its initial setting affects only forms that are outside of module.
+on platforms for which the JIT is supported and for Racket virtual
+machines that rely on a JIT.
 
 The default is #t, unless the JIT is not supported by the current
-platform, unless it is disabled through the -j/--no-jit command-line
+platform but is supported on the same virtual machine for other
+platforms, unless it is disabled through the -j/--no-jit command-line
 flag to stand-alone Racket (or GRacket), and unless it is disabled
 through the PLTNOMZJIT environment variable (set to any value).
 
                                         *load-on-demand-enabled*
 (load-on-demand-enabled) -> boolean? ~
 (load-on-demand-enabled on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that determines whether the default load handler sets
 read-on-demand-source. See current-load for more information. The
@@ -1011,7 +1216,7 @@ command-line flag.
 
 3. The racket/load Language
 
- #lang racket/load package: base ~
+ #lang racket/load package: base ~ ~
 
 The racket/load language supports evaluation where each top-level form
 in the module body is separately passed to eval in the same way as for
@@ -1075,13 +1280,13 @@ require. A module path is relative to another module.
 
                                         *resolved-module-path?*
 (resolved-module-path? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a resolved module path, #f otherwise.
 
                                         *make-resolved-module-path*
 (make-resolved-module-path path) -> resolved-module-path? ~
-  path : (or/c symbol? ~
+  path : (or/c symbol? ~ ~
                (and/c path? complete-path?)
                (cons/c (or/c symbol?
                              (and/c path? complete-path?))
@@ -1090,7 +1295,7 @@ Returns #t if v is a resolved module path, #f otherwise.
 Returns a resolved module path that encapsulates path, where a list path
 corresponds to a submodule path. If path is a path or starts with a
 path, the path normally should be cleansed (see cleanse-path) and
-simplified (see simplify-path).
+simplified (see simplify-path, including consulting the file system).
 
 A resolved module path is interned. That is, if two resolved module path
 values encapsulate paths that are equal?, then the resolved module path
@@ -1103,14 +1308,14 @@ values are eq?.
           (cons/c (or/c symbol?
                         (and/c path? complete-path?))
                   (non-empty-listof symbol?)))
-  module-path : resolved-module-path? ~
+  module-path : resolved-module-path? ~ ~
 
 Returns the path or symbol encapsulated by a resolved module path. A
 list result corresponds to a submodule path.
 
                                         *module-path?*
 (module-path? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v corresponds to a datum that matches the grammar for
 module-path for require, #f otherwise. Note that a path (in the sense of
@@ -1127,7 +1332,7 @@ path?) is a module path.
       . -> .
       resolved-module-path?))
 (current-module-name-resolver proc) -> void?
-  proc : (case-> ~
+  proc : (case-> ~ ~
           (resolved-module-path? (or/c #f namespace?) . -> . any)
           (module-path?
            (or/c #f resolved-module-path?)
@@ -1211,6 +1416,16 @@ is added to the cache only when the fourth argument to the module name
 resolver is true (indicating that a module should be loaded) and only
 when loading succeeds.
 
+Finally, the default module name resolver potentially treats a submod
+path specially. If the module path as the first element of the submod
+form refers to non-existent collection, then instead of raising an
+exception, the default module name resolver synthesizes an uninterned
+symbol module name for the resulting resolved module path. This special
+treatment of submodule paths is consistent with the special treatment of
+nonexistent submodules by the compiled-load handler, so that
+module-declared? can be used more readily to check for the existence of
+a submodule.
+
 Module loading is suppressed (i.e., #f is supplied as a fourth argument
 to the module name resolver) when resolving module paths in syntax
 objects (see [missing]). When a syntax object is manipulated, the
@@ -1225,13 +1440,15 @@ except that an error is also logged. Support for three arguments will be
 removed in a future version.
 
 Changed in version 6.0.1.12: Added error logging to the default module
-name resolver when called with three arguments.
+name resolver when called with three arguments. Changed in version
+7.0.0.17: Added special treatment of submod forms with a nonexistent
+collection by the default module name resolver.
 
                                         *current-module-declare-name*
 (current-module-declare-name) ~
  -> (or/c resolved-module-path? #f)
 (current-module-declare-name name) -> void?
-  name : (or/c resolved-module-path? #f) ~
+  name : (or/c resolved-module-path? #f) ~ ~
 
 A parameter that determines a module name that is used when evaluating a
 module declaration (when the parameter value is not #f). In that case,
@@ -1246,7 +1463,7 @@ relative to the root module is unaffected.
 (current-module-declare-source) ~
  -> (or/c symbol? (and/c path? complete-path?) #f)
 (current-module-declare-source src) -> void?
-  src : (or/c symbol? (and/c path? complete-path?) #f) ~
+  src : (or/c symbol? (and/c path? complete-path?) #f) ~ ~
 
 A parameter that determines source information to be associated with a
 module when evaluating a module declaration. Source information is used
@@ -1262,7 +1479,7 @@ parameter value.
                  (lambda (stx)
                    (module-path? (syntax->datum s)))))
 (current-module-path-for-load path) -> void?
-  path : (or/c #f module-path? ~
+  path : (or/c #f module-path? ~ ~
                (and/c syntax?
                       (lambda (stx)
                         (module-path? (syntax->datum s)))))
@@ -1318,13 +1535,14 @@ base values (even if they have different resolved values).
 
                                         *module-path-index?*
 (module-path-index? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a module path index, #f otherwise.
 
                                         *module-path-index-resolve*
-(module-path-index-resolve mpi) -> resolved-module-path? ~
-  mpi : module-path-index? ~
+(module-path-index-resolve mpi [load?]) -> resolved-module-path? ~
+  mpi : module-path-index? ~ ~
+  load? : any/c = #f ~ ~
 
 Returns a resolved module path for the resolved module name, computing
 the resolved name (and storing it in mpi) if it has not been computed
@@ -1333,13 +1551,18 @@ before.
 Resolving a module path index uses the current module name resolver (see
 current-module-name-resolver). Depending on the kind of module paths
 encapsulated by mpi, the computed resolved name can depend on the value
-of current-load-relative-directory or current-directory.
+of current-load-relative-directory or current-directory. The load?
+argument is propagated as the last argument to the module name resolver.
+
+See resolve-module-path-index.
+
+Changed in version 6.90.0.16: Added the load? optional argument.
 
                                         *module-path-index-split*
 (module-path-index-split mpi) ~
  -> (or/c module-path? #f)
     (or/c module-path-index? resolved-module-path? #f)
-  mpi : module-path-index? ~
+  mpi : module-path-index? ~ ~
 
 Returns two values: a module path, and a base path—either a module path
 index, resolved module path, or #f—to which the first path is relative.
@@ -1355,7 +1578,7 @@ have a non-#f submodule path as reported by module-path-index-submodule.
                                         *module-path-index-submodule*
 (module-path-index-submodule mpi) ~
  -> (or/c #f (non-empty-listof symbol?))
-  mpi : module-path-index? ~
+  mpi : module-path-index? ~ ~
 
 Returns a non-empty list of symbols if mpi is a “self” (see above)
 module path index that refers to a submodule. The result is always #f if
@@ -1363,17 +1586,17 @@ either result of (module-path-index-split mpi) is non-#f.
 
                                         *module-path-index-join*
 (module-path-index-join path base [submod]) -> module-path-index? ~
-  path : (or/c module-path? #f) ~
-  base : (or/c module-path-index? resolved-module-path? #f) ~
-  submod : (or/c #f (non-empty-listof symbol?)) = #f ~
+  path : (or/c module-path? #f) ~ ~
+  base : (or/c module-path-index? resolved-module-path? #f) ~ ~
+  submod : (or/c #f (non-empty-listof symbol?)) = #f ~ ~
 
 Combines path, base, and submod to create a new module path index. The
-path argument can #f only if base is also #f. The submod argument can be
-a list only when path and base are both #f.
+path argument can be #f only if base is also #f. The submod argument can
+be a list only when path and base are both #f.
 
                                         *compiled-module-expression?*
 (compiled-module-expression? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a compiled module declaration, #f otherwise. See also
 current-compile.
@@ -1381,47 +1604,47 @@ current-compile.
                                         *module-compiled-name*
 (module-compiled-name compiled-module-code) ~
  -> (or/c symbol? (cons/c symbol? (non-empty-listof symbol?)))
-  compiled-module-code : compiled-module-expression? ~
+  compiled-module-code : compiled-module-expression? ~ ~
 (module-compiled-name compiled-module-code 
                       name)                
  -> compiled-module-expression?
-  compiled-module-code : compiled-module-expression? ~
-  name : (or/c symbol? (cons/c symbol? (non-empty-listof symbol?))) ~
+  compiled-module-code : compiled-module-expression? ~ ~
+  name : (or/c symbol? (cons/c symbol? (non-empty-listof symbol?))) ~ ~
 
 Takes a module declaration in compiled form and either gets the module’s
 declared name (when name is not provided) or returns a revised module
 declaration with the given name.
 
-The name is a symbol for a top-level module, and it list of symbols for
-a submodule, where a list reflects the submodule path to the module
+The name is a symbol for a top-level module, or a symbol paired with a
+list of symbols where the list reflects the submodule path to the module
 starting with the top-level module’s declared name.
 
                                         *module-compiled-submodules*
 (module-compiled-submodules compiled-module-code  ~
                             non-star?)           
  -> (listof compiled-module-expression?)
-  compiled-module-code : compiled-module-expression? ~
-  non-star? : any/c ~
+  compiled-module-code : compiled-module-expression? ~ ~
+  non-star? : any/c ~ ~
 (module-compiled-submodules compiled-module-code 
                             non-star?            
                             submodules)          
  -> compiled-module-expression?
-  compiled-module-code : compiled-module-expression? ~
-  non-star? : any/c ~
-  submodules : (listof compiled-module-expression?) ~
+  compiled-module-code : compiled-module-expression? ~ ~
+  non-star? : any/c ~ ~
+  submodules : (listof compiled-module-expression?) ~ ~
 
 Takes a module declaration in compiled form and either gets the module’s
 submodules (when submodules is not provided) or returns a revised module
-declaration with the given submodules. The pre-module? argument
-determines whether the result or new submodule list corresponds to
-module declarations (when non-star? is true) or module* declarations
-(when non-star? is #f).
+declaration with the given submodules. The non-star? argument determines
+whether the result or new submodule list corresponds to module
+declarations (when non-star? is true) or module* declarations (when
+non-star? is #f).
 
                                         *module-compiled-imports*
 (module-compiled-imports compiled-module-code) ~
  -> (listof (cons/c (or/c exact-integer? #f)
                     (listof module-path-index?)))
-  compiled-module-code : compiled-module-expression? ~
+  compiled-module-code : compiled-module-expression? ~ ~
 
 Takes a module declaration in compiled form and returns an association
 list mapping phase level shifts (where #f corresponds to a shift into
@@ -1429,10 +1652,12 @@ the label phase level) to module references for the module’s explicit
 imports.
 
                                         *module-compiled-exports*
-(module-compiled-exports compiled-module-code) ~
+(module-compiled-exports  compiled-module-code  ~
+                         [verbosity])          
  -> (listof (cons/c (or/c exact-integer? #f) list?))
     (listof (cons/c (or/c exact-integer? #f) list?))
-  compiled-module-code : compiled-module-expression? ~
+  compiled-module-code : compiled-module-expression? ~ ~
+  verbosity : (or/c #f 'defined-names) = #f ~ ~
 
 Returns two association lists mapping phase level values (where #f
 corresponds to the label phase level) to exports at the corresponding
@@ -1450,7 +1675,9 @@ contracts above, more precisely matches the contract
                          (list/c module-path-index?
                                  (or/c exact-integer? #f)
                                  symbol?
-                                 (or/c exact-integer? #f))))))
+                                 (or/c exact-integer? #f))))
+                  ; only if verbosity is 'defined-names: ~ ~
+                  symbol?))
 
 For each element of the list, the leading symbol is the name of the
 export.
@@ -1463,18 +1690,62 @@ the import that was re-exported. The origin list has more than one
 element if the binding was imported multiple times from (possibly)
 different sources.
 
+The last part, a symbol, is included only if verbosity is
+'defined-names. In that case, the included symbol is the name of the
+definition within its defining module (which may be different than the
+name that is exported).
+
 For each origin, a module path index by itself means that the binding
 was imported with a phase level shift of 0 (i.e., a plain require
 without for-meta, for-syntax, etc.), and imported identifier has the
 same name as the re-exported name. An origin represented with a list
 indicates explicitly the import, the import phase level shift (where #f
 corresponds to a for-label import), the import name of the re-exported
-binding, and the phase level of the import.}
+binding, and the phase level of the import.
+
+Example:
+
+  > (module-compiled-exports
+     (compile
+      '(module banana racket/base
+         (require (only-in racket/math pi)
+                  (for-syntax racket/base))
+         (provide pi
+                  (rename-out [peel wrapper])
+                  bush
+                  cond
+                  (for-syntax compile-time))
+         (define peel pi)
+         (define bush (* 2 pi))
+         (begin-for-syntax
+           (define compile-time (current-seconds)))))
+     'defined-names)
+  '((0
+     (bush () bush)
+     (pi (#<module-path-index:racket/math>) pi) ~ ~
+     (wrapper () peel))
+    (1 (compile-time () compile-time)))
+  '((0 (cond (#<module-path-index:racket/base>) cond)))
+
+Changed in version 7.5.0.6: Added the verbosity argument.
+
+                                        *module-compiled-indirect-exports*
+(module-compiled-indirect-exports compiled-module-code) ~
+ -> (listof (cons/c exact-integer? (listof symbol?)))
+  compiled-module-code : compiled-module-expression? ~ ~
+
+Returns an association list mapping phase level values to symbols that
+represent variables within the module. These definitions are not
+directly accessible from source, but they are accessible from bytecode,
+and the order of the symbols in each list corresponds to an order for
+bytecode access.
+
+Added in version 6.5.0.5.
 
                                         *module-compiled-language-info*
 (module-compiled-language-info compiled-module-code) ~
  -> (or/c #f (vector/c module-path? symbol? any/c))
-  compiled-module-code : compiled-module-expression? ~
+  compiled-module-code : compiled-module-expression? ~ ~
 
 +See also [missing] in [missing].
 
@@ -1496,7 +1767,7 @@ See also module->language-info and racket/language-info.
                                         *module-compiled-cross-phase-persistent?*
 (module-compiled-cross-phase-persistent? compiled-module-code) ~
  -> boolean?
-  compiled-module-code : compiled-module-expression? ~
+  compiled-module-code : compiled-module-expression? ~ ~
 
 Return #t if compiled-module-code represents a cross-phase persistent
 module, #f otherwise.
@@ -1505,11 +1776,16 @@ module, #f otherwise.
 
                                         *dynamic-require*
 (dynamic-require mod provided [fail-thunk]) -> (or/c void? any/c) ~
-  mod : (or/c module-path? ~
+  mod : (or/c module-path? ~ ~
               resolved-module-path?
               module-path-index?)
-  provided : (or/c symbol? #f 0 void?) ~
-  fail-thunk : (-> any) = (lambda () ....) ~
+  provided : (or/c symbol? #f 0 void?) ~ ~
+  fail-thunk : (-> any) = (lambda () ....) ~ ~
+
+Because dynamic-require is a procedure, giving a plain S-expression for
+mod the same way as you would for a require expression likely won’t give
+you expected results. What you need instead is something that evaluates
+to an S-expression; using quote is one way to do it.
 
 Dynamically instantiates the module specified by mod in the current
 namespace’s registry at the namespace’s base phase, if it is not yet
@@ -1523,21 +1799,30 @@ visited (see [missing]) or even made available (for on-demand visits) in
 phases above the base phase.
 
 Examples:
-  > (module a racket/base (displayln "hello"))
 
+  > (module a racket/base (displayln "hello"))
   > (dynamic-require ''a #f)
   hello
 
+The double quoted ''a evaluates to the root-module-path 'a (see the
+grammar for require). Using 'a for mod won’t work, because that
+evaluates to root-module-path a, and the example is not a module
+installed in a collection. Using a won’t work, because a is an undefined
+variable.
+Declaring (module a ....) within another module, instead of in the
+read-eval-print loop, would create a submodule. In that case,
+(dynamic-require ''a #f) would not access the module, because ''a does
+not refer to a submodule.
 
 When provided is a symbol, the value of the module’s export with the
 given name is returned, and still the module is not visited or made
 available in higher phases.
 
 Examples:
+
   > (module b racket/base
       (provide dessert)
       (define dessert "gulab jamun"))
-
   > (dynamic-require ''b 'dessert)
   "gulab jamun"
 
@@ -1547,13 +1832,13 @@ attached, which means that the module is visited in the fresh namespace.
 The expanded syntax must return a single value.
 
 Examples:
+
   > (module c racket/base
       (require (for-syntax racket/base))
       (provide dessert2)
       (define dessert "nanaimo bar")
       (define-syntax dessert2
         (make-rename-transformer #'dessert)))
-
   > (dynamic-require ''c 'dessert2)
   "nanaimo bar"
 
@@ -1569,22 +1854,51 @@ available in higher phases.
 If provided is #<void>, then the module is visited but not instantiated
 (see [missing]), and the result is #<void>.
 
+More examples using different module-path grammar expressions are given
+below:
+
+Example:
+
+  > (dynamic-require 'racket/base #f)
+
+Example:
+
+  > (dynamic-require (list 'lib "racket/base") #f)
+
+Examples:
+
+  > (module a racket/base
+      (module b racket/base
+        (provide inner-dessert)
+        (define inner-dessert "tiramisu")))
+  > (dynamic-require '(submod 'a b) 'inner-dessert)
+  "tiramisu"
+
+The last line in the above example could instead have been written as
+
+Example:
+
+  > (dynamic-require ((lambda () (list 'submod ''a 'b))) 'inner-dessert)
+  "tiramisu"
+
+which is equivalent.
+
                                         *dynamic-require-for-syntax*
 (dynamic-require-for-syntax  mod               ~
                              provided         
                             [fail-thunk]) -> any
-  mod : module-path? ~
-  provided : (or/c symbol? #f) ~
-  fail-thunk : (-> any) = (lambda () ....) ~
+  mod : module-path? ~ ~
+  provided : (or/c symbol? #f) ~ ~
+  fail-thunk : (-> any) = (lambda () ....) ~ ~
 
 Like dynamic-require, but in a phase that is 1 more than the namespace’s
 base phase.
 
                                         *module-declared?*
 (module-declared? mod [load?]) -> boolean? ~
-  mod : (or/c module-path? module-path-index? ~
+  mod : (or/c module-path? module-path-index? ~ ~
               resolved-module-path?)
-  load? : any/c = #f ~
+  load? : any/c = #f ~ ~
 
 Returns #t if the module indicated by mod is declared (but not
 necessarily instantiated or visited) in the current namespace, #f
@@ -1600,9 +1914,9 @@ module does not exist.
                                         *module->language-info*
 (module->language-info mod [load?]) ~
  -> (or/c #f (vector/c module-path? symbol? any/c))
-  mod : (or/c module-path? module-path-index? ~
+  mod : (or/c module-path? module-path-index? ~ ~
               resolved-module-path?)
-  load? : any/c = #f ~
+  load? : any/c = #f ~ ~
 
 Returns information intended to reflect the “language” of the
 implementation of mod. If mod is a resolved module path or load? is #f,
@@ -1613,30 +1927,89 @@ returned by module->language-info is the same as would have been
 returned by module-compiled-language-info applied to the module’s
 implementation as compiled code.
 
+A module can be declared by using dynamic-require.
+
+Examples:
+
+  > (dynamic-require 'racket/dict (void))
+  > (module->language-info 'racket/dict)
+  #f
+
                                         *module->imports*
 (module->imports mod) ~
  -> (listof (cons/c (or/c exact-integer? #f)
                     (listof module-path-index?)))
-  mod : (or/c module-path? module-path-index? ~
+  mod : (or/c module-path? module-path-index? ~ ~
               resolved-module-path?)
 
-Like module-compiled-imports, but produces the imports of mod, which
-must be declared (but not necessarily instantiated or visited) in the
-current namespace.
+Like module-compiled-imports, but produces the  imports of mod, which
+must be declared (but  not necessarily instantiated or visited) in  the
+current namespace. See module->language-info for  an example of
+declaring an existing module.
+
+Examples:
+
+  > (module banana racket/base
+      (require (only-in racket/math pi))
+      (provide peel)
+      (define peel pi)
+      (define bush (* 2 pi)))
+  > (module->imports ''banana)
+  '((0 #<module-path-index:racket/base> #<module-path-index:racket/math>))
 
                                         *module->exports*
-(module->exports mod) ~
+(module->exports mod [verbosity]) ~
  -> (listof (cons/c (or/c exact-integer? #f) list?))
     (listof (cons/c (or/c exact-integer? #f) list?))
-  mod : (or/c module-path? resolved-module-path?) ~
+  mod : (or/c module-path? module-path-index? ~ ~
+              resolved-module-path?)
+  verbosity : (or/c #f 'defined-names) = #f ~ ~
 
-Like module-compiled-exports, but produces the exports of mod, which
-must be declared (but not necessarily instantiated or visited) in the
-current namespace.
+Like module-compiled-exports, but produces the  exports of mod, which
+must be declared (but  not necessarily instantiated or visited) in  the
+current namespace. See module->language-info for  an example of
+declaring an existing module.
+
+Examples:
+
+  > (module banana racket/base
+      (require (only-in racket/math pi))
+      (provide (rename-out [peel wrapper]))
+      (define peel pi)
+      (define bush (* 2 pi)))
+  > (module->exports ''banana)
+  '((0 (wrapper ())))
+  '()
+
+Changed in version 7.5.0.6: Added the verbosity argument.
+
+                                        *module->indirect-exports*
+(module->indirect-exports mod) ~
+ -> (listof (cons/c exact-integer? (listof symbol?)))
+  mod : (or/c module-path? module-path-index? ~ ~
+              resolved-module-path?)
+
+Like module-compiled-indirect-exports, but produces the  exports of mod,
+which must be declared (but  not necessarily instantiated or visited) in
+the current namespace. See module->language-info for  an example of
+declaring an existing module.
+
+Examples:
+
+  > (module banana racket/base
+      (require (only-in racket/math pi))
+      (provide peel)
+      (define peel pi)
+      (define bush (* 2 pi)))
+  > (module->indirect-exports ''banana)
+  '((0 bush))
+
+Added in version 6.5.0.5.
 
                                         *module-predefined?*
 (module-predefined? mod) -> boolean? ~
-  mod : (or/c module-path? resolved-module-path?) ~
+  mod : (or/c module-path? module-path-index? ~ ~
+              resolved-module-path?)
 
 Reports whether mod refers to a module that is predefined for the
 running Racket instance. Predefined modules always have a symbolic
@@ -1721,89 +2094,111 @@ instances.
 
                                         *impersonator?*
 (impersonator? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
-Returns #t if v is an impersonator, #f otherwise.
+Returns #t if v is an impersonator created by procedures like
+impersonate-procedure or impersonate-struct, #f otherwise.
 
 Programs and libraries generally should avoid impersonator? and treat
 impersonators the same as non-impersonator values. In rare cases,
 impersonator? may be needed to guard against redirection by an
 impersonator of an operation to an arbitrary procedure.
 
+A limitation of impersonator? is that it does not recognize an
+impersonator that is created by instantiating a structure type with the
+prop:impersonator-of property. The limitation reflects how those
+impersonators cannot redirect structure access and mutation operations
+to arbitrary procedures.
+
                                         *chaperone?*
 (chaperone? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a chaperone, #f otherwise.
 
 Programs and libraries generally should avoid chaperone? for the same
-reason that they should avoid impersonator?.
+reason that they should avoid impersonator?. A true value for chaperone?
+implies a true value of impersonator?.
 
                                         *impersonator-of?*
 (impersonator-of? v1 v2) -> boolean? ~
-  v1 : any/c ~
-  v2 : any/c ~
+  v1 : any/c ~ ~
+  v2 : any/c ~ ~
 
 Indicates whether v1 can be considered equivalent modulo impersonators
 to v2.
 
-For values that include no impersonators, v1 and v2 can be considered
+Any two values that are eq? to one another are also impersonator-of?.
+For values that include no impersonators, v1 and v2 are considered
 impersonators of each other if they are equal?.
 
-Otherwise, impersonators within v2 must be intact within v1:
+If at least one of v1 or v2 is an impersonator:
 
-* If a part of v2 is an impersonator created from one of  the
-  impersonator constructors (e.g.,  impersonate-procedure or
-  chaperone-procedure), and if the impersonator is  constructed with at
-  least one redirection procedure (i.e., a  value other than #f was
-  supplied for a redirection  procedure), then the corresponding part of
-  v1 must be  one of the following:
+* If v1 impersonates v1* then (impersonator-of? v1 v2)    is #t if and
+  only if (impersonator-of? v1* v2) is #t.
 
-  * the same value that is a part of v2 (with a special meaning of “the
-    same value“ in the case of immutable hash tables, as described
-    below);
+* If v2 is a non-interposing impersonator that impersonates v2*, i.e.,
+  all of its interposition procedures are #f, then (impersonator-of? v1
+  v2)    is #t if and only if (impersonator-of? v1 v2*) is #t.
 
-  * a value further derived from the same value that is part of v2 using
-    an impersonator constructor; or
+* When v2 is an impersonator constructed with at least one non-#f
+  interposition procedure,      but v1 is not an impersonator then
+  (impersonator-of? v1 v2) is #f.
 
-  * a value with the prop:impersonator-of property whose procedure
-    produces an impersonator of the same value that is part of v2.
+Otherwise, if neither v1 or v2 is an impersonator, but either of them
+contains an impersonator as a subpart (e.g., v1 is a list with an
+impersonator as one of its elements), then (impersonator-of? v1 v2)
+proceeds by comparing v1 and v2 recursively (as with equal?), returning
+true if all subparts are impersonator-of?.
 
-  For most kinds of values, “the same value” means equal according to
-  eq?. In the case of an immutable hash table, two impersonated hash
-  tables count as “the same value” when their redirection procedures
-  were originally attached to a hash table by the same call to
-  impersonate-hash or chaperone-hash (and potentially propagated by
-  hash-set, hash-remove, or hash-clear), as long as the content of the
-  first hash table is impersonator-of? of the second hash table.
+Examples:
 
-* If a part of v2 is a structure or procedure impersonator that was
-  created with no redirection procedures (i.e, #f in place of all
-  redirection procedures for specified operations), then the
-  impersonated value is considered in place of that part of v2. In other
-  words, an impersonator construction that does not redirect any access
-  or mutation (but that includes some impersonator properties) need not
-  be preserved in v1.
+  > (impersonator-of? (impersonate-procedure add1 (λ (x) x))
+                      add1)
+  #t
+  > (impersonator-of? (impersonate-procedure add1 (λ (x) x))
+                      sub1)
+  #f
+  > (impersonator-of? (impersonate-procedure
+                        (impersonate-procedure add1 (λ (x) x)) (λ (x) x))
+                      add1)
+  #t
+  > (impersonator-of? (impersonate-procedure add1 (λ (x) x))
+                      (impersonate-procedure add1 #f))
+  #t
+  > (impersonator-of? (impersonate-procedure add1 (λ (x) x))
+                      (impersonate-procedure add1 (λ (x) x)))
+  #f
+  > (impersonator-of? (list 1 2)
+                      (list 1 2))
+  #t
+  > (impersonator-of? (list (impersonate-procedure add1 (λ (x) x)) sub1)
+                      (list add1 sub1))
+  #t
 
                                         *chaperone-of?*
 (chaperone-of? v1 v2) -> boolean? ~
-  v1 : any/c ~
-  v2 : any/c ~
+  v1 : any/c ~ ~
+  v2 : any/c ~ ~
 
 Indicates whether v1 can be considered equivalent modulo chaperones to
 v2.
 
-For values that include no chaperones, v1 and v2 can be considered
-chaperones of each other if they are equal?, except that the mutability
-of vectors and boxes with v1 and v2 must be the same.
+For values that include no chaperones or other impersonators, v1 and v2
+can be considered chaperones of each other if they are equal?, except
+that corresponding mutable vectors, boxes, strings, byte strings, and
+mutable structures within v1 and v2 must be eq?.
 
-Otherwise, chaperones within v2 must be intact within v1 analogous to
-way that impersonator-of? requires that impersonators are preserved,
-except that prop:impersonator-of has no analog for chaperone-of?.
+Otherwise, chaperones and other impersonators within v2 must be intact
+within v1 analogous to way that impersonator-of? requires that
+impersonators are preserved. Furthermore, v1 must not have any
+non-chaperone impersonators whose corresponding value in v2 is not the
+same impersonator. Note that chaperone-of? implies impersonator-of?, but
+not vice-versa.
 
                                         *impersonator-ephemeron*
 (impersonator-ephemeron v) -> ephemeron? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Produces an ephemeron that can be used to connect the reachability of v
 (in the sense of garbage collection; see [missing]) with the
@@ -1811,6 +2206,15 @@ reachability of any value for which v is an impersonator. That is, the
 value v will be considered reachable as long as the result ephemeron is
 reachable in addition to any value that v impersonates (including
 itself).
+
+                                        *procedure-impersonator*?*
+(procedure-impersonator*? v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t for any procedure impersonator that either was produced by
+impersonate-procedure* or chaperone-procedure*, or is an
+impersonator/chaperone of a value that was created with
+impersonate-procedure* or chaperone-procedure* (possibly transitively).
 
 5.1. Impersonator Constructors
 
@@ -1821,10 +2225,10 @@ itself).
                        prop-val ... 
                        ...)         
  -> (and/c procedure? impersonator?)
-  proc : procedure? ~
-  wrapper-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  proc : procedure? ~ ~
+  wrapper-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator procedure that has the same arity, name, and
 other attributes as proc. When the impersonator procedure is applied,
@@ -1837,41 +2241,105 @@ keyword arguments of wrapper-proc must be a superset of the allowed
 keywords of proc. The required keyword arguments of wrapper-proc must be
 a subset of the required keywords of proc.
 
-For applications without keywords, the result of wrapper-proc must be
-either the same number of values as supplied to it or one more than the
-number of supplied values, where an extra result is supplied before the
-others. The additional result, if any, must be a procedure that accepts
+For applications without keywords, the result of wrapper-proc must be at
+least the same number of values as supplied to it. Additional results
+can be supplied—before the values that correspond to the supplied
+values—in the following pattern:
+
+* An optional procedure, result-wrapper-proc, which will be applied to
+  the results of proc; followed by
+
+* any number of repetitions of 'mark key val (i.e., three values), where
+  the call proc is wrapped to install a continuation mark key and val.
+
+If result-wrapper-proc is produced, it must be a procedure that accepts
 as many results as produced by proc; it must return the same number of
-results.  If wrapper-proc returns the same number of values as it is
-given (i.e., it does not return a procedure to impersonator proc’s
-result), then proc is called in tail position with respect to the call
-to the impersonator.
+results. If result-wrapper-proc is not supplied, then proc is called in
+tail position with respect to the call to the impersonator.
 
 For applications that include keyword arguments, wrapper-proc must
-return an additional value before any other values but after the
-result-impersonating procedure (if any). The additional value must be a
-list of replacements for the keyword arguments that were supplied to the
-impersonator (i.e., not counting optional arguments that were not
-supplied). The arguments must be ordered according to the sorted order
-of the supplied arguments’ keywords.
+return an additional value before any other values but after
+result-wrapper-proc and 'mark key val sequences (if any). The additional
+value must be a list of replacements for the keyword arguments that were
+supplied to the impersonator (i.e., not counting optional arguments that
+were not supplied). The arguments must be ordered according to the
+sorted order of the supplied arguments’ keywords.
 
-If wrapper is #f, then applying the resulting impersonator is the same
-as applying proc. If wrapper is #f and no prop is provided, then the
-result is proc unimpersonated.
+If wrapper-proc is #f, then applying the resulting impersonator is the
+same as applying proc. If wrapper-proc is #f and no prop is provided,
+then proc is returned and is not impersonated.
 
 Pairs of prop and prop-val (the number of arguments to
-procedure-impersonator must be even) add impersonator properties or
+impersonate-procedure must be even) add impersonator properties or
 override impersonator-property values of proc.
 
 If any prop is impersonator-prop:application-mark and if the associated
 prop-val is a pair, then the call to proc is wrapped with
 with-continuation-mark using (car prop-val) as the mark key and (cdr
-prop-val) as the mark value. In addition, if continuation-mark-set-first
-with (car prop-val) produces a value for the immediate continuation
-frame of the call to the impersonated procedure, the value is also
-installed as an immediate value for (car prop-val) as a mark during the
-call to wrapper-proc (which allows tail-calls of impersonators with
-respect to wrapping impersonators to be detected within wrapper-proc).
+prop-val) as the mark value. In addition, if the immediate continuation
+frame of the call to the impersonated procedure includes a value for
+(car prop-val)—that is, if call-with-immediate-continuation-mark would
+produce a value for (car prop-val) in the call’s continuation—then the
+value is also installed as an immediate value for (car prop-val) as a
+mark during the call to wrapper-proc (which allows tail-calls of
+impersonators with respect to wrapping impersonators to be detected
+within wrapper-proc).
+
+Changed in version 6.3.0.5: Added support for 'mark key val results from
+wrapper-proc.
+
+Examples:
+
+  > (define (add15 x) (+ x 15))
+  > (define add15+print
+      (impersonate-procedure add15
+                             (λ (x)
+                               (printf "called with ~s\n" x)
+                               (values (λ (res)
+                                         (printf "returned ~s\n" res)
+                                         res)
+                                       x))))
+  > (add15 27)
+  42
+  > (add15+print 27)
+  called with 27
+  returned 42
+  42
+  > (define-values (imp-prop:p1 imp-prop:p1? imp-prop:p1-get) ~ ~
+      (make-impersonator-property 'imp-prop:p1)) ~ ~
+  > (define-values (imp-prop:p2 imp-prop:p2? imp-prop:p2-get) ~ ~
+      (make-impersonator-property 'imp-prop:p2)) ~ ~
+  > (define add15.2 (impersonate-procedure add15 #f imp-prop:p1 11)) ~ ~
+  > (add15.2 2)
+  17
+  > (imp-prop:p1? add15.2)
+  #t
+  > (imp-prop:p1-get add15.2)
+  11
+  > (imp-prop:p2? add15.2)
+  #f
+  > (define add15.3 (impersonate-procedure add15.2 #f imp-prop:p2 13)) ~ ~
+  > (add15.3 3)
+  18
+  > (imp-prop:p1? add15.3)
+  #t
+  > (imp-prop:p1-get add15.3)
+  11
+  > (imp-prop:p2? add15.3)
+  #t
+  > (imp-prop:p2-get add15.3)
+  13
+  > (define add15.4 (impersonate-procedure add15.3 #f imp-prop:p1 101)) ~ ~
+  > (add15.4 4)
+  19
+  > (imp-prop:p1? add15.4)
+  #t
+  > (imp-prop:p1-get add15.4)
+  101
+  > (imp-prop:p2? add15.4)
+  #t
+  > (imp-prop:p2-get add15.4)
+  13
 
                                         *impersonate-procedure**
 (impersonate-procedure* proc          ~
@@ -1880,14 +2348,14 @@ respect to wrapping impersonators to be detected within wrapper-proc).
                         prop-val ... 
                         ...)         
  -> (and/c procedure? impersonator?)
-  proc : procedure? ~
-  wrapper-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  proc : procedure? ~ ~
+  wrapper-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-procedure, except that wrapper-proc receives an
 additional argument before all other arguments. The additional argument
-is the procedure orig-proc that was original applied.
+is the procedure orig-proc that was originally applied.
 
 If the result of impersonate-procedure* is applied directly, then
 orig-proc is that result. If the result is further impersonated before
@@ -1908,14 +2376,14 @@ Added in version 6.1.1.5.
                      prop                  
                      prop-val ...          
                      ...)              -> any/c
-  v : any/c ~
-  struct-type : struct-type? = unspecified ~
-  orig-proc : (or/c struct-accessor-procedure? ~
+  v : any/c ~ ~
+  struct-type : struct-type? = unspecified ~ ~
+  orig-proc : (or/c struct-accessor-procedure? ~ ~
                     struct-mutator-procedure?
                     struct-type-property-accessor-procedure?)
-  redirect-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  redirect-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of v, which redirects certain operations on the
 impersonated value. The orig-procs indicate the operations to redirect,
@@ -1947,13 +2415,14 @@ Supplying #f for a redirect-proc is useful to allow its orig-proc to act
 as a “witness” of v’s representation and enable the addition of props.
 
 Pairs of prop and prop-val (the number of arguments to
-impersonate-struct must be odd) add impersonator properties or override
-impersonator-property values of v.
+impersonate-struct must be even if struct-type is provided, odd
+otherwise) add impersonator properties or override impersonator-property
+values of v.
 
 Each orig-proc must indicate a distinct operation. If no struct-type and
 no orig-procs are supplied, then no props must be supplied. If
 orig-procs are supplied only with #f redirect-procs and no props are
-supplied, then v is returned unimpersonated.
+supplied, then v is returned and is not impersonated.
 
 If any orig-proc is itself an impersonator, then a use of the accessor
 or mutator that orig-proc impersonates is redirected for the resulting
@@ -1972,28 +2441,63 @@ optional struct-type argument.
                     prop-val ... 
                     ...)         
  -> (and/c vector? impersonator?)
-  vec : (and/c vector? (not/c immutable?)) ~
-  ref-proc : (vector? exact-nonnegative-integer? any/c . -> . any/c) ~
-  set-proc : (vector? exact-nonnegative-integer? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  vec : (and/c vector? (not/c immutable?)) ~ ~
+  ref-proc : (or/c (vector? exact-nonnegative-integer? any/c . -> ~ ~
+. any/c) #f)
+  set-proc : (or/c (vector? exact-nonnegative-integer? any/c . -> ~ ~
+. any/c) #f)
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of vec, which redirects the vector-ref and
 vector-set! operations.
 
-The ref-proc must accept vec, an index passed to vector-ref, and the
-value that vector-ref on vec produces for the given index; it must
-produce a replacement for the value, which is the result of vector-ref
-on the impersonator.
+The ref-proc and set-proc arguments must either both be procedures or
+both be #f. If they are #f then impersonate-vector does not interpose on
+vec, but still allows attaching impersonator properties.
 
-The set-proc must accept vec, an index passed to vector-set!, and the
-value passed to vector-set!; it must produce a replacement for the
-value, which is used with vector-set! on the original vec to install the
-value.
+If ref-proc is a procedure it must accept vec, an index passed to
+vector-ref, and the value that vector-ref on vec produces for the given
+index; it must produce a replacement for the value, which is the result
+of vector-ref on the impersonator.
+
+If set-proc is a procedure it must accept vec, an index passed to
+vector-set!, and the value passed to vector-set!; it must produce a
+replacement for the value, which is used with vector-set! on the
+original vec to install the value.
 
 Pairs of prop and prop-val (the number of arguments to
 impersonate-vector must be odd) add impersonator properties or override
 impersonator-property values of vec.
+
+Changed in version 6.9.0.2: Added non-interposing vector impersonators.
+
+                                        *impersonate-vector**
+(impersonate-vector* vec           ~
+                     ref-proc     
+                     set-proc     
+                     prop         
+                     prop-val ... 
+                     ...)         
+ -> (and/c vector? impersonator?)
+  vec : (and/c vector? (not/c immutable?)) ~ ~
+  ref-proc : (or/c (vector? vector? exact-nonnegative-integer? any/c . ~ ~
+-> . any/c) #f)
+  set-proc : (or/c (vector? vector? exact-nonnegative-integer? any/c . ~ ~
+-> . any/c) #f)
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
+
+Like impersonate-vector, except that ref-proc and set-proc each receive
+an additional vector as argument before other arguments. The additional
+argument is the original impersonated vector, access to which triggered
+interposition in the first place.
+
+The additional vector argument might be useful so that ref-proc or
+set-proc can extract impersonator properties that are overridden by
+further impersonators, for example.
+
+Added in version 6.9.0.2.
 
                                         *impersonate-box*
 (impersonate-box box               ~
@@ -2002,11 +2506,11 @@ impersonator-property values of vec.
                  prop             
                  prop-val ...     
                  ...)         -> (and/c box? impersonator?)
-  box : (and/c box? (not/c immutable?)) ~
-  unbox-proc : (box? any/c . -> . any/c) ~
-  set-proc : (box? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  box : (and/c box? (not/c immutable?)) ~ ~
+  unbox-proc : (box? any/c . -> . any/c) ~ ~
+  set-proc : (box? any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of box, which redirects the unbox and set-box!
 operations.
@@ -2024,25 +2528,27 @@ must be odd) add impersonator properties or override
 impersonator-property values of box.
 
                                         *impersonate-hash*
-(impersonate-hash  hash              ~
-                   ref-proc         
-                   set-proc         
-                   remove-proc      
-                   key-proc         
-                  [clear-proc]      
-                   prop             
-                   prop-val ...     
-                   ...)         -> (and/c hash? impersonator?)
-  hash : (and/c hash? (not/c immutable?)) ~
-  ref-proc : (hash? any/c . -> . (values ~
+(impersonate-hash  hash                 ~
+                   ref-proc            
+                   set-proc            
+                   remove-proc         
+                   key-proc            
+                  [clear-proc          
+                   equal-key-proc]     
+                   prop                
+                   prop-val ...        
+                   ...)            -> (and/c hash? impersonator?)
+  hash : (and/c hash? (not/c immutable?)) ~ ~
+  ref-proc : (hash? any/c . -> . (values ~ ~
                                   any/c
                                   (hash? any/c any/c . -> . any/c)))
-  set-proc : (hash? any/c any/c . -> . (values any/c any/c)) ~
-  remove-proc : (hash? any/c . -> . any/c) ~
-  key-proc : (hash? any/c . -> . any/c) ~
-  clear-proc : (or/c #f (hash? . -> . any)) = #f ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  set-proc : (hash? any/c any/c . -> . (values any/c any/c)) ~ ~
+  remove-proc : (hash? any/c . -> . any/c) ~ ~
+  key-proc : (hash? any/c . -> . any/c) ~ ~
+  clear-proc : (or/c #f (hash? . -> . any)) = #f ~ ~
+  equal-key-proc : (or/c #f (hash? any/c . -> . any/c)) = #f ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of hash, which redirects the hash-ref, hash-set!
 or hash-set (as applicable), hash-remove or hash-remove! (as
@@ -2051,16 +2557,19 @@ is not #f) operations. When hash-set, hash-remove or hash-clear is used
 on an impersonator of a hash table, the result is an impersonator with
 the same redirecting procedures. In addition, operations like
 hash-iterate-key or hash-map, which extract keys from the table, use
-key-proc to filter keys extracted from the table. Operations like
-hash-iterate-value or hash-iterate-map implicitly use hash-ref and
-therefore redirect through ref-proc.
+key-proc to replace keys extracted from the table. Operations like
+hash-iterate-value or hash-values implicitly use hash-ref and therefore
+redirect through ref-proc. The hash-ref-key operation uses both ref-proc
+and key-proc, the former to lookup the requested key and the latter to
+extract it.
 
 The ref-proc must accept hash and a key passed to hash-ref. It must
 return a replacement key as well as a procedure. The returned procedure
 is called only if the returned key is found in hash via hash-ref, in
 which case the procedure is called with hash, the previously returned
 key, and the found value. The returned procedure must itself return a
-replacement for the found value.
+replacement for the found value. The returned procedure is ignored by
+hash-ref-key.
 
 The set-proc must accept hash, a key passed to hash-set! or hash-set,
 and the value passed to hash-set! or hash-set; it must produce two
@@ -2069,14 +2578,14 @@ returned key and value are used with hash-set! or hash-set on the
 original hash to install the value.
 
 The remove-proc must accept hash and a key passed to hash-remove! or
-hash-remove; it must produce the a replacement for the key, which is
-used with hash-remove! or hash-remove on the original hash to remove any
+hash-remove; it must produce a replacement for the key, which is used
+with hash-remove! or hash-remove on the original hash to remove any
 mapping using the (impersonator-replaced) key.
 
 The key-proc must accept hash and a key that has been extracted from
-hash (by hash-iterate-key or other operations that use hash-iterate-key
-internally); it must produce a replacement for the key, which is then
-reported as a key extracted from the table.
+hash (by hash-ref-key, hash-iterate-key, or other operations that use
+hash-iterate-key internally); it must produce a replacement for the key,
+which is then reported as a key extracted from the table.
 
 If clear-proc is not #f, it must accept hash as an argument, and its
 result is ignored. The fact that clear-proc returns (as opposed to
@@ -2085,14 +2594,33 @@ remove all keys from hash. If clear-proc is #f, then hash-clear or
 hash-clear! on the impersonator is implemented using hash-iterate-key
 and hash-remove or hash-remove!.
 
+If equal-key-proc is not #f, it effectively interposes on calls to
+equal?, equal-hash-code, and equal-secondary-hash-code for the keys of
+hash. The equal-key-proc must accept as its arguments hash and a key
+that is either mapped by hash or passed to hash-ref, etc., where the
+latter has potentially been adjusted by the corresponding ref-proc, etc.
+The result is a value that is passed to equal?, equal-hash-code, and
+equal-secondary-hash-code as needed to hash and compare keys. In the
+case of hash-set! or hash-set, the key that is passed to equal-key-proc
+is the one stored in the hash table for future lookup.
+
 The hash-iterate-value, hash-map, or hash-for-each functions use a
 combination of hash-iterate-key and hash-ref. If a key produced by
 key-proc does not yield a value through hash-ref, then the
 exn:fail:contract exception is raised.
 
-Pairs of prop and prop-val (the number of arguments to impersonate-hash
-must be odd) add impersonator properties or override
+Pairs of prop and prop-val add impersonator properties or override
 impersonator-property values of hash.
+
+In the case of an immutable hash table, two impersonated hash tables
+count as “the same value” (for purposes of impersonator-of?) when their
+redirection procedures were originally attached to a hash table by the
+same call to impersonate-hash or chaperone-hash (and potentially
+propagated by hash-set, hash-remove, or hash-clear), as long as the
+content of the first hash table is impersonator-of? of the second hash
+table.
+
+Changed in version 6.3.0.11: Added the equal-key-proc argument.
 
                                         *impersonate-channel*
 (impersonate-channel channel       ~
@@ -2102,11 +2630,11 @@ impersonator-property values of hash.
                      prop-val ... 
                      ...)         
  -> (and/c channel? impersonator?)
-  channel : channel? ~
-  get-proc : (channel? . -> . (values channel? (any/c . -> . any/c))) ~
-  put-proc : (channel? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  channel : channel? ~ ~
+  get-proc : (channel? . -> . (values channel? (any/c . -> . any/c))) ~ ~
+  put-proc : (channel? any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of channel, which redirects the channel-get and
 channel-put operations.
@@ -2135,14 +2663,14 @@ impersonator-property values of channel.
                          prop-val ...             
                          ...)                     
  -> (and/c continuation-prompt-tag? impersonator?)
-  prompt-tag : continuation-prompt-tag? ~
-  handle-proc : procedure? ~
-  abort-proc : procedure? ~
-  cc-guard-proc : procedure? = values ~
-  callcc-impersonate-proc : (procedure? . -> . procedure?) ~
+  prompt-tag : continuation-prompt-tag? ~ ~
+  handle-proc : procedure? ~ ~
+  abort-proc : procedure? ~ ~
+  cc-guard-proc : procedure? = values ~ ~
+  callcc-impersonate-proc : (procedure? . -> . procedure?) ~ ~
                           = (lambda (p) p)
-  prop : impersonator-property? ~
-  prop-val : any ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of prompt-tag, which redirects the
 call-with-continuation-prompt and abort-current-continuation operations.
@@ -2180,12 +2708,12 @@ impersonate-prompt-tag must be odd) add impersonator properties or
 override impersonator-property values of prompt-tag.
 
 Examples:
+
   > (define tag
       (impersonate-prompt-tag
        (make-continuation-prompt-tag)
        (lambda (n) (* n 2))
        (lambda (n) (+ n 1))))
-
   > (call-with-continuation-prompt
       (lambda ()
         (abort-current-continuation tag 5))
@@ -2201,11 +2729,11 @@ Examples:
                                    prop-val ... 
                                    ...)         
  -> (and/c continuation-mark? impersonator?)
-  key : continuation-mark-key? ~
-  get-proc : procedure? ~
-  set-proc : procedure? ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  key : continuation-mark-key? ~ ~
+  get-proc : procedure? ~ ~
+  set-proc : procedure? ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns an impersonator of key, which redirects with-continuation-mark
 and continuation mark accessors such as continuation-mark-set->list.
@@ -2219,23 +2747,23 @@ must produce a replacement value, which is attached to the continuation
 frame.
 
 Pairs of prop and prop-val (the number of arguments to
-impersonate-prompt-tag must be odd) add impersonator properties or
-override impersonator-property values of key.
+impersonate-continuation-mark-key must be odd) add impersonator
+properties or override impersonator-property values of key.
 
 Examples:
+
   > (define mark-key
       (impersonate-continuation-mark-key
        (make-continuation-mark-key)
        (lambda (l) (map char-upcase l))
        (lambda (s) (string->list s))))
-
   > (with-continuation-mark mark-key "quiche"
       (continuation-mark-set-first
        (current-continuation-marks)
        mark-key))
   '(#\Q #\U #\I #\C #\H #\E)
 
-prop:impersonator-of : struct-type-property? ~
+prop:impersonator-of : struct-type-property? ~ ~
 
 A structure type property (see [missing]) that supplies a procedure for
 extracting an impersonated value from a structure that represents an
@@ -2260,6 +2788,27 @@ the prop:impersonator-of procedure is checked (recursively).
 Changed in version 6.1.1.8: Made impersonator property predicates and
 accessors sensitive to prop:impersonator-of.
 
+prop:authentic : struct-type-property? ~ ~
+
+A structure type property that declares a structure type as authentic.
+The value associated with the property is ignored; the presence of the
+property itself makes the structure type authentic.
+
+Instances of an authentic structure type cannot be impersonated via
+impersonate-struct or chaperoned via chaperone-struct. As a consequence,
+an instance of an authentic structure type can be given a contract (see
+struct/c) only if it is a flat contract.
+
+Declaring a structure type as authentic can prevent unwanted structure
+impersonation, but exposed structure types normally should support
+impersonators or chaperones to facilitate contracts. Declaring a
+structure type as authentic can also slightly improve the performance of
+structure predicates, selectors, and mutators, which can be appropriate
+for data structures that are private and frequently used within a
+library.
+
+Added in version 6.9.0.4.
+
 5.2. Chaperone Constructors
 
                                         *chaperone-procedure*
@@ -2269,10 +2818,10 @@ accessors sensitive to prop:impersonator-of.
                      prop-val ... 
                      ...)         
  -> (and/c procedure? chaperone?)
-  proc : procedure? ~
-  wrapper-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  proc : procedure? ~ ~
+  wrapper-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-procedure, but for each value supplied to wrapper-proc,
 the corresponding result must be the same or a chaperone of (in the
@@ -2297,10 +2846,10 @@ of the supplied arguments’ keywords.
                       prop-val ... 
                       ...)         
  -> (and/c procedure? chaperone?)
-  proc : procedure? ~
-  wrapper-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  proc : procedure? ~ ~
+  wrapper-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like chaperone-procedure, but wrapper-proc receives an extra argument as
 with impersonate-procedure*.
@@ -2316,15 +2865,15 @@ Added in version 6.1.1.5.
                    prop                  
                    prop-val ...          
                    ...)              -> any/c
-  v : any/c ~
-  struct-type : struct-type? = unspecified ~
-  orig-proc : (or/c struct-accessor-procedure? ~
+  v : any/c ~ ~
+  struct-type : struct-type? = unspecified ~ ~
+  orig-proc : (or/c struct-accessor-procedure? ~ ~
                     struct-mutator-procedure?
                     struct-type-property-accessor-procedure?
                     (one-of/c struct-info))
-  redirect-proc : (or/c procedure? #f) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  redirect-proc : (or/c procedure? #f) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-struct, but with the following refinements, where self
 refers to the value to which a orig-proc is originally applied:
@@ -2368,17 +2917,39 @@ optional struct-type argument.
                   prop             
                   prop-val ...     
                   ...)         -> (and/c vector? chaperone?)
-  vec : vector? ~
-  ref-proc : (vector? exact-nonnegative-integer? any/c . -> . any/c) ~
-  set-proc : (vector? exact-nonnegative-integer? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  vec : vector? ~ ~
+  ref-proc : (or/c (vector? exact-nonnegative-integer? any/c . -> ~ ~
+. any/c) #f)
+  set-proc : (or/c (vector? exact-nonnegative-integer? any/c . -> ~ ~
+. any/c) #f)
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-vector, but with support for immutable vectors. The
 ref-proc procedure must produce the same value or a chaperone of the
 original value, and set-proc must produce the value that is given or a
 chaperone of the value. The set-proc will not be used if vec is
 immutable.
+
+                                        *chaperone-vector**
+(chaperone-vector* vec               ~
+                   ref-proc         
+                   set-proc         
+                   prop             
+                   prop-val ...     
+                   ...)         -> (and/c vector? chaperone?)
+  vec : (and/c vector? (not/c immutable?)) ~ ~
+  ref-proc : (or/c (vector? vector? exact-nonnegative-integer? any/c . ~ ~
+-> . any/c) #f)
+  set-proc : (or/c (vector? vector? exact-nonnegative-integer? any/c . ~ ~
+-> . any/c) #f)
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
+
+Like chaperone-vector, but ref-proc and set-proc receive an extra
+argument as with impersonate-vector*.
+
+Added in version 6.9.0.2.
 
                                         *chaperone-box*
 (chaperone-box box               ~
@@ -2387,11 +2958,11 @@ immutable.
                prop             
                prop-val ...     
                ...)         -> (and/c box? chaperone?)
-  box : box? ~
-  unbox-proc : (box? any/c . -> . any/c) ~
-  set-proc : (box? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  box : box? ~ ~
+  unbox-proc : (box? any/c . -> . any/c) ~ ~
+  set-proc : (box? any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-box, but with support for immutable boxes. The
 unbox-proc procedure must produce the same value or a chaperone of the
@@ -2400,33 +2971,37 @@ of the value that it is given.  The set-proc will not be used if box is
 immutable.
 
                                         *chaperone-hash*
-(chaperone-hash  hash              ~
-                 ref-proc         
-                 set-proc         
-                 remove-proc      
-                 key-proc         
-                [clear-proc]      
-                 prop             
-                 prop-val ...     
-                 ...)         -> (and/c hash? chaperone?)
-  hash : hash? ~
-  ref-proc : (hash? any/c . -> . (values ~
+(chaperone-hash  hash                 ~
+                 ref-proc            
+                 set-proc            
+                 remove-proc         
+                 key-proc            
+                [clear-proc          
+                 equal-key-proc]     
+                 prop                
+                 prop-val ...        
+                 ...)            -> (and/c hash? chaperone?)
+  hash : hash? ~ ~
+  ref-proc : (hash? any/c . -> . (values ~ ~
                                   any/c
                                   (hash? any/c any/c . -> . any/c)))
-  set-proc : (hash? any/c any/c . -> . (values any/c any/c)) ~
-  remove-proc : (hash? any/c . -> . any/c) ~
-  key-proc : (hash? any/c . -> . any/c) ~
-  clear-proc : (or/c #f (hash? . -> . any)) = #f ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  set-proc : (hash? any/c any/c . -> . (values any/c any/c)) ~ ~
+  remove-proc : (hash? any/c . -> . any/c) ~ ~
+  key-proc : (hash? any/c . -> . any/c) ~ ~
+  clear-proc : (or/c #f (hash? . -> . any)) = #f ~ ~
+  equal-key-proc : (or/c #f (hash? any/c . -> . any/c)) = #f ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-hash, but with constraints on the given functions and
 support for immutable hashes. The ref-proc procedure must return a found
 value or a chaperone of the value. The set-proc procedure must produce
 two values: the key that it is given or a chaperone of the key and the
-value that it is given or a chaperone of the value. The remove-proc and
-key-proc procedures must produce the given key or a chaperone of the
-key.
+value that it is given or a chaperone of the value. The remove-proc,
+key-proc, and equal-key-proc procedures must produce the given key or a
+chaperone of the key.
+
+Changed in version 6.3.0.11: Added the equal-key-proc argument.
 
                                         *chaperone-struct-type*
 (chaperone-struct-type struct-type            ~
@@ -2437,12 +3012,12 @@ key.
                        prop-val ...          
                        ...)                  
  -> (and/c struct-type? chaperone?)
-  struct-type : struct-type? ~
-  struct-info-proc : procedure? ~
-  make-constructor-proc : (procedure? . -> . procedure?) ~
-  guard-proc : procedure? ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  struct-type : struct-type? ~ ~
+  struct-info-proc : procedure? ~ ~
+  make-constructor-proc : (procedure? . -> . procedure?) ~ ~
+  guard-proc : procedure? ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns a chaperoned value like struct-type, but with struct-type-info
 and struct-type-make-constructor operations on the chaperoned structure
@@ -2462,11 +3037,14 @@ struct-type. It must return the same or a chaperone of the procedure,
 which is used as the result of struct-type-make-constructor on the
 chaperoned structure type.
 
-The guard-proc must accept as many argument as a constructor for
-struct-type; it must return the same number of arguments, each the same
-or a chaperone of the corresponding argument. The guard-proc is added as
-a constructor guard when a subtype is created of the chaperoned
-structure type.
+The guard-proc is like a guard argument to make-struct-type: it must
+accept one more argument than a constructor for struct-type, where the
+last argument is the name the name of the instantiated structure type.
+It must return the number of values needed by the constructor (i.e. one
+value for each argument but the last), and each returned value must be
+the same as or a chaperone of the corresponding argument. The guard-proc
+is added as a constructor guard when a subtype is created of the
+chaperoned structure type.
 
 Pairs of prop and prop-val (the number of arguments to
 chaperone-struct-type must be even) add impersonator properties or
@@ -2475,10 +3053,10 @@ override impersonator-property values of struct-type.
                                         *chaperone-evt*
 (chaperone-evt evt proc prop prop-val ... ...) ~
  -> (and/c evt? chaperone?)
-  evt : evt? ~
-  proc : (evt? . -> . (values evt? (any/c . -> . any/c))) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  evt : evt? ~ ~
+  proc : (evt? . -> . (values evt? (any/c . -> . any/c))) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Returns a chaperoned value like evt, but with proc as an event generator
 when the result is synchronized with functions like sync.
@@ -2494,6 +3072,11 @@ Pairs of prop and prop-val (the number of arguments to chaperone-evt
 must be even) add impersonator properties or override
 impersonator-property values of evt.
 
+The result is chaperone-of? the argument evt. However, if evt is a
+thread, semaphore, input port, output port, or will executor, the result
+is not recognized as such. For example, thread? applied to the result of
+chaperone-evt will always produce #f.
+
                                         *chaperone-channel*
 (chaperone-channel channel           ~
                    get-proc         
@@ -2501,11 +3084,11 @@ impersonator-property values of evt.
                    prop             
                    prop-val ...     
                    ...)         -> (and/c channel? chaperone?)
-  channel : channel? ~
-  get-proc : (channel? . -> . (values channel? (any/c . -> . any/c))) ~
-  put-proc : (channel? any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  channel : channel? ~ ~
+  get-proc : (channel? . -> . (values channel? (any/c . -> . any/c))) ~ ~
+  put-proc : (channel? any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-channel, but with restrictions on the get-proc and
 put-proc procedures.
@@ -2532,14 +3115,14 @@ impersonator-property values of channel.
                        prop-val ...           
                        ...)                   
  -> (and/c continuation-prompt-tag? chaperone?)
-  prompt-tag : continuation-prompt-tag? ~
-  handle-proc : procedure? ~
-  abort-proc : procedure? ~
-  cc-guard-proc : procedure? = values ~
-  callcc-chaperone-proc : (procedure? . -> . procedure?) ~
+  prompt-tag : continuation-prompt-tag? ~ ~
+  handle-proc : procedure? ~ ~
+  abort-proc : procedure? ~ ~
+  cc-guard-proc : procedure? = values ~ ~
+  callcc-chaperone-proc : (procedure? . -> . procedure?) ~ ~
                         = (lambda (p) p)
-  prop : impersonator-property? ~
-  prop-val : any ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-prompt-tag, but produces a chaperoned value. The
 handle-proc procedure must produce the same values or chaperones of the
@@ -2550,12 +3133,12 @@ callcc-chaperone-proc must produce a procedure that is a chaperone or
 the same as the given procedure.
 
 Examples:
+
   > (define bad-chaperone
       (chaperone-prompt-tag
        (make-continuation-prompt-tag)
        (lambda (n) (* n 2))
        (lambda (n) (+ n 1))))
-
   > (call-with-continuation-prompt
       (lambda ()
         (abort-current-continuation bad-chaperone 5))
@@ -2564,14 +3147,13 @@ Examples:
   abort-current-continuation: non-chaperone result;
    received a value that is not a chaperone of the original
   value
-    original: 5 ~
-    received: 6 ~
+    original: 5 ~ ~
+    received: 6 ~ ~
   > (define good-chaperone
       (chaperone-prompt-tag
        (make-continuation-prompt-tag)
        (lambda (n) (if (even? n) n (error "not even")))
        (lambda (n) (if (even? n) n (error "not even")))))
-
   > (call-with-continuation-prompt
       (lambda ()
         (abort-current-continuation good-chaperone 2))
@@ -2587,11 +3169,11 @@ Examples:
                                  prop-val ... 
                                  ...)         
  -> (and/c continuation-mark-key? chaperone?)
-  key : continuation-mark-key? ~
-  get-proc : procedure? ~
-  set-proc : procedure? ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  key : continuation-mark-key? ~ ~
+  get-proc : procedure? ~ ~
+  set-proc : procedure? ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any/c ~ ~
 
 Like impersonate-continuation-mark-key, but produces a chaperoned value.
 The get-proc procedure must produce the same value or a chaperone of the
@@ -2599,12 +3181,12 @@ original value, and set-proc must produce the same value or a chaperone
 of the value that it is given.
 
 Examples:
+
   > (define bad-chaperone
       (chaperone-continuation-mark-key
        (make-continuation-mark-key)
        (lambda (l) (map char-upcase l))
        string->list))
-
   > (with-continuation-mark bad-chaperone "timballo"
       (continuation-mark-set-first
        (current-continuation-marks)
@@ -2612,19 +3194,17 @@ Examples:
   with-continuation-mark: non-chaperone result;
    received a value that is not a chaperone of the original
   value
-    original: "timballo" ~
-    received: '(#\t #\i #\m #\b #\a #\l #\l #\o) ~
+    original: "timballo" ~ ~
+    received: '(#\t #\i #\m #\b #\a #\l #\l #\o) ~ ~
   > (define (checker s)
       (if (> (string-length s) 5)
           s
           (error "expected string of length at least 5")))
-
   > (define good-chaperone
       (chaperone-continuation-mark-key
        (make-continuation-mark-key)
        checker
        checker))
-
   > (with-continuation-mark good-chaperone "zabaione"
       (continuation-mark-set-first
        (current-continuation-marks)
@@ -2634,10 +3214,11 @@ Examples:
 5.3. Impersonator Properties
 
                                         *make-impersonator-property*
-(make-impersonator-property name) -> impersonator-property? ~
-                                     (-> any/c boolean?)
-                                     (-> impersonator? any)
-  name : symbol? ~
+(make-impersonator-property name) ~
+ -> impersonator-property?
+    (-> any/c boolean?)
+    (->* (impersonator?) (any/c) any)
+  name : symbol? ~ ~
 
 Creates a new impersonator property and returns three values:
 
@@ -2653,23 +3234,27 @@ Creates a new impersonator property and returns three values:
   associated with an impersonator for the property; if a value given to
   the accessor is not an impersonator or does not have a value for the
   property (i.e. if the corresponding impersonator property predicate
-  returns #f), the exn:fail:contract exception is raised.
+  returns #f), then a second optional argument to the selector
+  determines its response: the exn:fail:contract exception is raised if
+  a second argument is not provided, the second argument is tail-called
+  with zero arguments if it is a procedure, and the second argument is
+  returned otherwise.
 
                                         *impersonator-property?*
 (impersonator-property? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a impersonator property descriptor value, #f
 otherwise.
 
                                         *impersonator-property-accessor-procedure?*
 (impersonator-property-accessor-procedure? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an accessor procedure produced by
 make-impersonator-property, #f otherwise.
 
-impersonator-prop:application-mark : impersonator-property? ~
+impersonator-prop:application-mark : impersonator-property? ~ ~
 
 An impersonator property that is recognized by impersonate-procedure and
 chaperone-procedure.
@@ -2678,7 +3263,7 @@ chaperone-procedure.
 
                                         *security-guard?*
 (security-guard? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a security guard value as created by
 make-security-guard, #f otherwise.
@@ -2705,17 +3290,17 @@ platform.
                       file-guard        
                       network-guard     
                      [link-guard])  -> security-guard?
-  parent : security-guard? ~
-  file-guard : (symbol? ~
+  parent : security-guard? ~ ~
+  file-guard : (symbol? ~ ~
                 (or/c path? #f)
                 (listof symbol?)
                 . -> . any)
-  network-guard : (symbol? ~
+  network-guard : (symbol? ~ ~
                    (or/c (and/c string? immutable?) #f)
                    (or/c (integer-in 1 65535) #f)
                    (or/c 'server 'client)
                    . -> . any)
-  link-guard : (or/c (symbol? path? path? . -> . any) #f) = #f ~
+  link-guard : (or/c (symbol? path? path? . -> . any) #f) = #f ~ ~
 
 Creates a new security guard as child of parent.
 
@@ -2799,7 +3384,7 @@ going into or out of the file-guard or network-guard call (see
                                         *current-security-guard*
 (current-security-guard) -> security-guard? ~
 (current-security-guard guard) -> void?
-  guard : security-guard? ~
+  guard : security-guard? ~ ~
 
 A parameter that determines the current security guard that controls
 access to the filesystem and network.
@@ -2810,13 +3395,14 @@ See [missing] for basic information on the Racket custodian model.
 
                                         *custodian?*
 (custodian? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a custodian value, #f otherwise.
 
                                         *make-custodian*
 (make-custodian [cust]) -> custodian? ~
-  cust : custodian? = (current-custodian) ~
+  cust : (and/c custodian? (not/c custodian-shut-down?)) ~ ~
+       = (current-custodian)
 
 Creates a new custodian that is subordinate to cust. When cust is
 directed (via custodian-shutdown-all) to shut down all of its managed
@@ -2825,7 +3411,7 @@ down its managed values as well.
 
                                         *custodian-shutdown-all*
 (custodian-shutdown-all cust) -> void? ~
-  cust : custodian? ~
+  cust : custodian? ~ ~
 
 In racket/gui/base, eventspaces managed by cust are also shut down.
 
@@ -2837,10 +3423,24 @@ thread has no managers, it is killed (or suspended; see
 thread/suspend-to-kill) If the current thread is to be killed, all other
 shut-down actions take place before killing the thread.
 
+If cust is already shut down, then custodian-shutdown-all has no effect.
+When a custodian is shut down and it has subordinate custodians, the
+subordinates are not only shut down, they no longer count as
+subordinates.
+
+                                        *custodian-shut-down?*
+(custodian-shut-down? cust) -> boolean? ~
+  cust : custodian? ~ ~
+
+Returns #t if cust has been shut down with custodian-shutdown-all or if
+it was a subordinate of a custodian that is shut down, #f otherwise.
+
+Added in version 6.11.0.5.
+
                                         *current-custodian*
 (current-custodian) -> custodian? ~
 (current-custodian cust) -> void?
-  cust : custodian? ~
+  cust : custodian? ~ ~
 
 Custodians also manage eventspaces from racket/gui/base.
 
@@ -2850,13 +3450,17 @@ sockets, and byte converters.
 
                                         *custodian-managed-list*
 (custodian-managed-list cust super) -> list? ~
-  cust : custodian? ~
-  super : custodian? ~
+  cust : custodian? ~ ~
+  super : custodian? ~ ~
 
 Returns a list of immediately managed objects (not including custodian
 boxes) and subordinate custodians for cust, where cust is itself
 subordinate to super (directly or indirectly). If cust is not strictly
 subordinate to super, the exn:fail:contract exception is raised.
+
+If cust has been shut down, the result is '(). If cust was a subordinate
+of a custodian that was shut down, then it cannot be a subordinate of
+super.
 
                                         *custodian-memory-accounting-available?*
 (custodian-memory-accounting-available?) -> boolean? ~
@@ -2871,9 +3475,9 @@ accounting, #f otherwise.
 (custodian-require-memory limit-cust      ~
                           need-amt       
                           stop-cust) -> void?
-  limit-cust : custodian? ~
-  need-amt : exact-nonnegative-integer? ~
-  stop-cust : custodian? ~
+  limit-cust : custodian? ~ ~
+  need-amt : exact-nonnegative-integer? ~ ~
+  stop-cust : custodian? ~ ~
 
 Registers a required-memory check if Racket is compiled with support for
 per-custodian memory accounting, otherwise the exn:fail:unsupported
@@ -2884,13 +3488,15 @@ garbage collection (see [missing]) where allocating need-amt bytes
 charged to limit-cust would fail or trigger some shutdown, then
 stop-cust is shut down.
 
+The stop-cust must be a subordinate custodian of limit-cust.
+
                                         *custodian-limit-memory*
 (custodian-limit-memory  limit-cust       ~
                          limit-amt       
                         [stop-cust]) -> void?
-  limit-cust : custodian? ~
-  limit-amt : exact-nonnegative-integer? ~
-  stop-cust : custodian? = limit-cust ~
+  limit-cust : custodian? ~ ~
+  limit-amt : exact-nonnegative-integer? ~ ~
+  stop-cust : custodian? = limit-cust ~ ~
 
 Registers a limited-memory check if Racket is compiled with support for
 per-custodian memory accounting, otherwise the exn:fail:unsupported
@@ -2917,11 +3523,12 @@ rejected with an exn:fail:out-of-memory exception.
 
                                         *make-custodian-box*
 (make-custodian-box cust v) -> custodian-box? ~
-  cust : custodian? ~
-  v : any/c ~
+  cust : custodian? ~ ~
+  v : any/c ~ ~
 
 Returns a custodian box that contains v as long as cust has not been
-shut down.
+shut down. If cust is already shut down, the custodian box’s value is
+immediately removed.
 
 A custodian box is a synchronizable event (see [missing]). The custodian
 box becomes ready when its custodian is shut down; the synchronization
@@ -2929,14 +3536,14 @@ result of a custodian box is the custodian box itself.
 
                                         *custodian-box?*
 (custodian-box? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a custodian box produced by make-custodian-box, #f
 otherwise.
 
                                         *custodian-box-value*
 (custodian-box-value cb) -> any ~
-  cb : custodian-box? ~
+  cb : custodian-box? ~ ~
 
 Returns the value in the given custodian box, or #f if the value has
 been removed.
@@ -2959,20 +3566,20 @@ synchronizing with other processes.
 
                                         *make-thread-group*
 (make-thread-group [group]) -> thread-group? ~
-  group : thread-group? = (current-thread-group) ~
+  group : thread-group? = (current-thread-group) ~ ~
 
 Creates a new thread group that belongs to group.
 
                                         *thread-group?*
 (thread-group? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a thread group value, #f otherwise.
 
                                         *current-thread-group*
 (current-thread-group) -> thread-group? ~
 (current-thread-group group) -> void?
-  group : thread-group? ~
+  group : thread-group? ~ ~
 
 A parameter that determines the thread group for newly created threads.
 
@@ -2996,13 +3603,13 @@ through an optional inspector argument to make-struct-type.
 
                                         *inspector?*
 (inspector? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an inspector, #f otherwise.
 
                                         *make-inspector*
 (make-inspector [inspector]) -> inspector? ~
-  inspector : inspector? = (current-inspector) ~
+  inspector : inspector? = (current-inspector) ~ ~
 
 Returns a new inspector that is a subinspector of inspector. Any
 structure type controlled by the new inspector is also controlled by its
@@ -3010,23 +3617,34 @@ ancestor inspectors, but no other inspectors.
 
                                         *make-sibling-inspector*
 (make-sibling-inspector [inspector]) -> inspector? ~
-  inspector : inspector? = (current-inspector) ~
+  inspector : inspector? = (current-inspector) ~ ~
 
 Returns a new inspector that is a subinspector of the same inspector as
 inspector. That is, inspector and the result inspector control mutually
 disjoint sets of structure types.
 
+                                        *inspector-superior?*
+(inspector-superior? inspector                ~
+                     maybe-subinspector) -> boolean?
+  inspector : inspector? ~ ~
+  maybe-subinspector : inspector? ~ ~
+
+Returns #t if inspector is an ancestor of maybe-subinspector (and not
+equal to maybe-subinspector), #f otherwise.
+
+Added in version 6.5.0.6.
+
                                         *current-inspector*
 (current-inspector) -> inspector? ~
 (current-inspector insp) -> void?
-  insp : inspector? ~
+  insp : inspector? ~ ~
 
 A parameter that determines the default inspector for newly created
 structure types.
 
                                         *struct-info*
 (struct-info v) -> (or/c struct-type? #f) boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns two values:
 
@@ -3049,7 +3667,7 @@ Returns two values:
     (listof exact-nonnegative-integer?)
     (or/c struct-type? #f)
     boolean?
-  struct-type : struct-type? ~
+  struct-type : struct-type? ~ ~
 
 Returns eight values that provide information about the structure type
 descriptor struct-type, assuming that the type is controlled  by the
@@ -3085,17 +3703,21 @@ If the type for struct-type is not controlled by the current inspector,
 the exn:fail:contract exception is raised.
 
                                         *struct-type-make-constructor*
-(struct-type-make-constructor struct-type) ~
+(struct-type-make-constructor  struct-type         ~
+                              [constructor-name]) 
  -> struct-constructor-procedure?
-  struct-type : struct-type? ~
+  struct-type : struct-type? ~ ~
+  constructor-name : (or/c symbol? #f) = #f ~ ~
 
 Returns a constructor procedure to create instances of the type for
-struct-type.  If the type for struct-type is not controlled by the
-current inspector, the exn:fail:contract exception is raised.
+struct-type.  If constructor-name is not #f, it is used as the name of
+the generated constructor procedure. If the type for struct-type is not
+controlled by the current inspector, the exn:fail:contract exception is
+raised.
 
                                         *struct-type-make-predicate*
 (struct-type-make-predicate struct-type) -> any ~
-  struct-type : any/c ~
+  struct-type : any/c ~ ~
 
 Returns a predicate procedure to recognize instances of the type for
 struct-type.  If the type for struct-type is not controlled by the
@@ -3103,7 +3725,7 @@ current inspector, the exn:fail:contract exception is raised.
 
                                         *object-name*
 (object-name v) -> any ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns a value for the name of v if v has a name, #f otherwise. The
 argument v can be any value, but only (some) procedures, structures,
@@ -3133,7 +3755,7 @@ name as the port’s for (to report source locations, for example).
 
 The name of a logger is either a symbol or #f.
 
-prop:object-name : struct-type-property? ~
+prop:object-name : struct-type-property? ~ ~
 
 A structure type property that allows structure types to customize  the
 result of object-name applied to their instances. The property value can
@@ -3155,7 +3777,8 @@ Added in version 6.2.
 
 In the same way that inspectors control access to structure fields (see
 Structure Inspectors), inspectors also control access to module
-bindings. The default inspector for module bindings is determined by the
+bindings. Inspectors used this way are code inspectors. The default code
+inspector for module bindings is determined by the
 current-code-inspector parameter, instead of the current-inspector
 parameter.
 
@@ -3204,10 +3827,13 @@ changing the inspector requires control over the old one).
                                         *current-code-inspector*
 (current-code-inspector) -> inspector? ~
 (current-code-inspector insp) -> void?
-  insp : inspector? ~
+  insp : inspector? ~ ~
 
 A parameter that determines an inspector to control access to module
 bindings and redefinitions.
+
+If the code inspector is changed from its original value, then bytecode
+loaded by the default compiled-load handler is marked as non-runnable.
 
 11. Plumbers
 
@@ -3225,14 +3851,14 @@ process is terminated forcibly (e.g., through a custodian shutdown).
 
                                         *plumber?*
 (plumber? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a plumber value, #f otherwise.
 
 Added in version 6.0.1.8.
 
                                         *make-plumber*
-(make-plumber) -> pluber? ~
+(make-plumber) -> plumber? ~
 
 Creates a new plumber.
 
@@ -3245,7 +3871,7 @@ Added in version 6.0.1.8.
                                         *current-plumber*
 (current-plumber) -> plumber? ~
 (current-plumber plumber) -> void?
-  plumber : plumber? ~
+  plumber : plumber? ~ ~
 
 A parameter that determines a current plumber for flush callbacks. For
 example, creating an output file stream port registers a flush callback
@@ -3256,7 +3882,7 @@ Added in version 6.0.1.8.
 
                                         *plumber-flush-all*
 (plumber-flush-all plumber) -> void? ~
-  plumber : plumber? ~
+  plumber : plumber? ~ ~
 
 Calls all flush callbacks that are registered with plumber.
 
@@ -3269,7 +3895,7 @@ Added in version 6.0.1.8.
 
                                         *plumber-flush-handle?*
 (plumber-flush-handle? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a flush handle represents the registration of a flush
 callback, #f otherwise.
@@ -3278,9 +3904,9 @@ Added in version 6.0.1.8.
 
                                         *plumber-add-flush!*
 (plumber-add-flush! plumber proc [weak?]) -> plumber-flush-handle? ~
-  plumber : plumber? ~
-  proc : (plumber-flush-handle? . -> . any) ~
-  weak? : any/c = #f ~
+  plumber : plumber? ~ ~
+  proc : (plumber-flush-handle? . -> . any) ~ ~
+  weak? : any/c = #f ~ ~
 
 Registers proc as a flush callback with plumber, so that proc is called
 when plumber-flush-all is applied to plumber.
@@ -3301,7 +3927,7 @@ Added in version 6.0.1.8.
 
                                         *plumber-flush-handle-remove!*
 (plumber-flush-handle-remove! handle) -> void? ~
-  handle : plumber-flush-handle? ~
+  handle : plumber-flush-handle? ~ ~
 
 Unregisters the flush callback that was registered by the
 plumber-add-flush! call that produced handle.
@@ -3313,7 +3939,7 @@ Added in version 6.0.1.8.
 
 12. Sandboxed Evaluation
 
- (require racket/sandbox) package: sandbox-lib ~
+ (require racket/sandbox) package: sandbox-lib ~ ~
 
 The bindings documented in this section are provided by the
 racket/sandbox library, not racket/base or racket.
@@ -3328,32 +3954,32 @@ sandboxes are very limited.
                                         *make-evaluator*
 (make-evaluator  language                               ~
                  input-program ...                     
-                [#:requires requires                    ~
-                 #:allow-for-require allow-for-require  ~
-                 #:allow-for-load allow-for-load        ~
-                 #:allow-read allow-read])              ~
+                [#:requires requires                    ~ ~
+                 #:allow-for-require allow-for-require  ~ ~
+                 #:allow-for-load allow-for-load        ~ ~
+                 #:allow-read allow-read])              ~ ~
  -> (any/c . -> . any)
-  language : (or/c module-path? ~
+  language : (or/c module-path? ~ ~
                    (list/c 'special symbol?)
                    (cons/c 'begin list?))
-  input-program : any/c ~
-  requires : (listof (or/c module-path? path-string? ~
+  input-program : any/c ~ ~
+  requires : (listof (or/c module-path? path-string? ~ ~
                            (cons/c 'for-syntax (listof module-path?))))
            = null
-  allow-for-require : (listof (or/c module-path? path?)) = null ~
-  allow-for-load : (listof path-string?) = null ~
-  allow-read : (listof (or/c module-path? path-string?)) = null ~
+  allow-for-require : (listof (or/c module-path? path?)) = null ~ ~
+  allow-for-load : (listof path-string?) = null ~ ~
+  allow-read : (listof (or/c module-path? path-string?)) = null ~ ~
 (make-module-evaluator  module-decl                           
-                       [#:language lang                        ~
-                        #:allow-for-require allow-for-require  ~
-                        #:allow-for-load allow-for-load        ~
-                        #:allow-read allow-read])              ~
+                       [#:language lang                        ~ ~
+                        #:allow-for-require allow-for-require  ~ ~
+                        #:allow-for-load allow-for-load        ~ ~
+                        #:allow-read allow-read])              ~ ~
  -> (any/c . -> . any)
-  module-decl : (or/c syntax? pair? path? input-port? string? bytes?) ~
-  lang : (or/c #f module-path?) = #f ~
-  allow-for-require : (listof (or/c module-path? path?)) = null ~
-  allow-for-load : (listof path-string?) = null ~
-  allow-read : (listof (or/c module-path? path-string?)) = null ~
+  module-decl : (or/c syntax? pair? path? input-port? string? bytes?) ~ ~
+  lang : (or/c #f module-path?) = #f ~ ~
+  allow-for-require : (listof (or/c module-path? path?)) = null ~ ~
+  allow-for-load : (listof path-string?) = null ~ ~
+  allow-read : (listof (or/c module-path? path-string?)) = null ~ ~
 
 The make-evaluator function creates an evaluator with a language and
 requires specification, and starts evaluating the given input-programs.
@@ -3363,13 +3989,13 @@ for further evaluation.
 
 The returned evaluator operates in an isolated and limited environment.
 In particular, filesystem access is restricted, which may interfere with
-using modules from the filesystem.  See below for information on the
-allow-for-require, allow-for-load, and allow-read arguments.  When
-language is a module path or when requires is provided, the indicated
-modules are implicitly included in the allow-for-require list. (For
-backward compatibility, non-module-path? path strings are allowed in
-requires; they are implicitly converted to paths before addition to
-allow-for-require.)
+using modules from the filesystem that are not in a collection.  See
+below for information on the allow-for-require, allow-for-load, and
+allow-read arguments.  When language is a module path or when requires
+is provided, the indicated modules are implicitly included in the
+allow-for-require list. (For backward compatibility, non-module-path?
+path strings are allowed in requires; they are implicitly converted to
+paths before addition to allow-for-require.)
 
 Each input-program or module-decl argument provides a program in one of
 the following forms:
@@ -3447,22 +4073,19 @@ top-level namespace:
   > (define base-module-eval
       ; a module cannot have free variables...
       (make-evaluator 'racket/base '(define (f) later)))
-  program:1:0: later: unbound identifier in module
-    in: later ~
+  program:1:0: later: unbound identifier
+    in: later ~ ~
   > (define base-module-eval
       (make-evaluator 'racket/base '(define (f) later)
                                    '(define later 5)))
-
   > (base-module-eval '(f))
   5
   > (define base-top-eval
-      ; non-module code can have free variables: ~
+      ; non-module code can have free variables: ~ ~
       (make-evaluator '(begin) '(define (f) later)))
-
   > (base-top-eval '(+ 1 2))
   3
   > (base-top-eval '(define later 5))
-
   > (base-top-eval '(f))
   5
 
@@ -3475,7 +4098,7 @@ the optional lang argument to specify such a restriction (the default,
 a path, then the path is implicitly added to the allow-for-load list.
 
   (define base-module-eval2
-    ; equivalent to base-module-eval: ~
+    ; equivalent to base-module-eval: ~ ~
     (make-module-evaluator '(module m racket/base
                               (define (f) later)
                               (define later 5))))
@@ -3507,13 +4130,14 @@ memory limit exception.
 
 The allow-for-require and allow-for-load arguments adjust filesystem
 permissions to extend the set of files that are usable by the evaluator.
-The allow-for-require argument lists modules that can be required along
-with their imports (transitively). The allow-for-load argument lists
-files that can be loaded. (The precise permissions needed for require
-versus load can differ.)  The allow-read argument is for backward
-compatibility, only; each module-path? element of allow-read is
-effectively moved to allow-for-require, while other elements are moved
-to all-for-load.
+Modules that are in a collection are automatically accessible, but the
+allow-for-require argument lists additional modules that can be required
+along with their imports (transitively) through a filesystem path. The
+allow-for-load argument similarly lists files that can be loaded. (The
+precise permissions needed for require versus load can differ.)  The
+allow-read argument is for backward compatibility, only; each
+module-path? element of allow-read is effectively moved to
+allow-for-require, while other elements are moved to allow-for-load.
 
 The sandboxed environment is well isolated, and the evaluator function
 essentially sends it an expression and waits for a result.  This form of
@@ -3539,53 +4163,66 @@ receives #<void>.
 
 Finally, the fact that a sandboxed evaluator accept syntax objects makes
 it usable as the value for current-eval, which means that you can easily
-start a sandboxed read-eval-print-loop.  For example, here is a quick
-implementation of a networked REPL:
+start a sandboxed read-eval-print-loop:
 
   (define e (make-evaluator 'racket/base))
-  (let-values ([(i o) (tcp-accept (tcp-listen 9999))])
-    (parameterize ([current-input-port  i]
-                   [current-output-port o]
-                   [current-error-port  o]
-                   [current-eval e])
-      (read-eval-print-loop)
-      (fprintf o "\nBye...\n")
-      (close-output-port o)))
+  (parameterize ([current-eval e])
+    (read-eval-print-loop))
 
-Note that in this code it is only the REPL interactions that are going
-over the network connection; using I/O operations inside the REPL will
-still use the usual sandbox parameters (defaulting to no I/O).  In
-addition, the code works only from an existing toplevel REPL —
-specifically, read-eval-print-loop reads a syntax value and gives it the
-lexical context of the current namespace.  Here is a variation that uses
-the networked ports for user I/O, and works when used from a module (by
-using a new namespace):
+Note that in this code only the REPL interactions will be printed to the
+current output ports; using I/O operations inside the REPL will still
+use the usual sandbox parameters (defaulting to no I/O).  In addition,
+the code works only from an existing toplevel REPL — specifically,
+read-eval-print-loop reads a syntax value and gives it the lexical
+context of the current namespace.  Here is a variation that also allows
+I/O over the current input and output ports, and works when used from a
+module (by using a new namespace):
 
-  (let-values ([(i o) (tcp-accept (tcp-listen 9999))])
-    (parameterize ([current-input-port   i]
-                   [current-output-port  o]
-                   [current-error-port   o]
-                   [sandbox-input        i]
-                   [sandbox-output       o]
-                   [sandbox-error-output o]
-                   [current-namespace (make-empty-namespace)])
-      (parameterize ([current-eval
-                      (make-evaluator 'racket/base)])
-        (read-eval-print-loop))
-      (fprintf o "\nBye...\n")
-      (close-output-port o)))
+  (parameterize ([sandbox-input        current-input-port]
+                 [sandbox-output       current-output-port]
+                 [sandbox-error-output current-error-port]
+                 [current-namespace (make-empty-namespace)])
+    (parameterize ([current-eval (make-evaluator 'racket/base)])
+      (read-eval-print-loop)))
 
                                         *exn:fail:sandbox-terminated?*
 (exn:fail:sandbox-terminated? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 (exn:fail:sandbox-terminated-reason exn) -> symbol?
-  exn : exn:fail:sandbox-terminated? ~
+  exn : exn:fail:sandbox-terminated? ~ ~
 
 A predicate and accessor for exceptions that are raised when a sandbox
 is terminated.  Once a sandbox raises such an exception, it will
 continue to raise it on further evaluation attempts.
 
-12.1. Customizing Evaluators
+12.1. Security Considerations
+
+Although the sandbox is designed to provide a safe environment for
+executing Racket programs with restricted access to system resources,
+executing untrusted programs in a sandbox still carries some risk.
+Because a malicious program can exercise arbitrary functionality from
+the Racket runtime and installed collections, an attacker who identifies
+a vulnerability in Racket or an installed collection may be able to
+escape the sandbox.
+
+To mitigate this risk, programs that use the sandbox should employ
+additional precautions when possible. Suggested measures include:
+
+* Supplying a custom module language to make-evaluator or
+  make-module-evaluator that gives untrusted code access to only the
+  language constructs it absolutely requires.
+
+* If untrusted code needs access to installed collections, installing
+  only the collections required by your program.
+
+* Using operating-system-level security features to provide
+  defense-in-depth in case the process running the sandbox is
+  compromised.
+
+* Making sure your Racket installation and installed packages are
+  up-to-date with the latest release.
+
+12.2. Customizing Evaluators
 
 The sandboxed evaluators that make-evaluator creates can be customized
 via many parameters.  Most of the configuration parameters affect newly
@@ -3614,7 +4251,7 @@ use threads.
 
                                         *call-with-trusted-sandbox-configuration*
 (call-with-trusted-sandbox-configuration thunk) -> any ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 Invokes the thunk in a context where sandbox configuration parameters
 are set for minimal restrictions.  More specifically, there are no
@@ -3625,7 +4262,7 @@ used.  (Note that the I/O ports settings are not included.)
                                         *sandbox-init-hook*
 (sandbox-init-hook) -> (-> any) ~
 (sandbox-init-hook thunk) -> void?
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 A parameter that determines a thunk to be called for initializing a new
 evaluator.  The hook is called just before the program is evaluated in a
@@ -3638,7 +4275,7 @@ initialization, so it can override settings.
                                         *sandbox-reader*
 (sandbox-reader) -> (any/c . -> . any) ~
 (sandbox-reader proc) -> void?
-  proc : (any/c . -> . any) ~
+  proc : (any/c . -> . any) ~ ~
 
 A parameter that specifies a function that reads all expressions from
 (current-input-port).  The function is used to read program source for
@@ -3659,7 +4296,7 @@ read-accept-lang and read-accept-reader are set to #t.
                          'pipe
                          (-> input-port?))
 (sandbox-input in) -> void?
-  in : (or/c #f ~
+  in : (or/c #f ~ ~
              string? bytes?
              input-port?
              'pipe
@@ -3690,7 +4327,7 @@ The following other values are allowed:
                           'string
                           (-> output-port?))
 (sandbox-output in) -> void?
-  in : (or/c #f ~
+  in : (or/c #f ~ ~
              output-port?
              'pipe
              'bytes
@@ -3725,7 +4362,7 @@ discards all data.  The following other values are allowed:
                                 'string
                                 (-> output-port?))
 (sandbox-error-output in) -> void?
-  in : (or/c #f ~
+  in : (or/c #f ~ ~
              output-port?
              'pipe
              'bytes
@@ -3745,16 +4382,18 @@ calling context’s error port.
                                         *sandbox-coverage-enabled*
 (sandbox-coverage-enabled) -> boolean? ~
 (sandbox-coverage-enabled enabled?) -> void?
-  enabled? : any/c ~
+  enabled? : any/c ~ ~
 
 A parameter that controls whether syntactic coverage information is
 collected by sandbox evaluators.  Use get-uncovered-expressions to
 retrieve coverage information.
 
+The default value is #f.
+
                                         *sandbox-propagate-breaks*
 (sandbox-propagate-breaks) -> boolean? ~
 (sandbox-propagate-breaks propagate?) -> void?
-  propagate? : any/c ~
+  propagate? : any/c ~ ~
 
 When both this boolean parameter and (break-enabled) are true, breaking
 while an evaluator is running propagates the break signal to the
@@ -3771,7 +4410,7 @@ further). The default is #t.
                                         *sandbox-propagate-exceptions*
 (sandbox-propagate-exceptions) -> boolean? ~
 (sandbox-propagate-exceptions propagate?) -> void?
-  propagate? : any/c ~
+  propagate? : any/c ~ ~
 
 A parameter that controls how uncaught exceptions during a sandbox
 evaluation are treated. When the parameter value is #t, then the
@@ -3784,7 +4423,7 @@ The default is #t.
 (sandbox-namespace-specs) -> (cons/c (-> namespace?) ~
                                      (listof module-path?))
 (sandbox-namespace-specs spec) -> void?
-  spec : (cons/c (-> namespace?) ~
+  spec : (cons/c (-> namespace?) ~ ~
                  (listof module-path?))
 
 A parameter that holds a list of values that specify how to create a
@@ -3821,7 +4460,7 @@ make-base-namespace otherwise.
                                         *sandbox-gui-available*
 (sandbox-gui-available) -> boolean? ~
 (sandbox-gui-available avail?) -> void?
-  avail? : any/c ~
+  avail? : any/c ~ ~
 
 Determines whether the racket/gui module can be used when a sandbox
 evaluator is created. If gui-available? produces #f during the creation
@@ -3834,7 +4473,7 @@ such as using a new eventspace for each evaluator.
                                         *sandbox-override-collection-paths*
 (sandbox-override-collection-paths) -> (listof path-string?) ~
 (sandbox-override-collection-paths paths) -> void?
-  paths : (listof path-string?) ~
+  paths : (listof path-string?) ~ ~
 
 A parameter that determines a list of collection directories to prefix
 current-library-collection-paths in an evaluator. This parameter is
@@ -3848,7 +4487,7 @@ default is null.
 (sandbox-security-guard) ~
  -> (or/c security-guard? (-> security-guard?))
 (sandbox-security-guard guard) -> void?
-  guard : (or/c security-guard? (-> security-guard?)) ~
+  guard : (or/c security-guard? (-> security-guard?)) ~ ~
 
 A parameter that determines the initial (current-security-guard) for
 sandboxed evaluations.  It can be either a security guard, or a function
@@ -3863,7 +4502,7 @@ sandbox-network-guard for network connections.
                           'read-bytecode 'read 'exists)
                     (or/c byte-regexp? bytes? string? path?)))
 (sandbox-path-permissions perms) -> void?
-  perms : (listof (list/c (or/c 'execute 'write 'delete ~
+  perms : (listof (list/c (or/c 'execute 'write 'delete ~ ~
                                 'read-bytecode 'read 'exists)
                           (or/c byte-regexp? bytes? string? path?)))
 
@@ -3911,7 +4550,7 @@ make-evaluator for more information.
      (or/c 'server 'client)
      . -> . any)
 (sandbox-network-guard proc) -> void?
-  proc : (symbol? ~
+  proc : (symbol? ~ ~
           (or/c (and/c string? immutable?) #f)
           (or/c (integer-in 1 65535) #f)
           (or/c 'server 'client)
@@ -3923,7 +4562,7 @@ sandbox-security-guard.  The default forbids all network connection.
                                         *sandbox-exit-handler*
 (sandbox-exit-handler) -> (any/c . -> . any) ~
 (sandbox-exit-handler handler) -> void?
-  handler : (any/c . -> . any) ~
+  handler : (any/c . -> . any) ~ ~
 
 A parameter that determines the initial (exit-handler) for sandboxed
 evaluations.  The default kills the evaluator with an appropriate error
@@ -3932,7 +4571,7 @@ message (see exn:fail:sandbox-terminated-reason).
                                         *sandbox-memory-limit*
 (sandbox-memory-limit) -> (or/c (>=/c 0) #f) ~
 (sandbox-memory-limit limit) -> void?
-  limit : (or/c (>=/c 0) #f) ~
+  limit : (or/c (>=/c 0) #f) ~ ~
 
 A parameter that determines the total memory limit on the sandbox in
 megabytes (it can hold a rational or a floating point number).  When
@@ -3969,7 +4608,7 @@ counts against the interaction limit).
                                        (or/c (>=/c 0) #f))
                                #f)
 (sandbox-eval-limits limits) -> void?
-  limits : (or/c (list/c (or/c (>=/c 0) #f) ~
+  limits : (or/c (list/c (or/c (>=/c 0) #f) ~ ~
                          (or/c (>=/c 0) #f))
                  #f)
 
@@ -4006,9 +4645,9 @@ individually larger than the custodian’s limit.
 The memory limit that is specified by this parameter applies to each
 individual evaluation, but not to the whole sandbox — that limit is
 specified via sandbox-memory-limit.  When the global limit is exceeded,
-the sandbox is terminated, but when the per-evaluation limit is exceeded
-the exn:fail:resource exception is raised.  For example, say that you
-evaluate an expression like
+the sandbox is terminated, but when the per-evaluation limit is
+exceeded, an exception recognizable by exn:fail:resource? is raised.
+For example, say that you evaluate an expression like
 
   (for ([i (in-range 1000)])
     (set! a (cons (make-bytes 1000000) a))
@@ -4035,7 +4674,7 @@ then, assuming sufficiently small limits,
  -> (list/c (or/c #f ((-> any) . -> . any))
             (or/c #f ((-> any) . -> . any)))
 (sandbox-eval-handlers handlers) -> void?
-  handlers : (list/c (or/c #f ((-> any) . -> . any)) ~
+  handlers : (list/c (or/c #f ((-> any) . -> . any)) ~ ~
                      (or/c #f ((-> any) . -> . any)))
 
 A parameter that determines two (optional) handlers that wrap sandboxed
@@ -4053,7 +4692,7 @@ but leaves other resources intact.
                                         *sandbox-run-submodules*
 (sandbox-run-submodules) -> (list/c symbol?) ~
 (sandbox-run-submodules submod-syms) -> void?
-  submod-syms : (list/c symbol?) ~
+  submod-syms : (list/c symbol?) ~ ~
 
 A parameter that determines submodules to run when a sandbox is created
 by make-module-evaluator. The parameter’s default value is the empty
@@ -4062,7 +4701,7 @@ list.
                                         *sandbox-make-inspector*
 (sandbox-make-inspector) -> (-> inspector?) ~
 (sandbox-make-inspector make) -> void?
-  make : (-> inspector?) ~
+  make : (-> inspector?) ~ ~
 
 A parameter that determines the (nullary) procedure that is used to
 create the inspector for sandboxed evaluation.  The procedure is called
@@ -4072,7 +4711,7 @@ when initializing an evaluator.  The default parameter value is (lambda
                                         *sandbox-make-code-inspector*
 (sandbox-make-code-inspector) -> (-> inspector?) ~
 (sandbox-make-code-inspector make) -> void?
-  make : (-> inspector?) ~
+  make : (-> inspector?) ~ ~
 
 A parameter that determines the (nullary) procedure that is used to
 create the code inspector for sandboxed evaluation.  The procedure is
@@ -4087,7 +4726,7 @@ which makes loading libraries possible.
                                         *sandbox-make-logger*
 (sandbox-make-logger) -> (-> logger?) ~
 (sandbox-make-logger make) -> void?
-  make : (-> logger?) ~
+  make : (-> logger?) ~ ~
 
 A parameter that determines the procedure used to create the logger for
 sandboxed evaluation.  The procedure is called when initializing an
@@ -4098,7 +4737,7 @@ future).
                                         *sandbox-make-plumber*
 (sandbox-make-plumber) -> (or/c (-> plumber?) 'propagate) ~
 (sandbox-make-plumber make) -> void?
-  make : (or/c (-> plumber?) 'propagate) ~
+  make : (or/c (-> plumber?) 'propagate) ~ ~
 
 A parameter that determines the procedure used to create the plumber for
 sandboxed evaluation.  The procedure is called when initializing an
@@ -4115,7 +4754,7 @@ Added in version 6.0.1.8 of package sandbox-lib.
 (sandbox-make-environment-variables) ~
  -> (-> environment-variables?)
 (sandbox-make-environment-variables make) -> void?
-  make : (-> environment-variables?) ~
+  make : (-> environment-variables?) ~ ~
 
 A parameter that determines the procedure used to create the environment
 variable set for sandboxed evaluation.  The procedure is called when
@@ -4123,20 +4762,20 @@ initializing an evaluator, and the default parameter value constructs a
 new environment variable set using (environment-variables-copy
 (current-environment-variables)).
 
-12.2. Interacting with Evaluators
+12.3. Interacting with Evaluators
 
 The following functions are used to interact with a sandboxed evaluator
 in addition to using it to evaluate code.
 
                                         *evaluator-alive?*
 (evaluator-alive? evaluator) -> boolean? ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 
 Determines whether the evaluator is still alive.
 
                                         *kill-evaluator*
 (kill-evaluator evaluator) -> void? ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 
 Releases the resources that are held by evaluator by shutting down the
 evaluator’s custodian.  Attempting to use an evaluator after killing
@@ -4147,7 +4786,7 @@ evaluator, except that an eof value will raise an error immediately.
 
                                         *break-evaluator*
 (break-evaluator evaluator) -> void? ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 
 Sends a break to the running evaluator.  The effect of this is as if
 Ctrl-C was typed when the evaluator is currently executing, which
@@ -4155,7 +4794,7 @@ propagates the break to the evaluator’s context.
 
                                         *get-user-custodian*
 (get-user-custodian evaluator) -> void? ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 
 Retrieves the evaluator’s toplevel custodian.  This returns a value that
 is different from (evaluator '(current-custodian)) or
@@ -4170,9 +4809,9 @@ the whole sandbox.)
 
                                         *set-eval-limits*
 (set-eval-limits evaluator secs mb) -> void? ~
-  evaluator : (any/c . -> . any) ~
-  secs : (or/c exact-nonnegative-integer? #f) ~
-  mb : (or/c exact-nonnegative-integer? #f) ~
+  evaluator : (any/c . -> . any) ~ ~
+  secs : (or/c exact-nonnegative-integer? #f) ~ ~
+  mb : (or/c exact-nonnegative-integer? #f) ~ ~
 
 Changes the per-expression limits that evaluator uses to secs seconds of
 shallow time and mb megabytes (either one can be #f, indicating no
@@ -4184,8 +4823,8 @@ existing evaluators. See also call-with-limits.
 
                                         *set-eval-handler*
 (set-eval-handler evaluator handler) -> void? ~
-  evaluator : (any/c . -> . any) ~
-  handler : (or/c #f ((-> any) . -> . any)) ~
+  evaluator : (any/c . -> . any) ~ ~
+  handler : (or/c #f ((-> any) . -> . any)) ~ ~
 
 Changes the per-expression handler that the evaluator uses around each
 interaction.  A #f value means no handler is used.
@@ -4197,9 +4836,9 @@ call-with-killing-threads for two useful handlers that are provided.
 
                                         *call-with-custodian-shutdown*
 (call-with-custodian-shutdown thunk) -> any ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 (call-with-killing-threads thunk) -> any
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 These functions are useful for use as an evaluation handler.
 call-with-custodian-shutdown will execute the thunk in a fresh
@@ -4210,10 +4849,10 @@ resources as is.
 
                                         *put-input*
 (put-input evaluator) -> output-port? ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 (put-input evaluator i/o) -> void?
-  evaluator : (any/c . -> . any) ~
-  i/o : (or/c bytes? string? eof-object?) ~
+  evaluator : (any/c . -> . any) ~ ~
+  i/o : (or/c bytes? string? eof-object?) ~ ~
 
 If (sandbox-input) is 'pipe when an evaluator is created, then this
 procedure can be used to retrieve the output port end of the pipe (when
@@ -4222,10 +4861,10 @@ pipe.  It can also be used with eof, which closes the pipe.
 
                                         *get-output*
 (get-output evaluator) -> (or/c #f input-port? bytes? string?) ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 (get-error-output evaluator)
  -> (or/c #f input-port? bytes? string?)
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 
 Returns the output or error-output of the evaluator, in a way that
 depends on the setting of (sandbox-output) or (sandbox-error-output)
@@ -4246,9 +4885,9 @@ when the evaluator was created:
 (get-uncovered-expressions  evaluator      ~
                            [prog?         
                             src])     -> (listof syntax?)
-  evaluator : (any/c . -> . any) ~
-  prog? : any/c = #t ~
-  src : any/c = default-src ~
+  evaluator : (any/c . -> . any) ~ ~
+  prog? : any/c = #t ~ ~
+  src : any/c = default-src ~ ~
 
 Retrieves uncovered expression from an evaluator, as longs as the
 sandbox-coverage-enabled parameter had a true value when the evaluator
@@ -4290,9 +4929,9 @@ expression may be assigned a single source location.
 (call-in-sandbox-context  evaluator            ~
                           thunk               
                          [unrestricted?]) -> any
-  evaluator : (any/c . -> . any) ~
-  thunk : (-> any) ~
-  unrestricted? : boolean? = #f ~
+  evaluator : (any/c . -> . any) ~ ~
+  thunk : (-> any) ~ ~
+  unrestricted? : boolean? = #f ~ ~
 
 Calls the given thunk in the context of a sandboxed evaluator.  The call
 is performed under the resource limits and evaluation handler that are
@@ -4318,9 +4957,9 @@ your own permissions, for example,
           ; can access anything you want here
           (delete-file "/some/file")))))
 
-12.3. Miscellaneous
+12.4. Miscellaneous
 
-gui? : boolean? ~
+gui? : boolean? ~ ~
 
 For backward compatibility, only: the result of gui-available? at the
 time that racket/sandbox was instantiated.
@@ -4331,17 +4970,17 @@ sandbox evaluator is created.
 
                                         *call-with-limits*
 (call-with-limits secs mb thunk) -> any ~
-  secs : (or/c exact-nonnegative-integer? #f) ~
-  mb : (or/c exact-nonnegative-integer? #f) ~
-  thunk : (-> any) ~
+  secs : (or/c exact-nonnegative-integer? #f) ~ ~
+  mb : (or/c exact-nonnegative-integer? #f) ~ ~
+  thunk : (-> any) ~ ~
 
 Executes the given thunk with memory and time restrictions: if execution
 consumes more than mb megabytes or more than secs shallow time seconds,
-then the computation is aborted and the exn:fail:resource exception is
-raised.  Otherwise the result of the thunk is returned as usual (a
-value, multiple values, or an exception).  Each of the two limits can be
-#f to indicate the absence of a limit. See also custodian-limit-memory
-for information on memory limits.
+then the computation is aborted and an exception recognizable by
+exn:fail:resource? is raised.  Otherwise, the result of the thunk is
+returned as usual (a value, multiple values, or an exception).  Each of
+the two limits can be #f to indicate the absence of a limit. See also
+custodian-limit-memory for information on memory limits.
 
 Sandboxed evaluators use call-with-limits, according to the
 sandbox-eval-limits setting and uses of set-eval-limits: each expression
@@ -4356,10 +4995,17 @@ A macro version of call-with-limits.
 
                                         *call-with-deep-time-limit*
 (call-with-deep-time-limit secs thunk) -> any ~
-  secs : exact-nonnegative-integer? ~
-  thunk : (-> any) ~
+  secs : exact-nonnegative-integer? ~ ~
+  thunk : (-> any) ~ ~
 
-Executes the given thunk with deep time restrictions.
+Executes the given thunk with deep time restrictions, and returns the
+values produced by thunk.
+
+The given thunk is run in a new thread. If it errors or if the thread
+terminates returning a value, then (values) is returned.
+
+Changed in version 1.1 of package sandbox-lib: Changed to return thunk’s
+result if it completes normally.
 
                                         *with-deep-time-limit*
 (with-deep-time-limit secs-expr body ...) ~
@@ -4368,12 +5014,572 @@ A macro version of call-with-deep-time-limit.
 
                                         *exn:fail:resource?*
 (exn:fail:resource? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 (exn:fail:resource-resource exn)
  -> (or/c 'time 'memory 'deep-time)
-  exn : exn:fail:resource? ~
+  exn : exn:fail:resource? ~ ~
 
 A predicate and accessor for exceptions that are raised by
 call-with-limits.  The resource field holds a symbol, representing the
 resource that was expended. 'time is used for shallow time and
 'deep-time is used for deep time.
+
+13. The racket/repl Library
+
+ (require racket/repl) package: base ~ ~
+
+The racket/repl provides the same read-eval-print-loop binding as
+racket/base, but with even fewer internal dependencies than racket/base.
+It is loaded in some situations on startup, as described in [missing].
+
+14. Linklets and the Core Compiler
+
+ (require racket/linklet) package: base ~ ~
+
+A linklet is a primitive element of compilation, bytecode marshaling,
+and evaluation. Racket’s implementations of modules, macros, and
+top-level evaluation are all built on linklets. Racket programmers
+generally do not encounter linklets directly, but the racket/linklet
+library provides access to linklet facilities.
+
+A single Racket module (or collection of top-level forms) is typically
+implemented by multiple linklets. For example, each phase of evaluation
+that exists in a module is implemented in a separate linklet. A linklet
+is also used for metadata such as the module path indexes for a module’s
+requires. These linklets, plus some other metadata, are combined to form
+a linklet bundle. Information in a linklet bundle is keyed by either a
+symbol or a fixnum. A linklet bundle containing linklets can be
+marshaled to and from a byte stream by write and (with
+read-accept-compiled is enabled) read.
+
+When a Racket module has submodules, the linklet bundles for the module
+and the submodules are grouped together in a linklet directory. A
+linklet directory can have nested linklet directories. Information in a
+linklet directory is keyed by #f or a symbol, where #f must be mapped to
+a linklet bundle (if anything) and each symbol must be mapped to a
+linklet directory. A linklet directory can be equivalently viewed as a
+mapping from a lists of symbols to a linklet bundle. Like linklet
+bundles, a linklet directory can be marshaled to and from a byte stream
+by write and read; the marshaled form allows individual linklet bundles
+to be loaded independently.
+
+A linklet consists of a set of variable definitions and expressions, an
+exported subset of the defined variable names, a set of variables to
+export from the linklet despite having no corresponding definition, and
+a set of imports that provide other variables for the linklet to use. To
+run a linklet, it is instantiated as as linklet instance (or just
+instance, for short). When a linklet is instantiated, it receives other
+linklet instances for its imports, and it extracts a specified set of
+variables that are exported from each of the given instances. The newly
+created linklet instance provides its exported variables for use by
+other linklets or for direct access via instance-variable-value. A
+linklet instance can be synthesized directly with make-instance.
+
+A linklet is created by compiling an enriched S-expression
+representation of its source. Since linklets exist below the layer of
+macros and syntax objects, linklet compilation does not use syntax
+objects. Instead, linklet compilation uses correlated objects, which are
+like syntax objects without lexical-context information and without the
+constraint that content is coerced to correlated objects. Using an
+S-expression or correlated object, the grammar of a linklet as
+recognized by compile-linklet is
+
+                                        *linklet*
+(linklet [[imported-id/renamed ...] ...] ~
+         [exported-id/renamed ...]
+  defn-or-expr ...)
+ 
+imported-id/renamed = imported-id
+                    | (external-imported-id internal-imported-id)
+                       
+exported-id/renamed = exported-id
+                    | (internal-exported-id external-exported-id)
+
+Each import set [imported-id/renamed ...] refers to a single imported
+instance, and each import-id/renamed corresponds to a variable from that
+instance. If separate external-imported-id and internal-imported-id are
+specified, then external-imported-id is the name of the variable as
+exported by the instance, and internal-imported-id is the name used to
+refer to the variable in the defn-or-exprs. For exports, separate
+internal-exported-id and external-exported-id names corresponds to the
+variable name as exported as referenced in the defn-or-exprs,
+respectively.
+
+The grammar of an defn-or-expr is similar to the expander’s grammar of
+fully expanded expressions (see [missing]) with some exceptions:
+quote-syntax and #%top are not allowed; #%plain-lambda is spelled
+lambda; #%plain-app is omitted (i.e., application is implicit); lambda,
+case-lambda, let-values, and letrec-values can have only a single body
+expression; and numbers, booleans, strings, and byte strings are
+self-quoting. Primitives are accessed directly by name, and shadowing is
+not allowed within a linklet form for primitive names, imported
+variables, defined variables, or local variables.
+
+When an exported-id/renamed has no corresponding definition among the
+defn-or-exprs, then the variable is effectively defined as
+uninitialized; referencing the variable will trigger
+exn:fail:contract:variable, the same as referencing a variable before it
+is defined. When a target instance is provided to instantiate-linklet,
+any existing variable with the same name will be left as-is, instead of
+set to undefined. This treatment of uninitialized variables provides
+core support for top-level evaluation where variables may be referenced
+and then defined in a separate element of compilation.
+
+Added in version 6.90.0.1 of package base.
+
+                                        *linklet?*
+(linklet? v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t if v is a linklet, #f otherwise.
+
+                                        *compile-linklet*
+(compile-linklet  form             ~
+                 [name            
+                  import-keys     
+                  get-import      
+                  options])   -> linklet?
+  form : (or/c correlated? any/c) ~ ~
+  name : any/c = #f ~ ~
+  import-keys : #f = #f ~ ~
+  get-import : #f = #f ~ ~
+  options : (listof (or/c 'serializable 'unsafe 'static 'quick ~ ~
+                           'use-prompt 'uninterned-literal))
+          = '(serializable)
+(compile-linklet  form            
+                  name            
+                  import-keys     
+                 [get-import      
+                  options])   -> linklet? vector?
+  form : (or/c correlated? any/c) ~ ~
+  name : any/c ~ ~
+  import-keys : vector? ~ ~
+  get-import : (or/c #f (any/c . -> . (values (or/c linklet? instance? #f) ~ ~
+                                              (or/c vector? #f))))
+             = #f
+  options : (listof (or/c 'serializable 'unsafe 'static 'quick ~ ~
+                          'use-prompt 'uninterned-literal))
+          = '(serializable)
+
+Takes an S-expression or correlated object for a linklet form and
+produces a linklet. As long as 'serializable included in options, the
+resulting linklet can be marshaled to and from a byte stream when it is
+part of a linklet bundle (possibly in a linklet directory).
+
+The optional name is associated to the linklet for debugging purposes
+and as the default name of the linklet’s instance.
+
+The optional import-keys and get-import arguments support cross-linklet
+optimization. If import-keys is a vector, it must have as many elements
+as sets of imports in form. If the compiler becomes interested in
+optimizing a reference to an imported variable, it passes back to
+get-import (if non-#f) the element of import-keys that corresponds to
+the variable’s import set. The get-import function can then return a
+linklet or instance that represents an instance to be provided to the
+compiled linklet when it is eventually instantiated; ensuring
+consistency between reported linklet or instance and the eventual
+instance is up to the caller of compile-linklet. If get-import returns
+#f as its first value, the compiler will be prevented from making any
+assumptions about the imported instance. The second result from
+get-import is an optional vector of keys to provide transitive
+information on a returned linklet’s imports (and is not allowed for a
+returned instance); the returned vector must have the same number of
+elements as the linklet has imports. When vector elements are eq? and
+non-#f, the compiler can assume that they correspond to the same
+run-time instance. A #f value for get-import is equivalent to a function
+that always returns two #f results.
+
+When import-keys is not #f, then the compiler is allowed to grow or
+shrink the set of imported instances for the linklet. The result vector
+specifies the keys of the imports for the returned linklet. Any key that
+is #f or a linklet instance must be preserved intact, however.
+
+If 'unsafe is included in options, then the linklet is compiled in
+unsafe mode: uses of safe operations within the linklet can be converted
+to unsafe operations on the assumption that the relevant contracts are
+satisfied. For example, car is converted to unsafe-car. Some substituted
+unsafe operations may not have directly accessible names, such as the
+unsafe variant of in-list that can be substituted in unsafe mode. An
+unsafe operation is substituted only if its (unchecked) contract is
+subsumed by the safe operation’s contract. The fact that the linklet is
+compiled in unsafe mode can be exposed through
+variable-reference-from-unsafe? using a variable reference produced by a
+#%variable-reference form within the module body.
+
+If 'static is included in options, then the linklet must be instantiated
+only once; if the linklet is serialized, then any individual instance
+read from the serialized form must be instantiated at most once.
+Compilation with 'static is intended to improve the performance of
+references within the linklet to defined and imported variables.
+
+If 'quick is included in options, then linklet compilation may trade
+run-time performance for compile-time performance—that is, spend less
+time compiling the linklet, but the resulting linklet may run more
+slowly.
+
+If 'use-prompt is included in options, then instantiating resulting
+linklet always wraps a prompt around each definition and immediate
+expression in the linklet. Otherwise, supplying #t as the use-prompt?
+argument to instantiate-linklet may only wrap a prompt around the entire
+instantiation.
+
+If 'uninterned-literal is included in options, then literals in form
+will not necessarily be interned via datum-intern-literal when compiling
+or loading the linklet. Disabling the use of datum-intern-literal can be
+especially useful of the linklet includes a large string or byte string
+constant that is not meant to be shared.
+
+The symbols in options must be distinct, otherwise exn:fail:contract
+exception is raised.
+
+Changed in version 7.1.0.8 of package base: Added the 'use-prompt
+option. Changed in version 7.1.0.10: Added the 'uninterned-literal
+option. Changed in version 7.5.0.14: Added the 'quick option.
+
+                                        *recompile-linklet*
+(recompile-linklet  linklet          ~
+                   [name            
+                    import-keys     
+                    get-import      
+                    options])   -> linklet?
+  linklet : linklet? ~ ~
+  name : any/c = #f ~ ~
+  import-keys : #f = #f ~ ~
+  get-import : #f = #f ~ ~
+  options : (listof (or/c 'serializable 'unsafe 'static 'quick ~ ~
+                          'use-prompt 'uninterned-literal))
+          = '(serializable)
+(recompile-linklet  linklet         
+                    name            
+                    import-keys     
+                   [get-import      
+                    options])   -> linklet? vector?
+  linklet : linklet? ~ ~
+  name : any/c ~ ~
+  import-keys : vector? ~ ~
+  get-import : (or/c (any/c . -> . (values (or/c linklet? #f) ~ ~
+                                           (or/c vector? #f)))
+                     #f)
+             = (lambda (import-key) (values #f #f))
+  options : (listof (or/c 'serializable 'unsafe 'static 'quick ~ ~
+                          'use-prompt 'uninterned-literal))
+          = '(serializable)
+
+Like compile-linklet, but takes an already-compiled linklet and
+potentially optimizes it further.
+
+Changed in version 7.1.0.6 of package base: Added the options argument.
+Changed in version 7.1.0.8: Added the 'use-prompt option. Changed in
+version 7.1.0.10: Added the 'uninterned-literal option. Changed in
+version 7.5.0.14: Added the 'quick option.
+
+                                        *eval-linklet*
+(eval-linklet linklet) -> linklet? ~
+  linklet : linklet? ~ ~
+
+Returns a variant of a linklet that is prepared for JIT compilation such
+that every later use of the result linklet with instantiate-linklet
+shares the JIT-generated code. However, the result of eval-linklet
+cannot be marshaled to a byte stream as part of a linklet bundle, and it
+cannot be used with recompile-linklet.
+
+                                        *instantiate-linklet*
+(instantiate-linklet  linklet               ~
+                      import-instances     
+                     [target-instance?     
+                      use-prompt?])    -> instance?
+  linklet : linklet? ~ ~
+  import-instances : (listof instance?) ~ ~
+  target-instance? : #f = #f ~ ~
+  use-prompt? : any/c = #t ~ ~
+(instantiate-linklet  linklet              
+                      import-instances     
+                      target-instance      
+                     [use-prompt?])    -> any
+  linklet : linklet? ~ ~
+  import-instances : (listof instance?) ~ ~
+  target-instance : instance? ~ ~
+  use-prompt? : any/c = #t ~ ~
+
+Instantiates linklet by running its definitions and expressions, using
+the given import-instances for its imports. The number of instances in
+import-instances must match the number of import sets in linklet.
+
+If target-instance is #f or not provided, the result is a fresh instance
+for the linklet. If target-instance is an instance, then the instance is
+used and modified for the linklet definitions and expressions, and the
+result is the value of the last expression in the linklet.
+
+The linklet’s exported variables are accessible in the result instance
+or in target-instance using the linklet’s external name for each export.
+If target-instance is provided as non-#f, its existing variables remain
+intact if they are not modified by a linklet definition.
+
+If use-prompt? is true, then a a prompt is wrapped around the linklet
+instantiation in same ways as an expression in a module body. If the
+linklet contains multiple definitions or immediate expressions, then a
+prompt may or may not be wrapped around each definition or expression;
+supply 'use-prompt to compile-linklet to ensure that a prompt is used
+around each definition and expression.
+
+                                        *linklet-import-variables*
+(linklet-import-variables linklet) -> (listof (listof symbol?)) ~
+  linklet : linklet? ~ ~
+
+Returns a description of a linklet’s imports. Each element of the result
+list corresponds to an import set as satisfied by a single instance on
+instantiation, and each member of the set is a variable name that is
+used from the corresponding imported instance.
+
+                                        *linklet-export-variables*
+(linklet-export-variables linklet) -> (listof symbol?) ~
+  linklet : linklet? ~ ~
+
+Returns a description of a linklet’s exports. Each element of the list
+corresponds to a variable that is made available by the linklet in its
+instance.
+
+                                        *linklet-directory?*
+(linklet-directory? v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t if v is a linklet directory, #f otherwise.
+
+                                        *hash->linklet-directory*
+(hash->linklet-directory content) -> linklet-directory? ~
+  content : (and/c hash? hash-eq? immutable? (not/c impersonator?)) ~ ~
+
+Constructs a linklet directory given mappings in the form of a hash
+table. Each key of content must be either a symbol or #f, each symbol
+must be mapped to a linklet directory, and #f must be mapped to a
+linklet bundle or not mapped.
+
+                                        *linklet-directory->hash*
+(linklet-directory->hash linklet-directory) ~
+ -> (and/c hash? hash-eq? immutable? (not/c impersonator?))
+  linklet-directory : linklet-directory? ~ ~
+
+Extracts the content of a linklet directory into a hash table.
+
+                                        *linklet-bundle?*
+(linklet-bundle? v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t if v is a linklet bundle, #f otherwise.
+
+                                        *hash->linklet-bundle*
+(hash->linklet-bundle content) -> linklet-bundle? ~
+  content : (and/c hash? hash-eq? immutable? (not/c impersonator?)) ~ ~
+
+Constructs a linklet bundle given mappings in the form of a hash table.
+Each key of content must be either a symbol or a fixnum. Values in the
+hash table are unconstrained, but the intent is that they are all
+linklets or values that can be recovered from write output by read.
+
+                                        *linklet-bundle->hash*
+(linklet-bundle->hash linklet-bundle) ~
+ -> (and/c hash? hash-eq? immutable? (not/c impersonator?))
+  linklet-bundle : linklet-bundle? ~ ~
+
+Extracts the content of a linklet bundle into a hash table.
+
+                                        *instance?*
+(instance? v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t if v is a linklet instance, #f otherwise.
+
+                                        *make-instance*
+(make-instance  name                    ~
+               [data                   
+                mode]                  
+                variable-name          
+                variable-value ...     
+                ...)               -> instance?
+  name : any/c ~ ~
+  data : any/c = #f ~ ~
+  mode : (or/c #f 'constant 'consistent) = #f ~ ~
+  variable-name : symbol? ~ ~
+  variable-value : any/c ~ ~
+
+Constructs a linklet instance directly. Besides associating an arbitrary
+name and data value to the instance, the instance is populated with
+variables as specified by variable-name and variable-value.
+
+The optional data and mode arguments must be provided if any
+variable-name and variable-value arguments are provided. The mode
+argument is used as in instance-set-variable-value! for every
+variable-name.
+
+                                        *instance-name*
+(instance-name instance) -> any/c ~
+  instance : instance? ~ ~
+
+Returns the value associated to instance as its name—either the first
+value provided to make-instance or the name of a linklet that was
+instantiated to create the instance.
+
+                                        *instance-data*
+(instance-data instance) -> any/c ~
+  instance : instance? ~ ~
+
+Returns the value associated to instance as its data—either the second
+value provided to make-instance or the default #f.
+
+                                        *instance-variable-names*
+(instance-variable-names instance) -> (list symbol?) ~
+  instance : instance? ~ ~
+
+Returns a list of all names for all variables accessible from instance.
+
+                                        *instance-variable-value*
+(instance-variable-value  instance      ~
+                          name         
+                         [fail-k]) -> any
+  instance : instance? ~ ~
+  name : symbol? ~ ~
+  fail-k : any/c = (lambda () (error ....)) ~ ~
+
+Returns the value of the variable exported as name from instance. If no
+such variable is exported, then fail-k is used in the same way as by
+hash-ref.
+
+                                        *instance-set-variable-value!*
+(instance-set-variable-value!  instance      ~
+                               name         
+                               v            
+                              [mode])   -> void?
+  instance : instance? ~ ~
+  name : symbol? ~ ~
+  v : any/c ~ ~
+  mode : (or/c #f 'constant 'consistent) = #f ~ ~
+
+Sets or creates the variable exported as name in instance so that its
+value is v, as long as the variable does not exist already as constant.
+If a variable for name exists as constant, the exn:fail:contract
+exception is raised.
+
+If mode is 'constant or 'consistent, then the variable is created or
+changed to be constant. Furthermore, when the instance is reported for a
+linklet’s import though a get-import callback to compile-linklet, the
+compiler can assume that the variable will be constant in all future
+instances that are used to satisfy a linklet’s imports.
+
+If mode is 'consistent, when the instance is reported though a callback
+to compile-linklet, the compiler can further assume that the variable’s
+value will be the same for future instances. For compilation purposes,
+“the same” can mean that a procedure value will have the same arity and
+implementation details, a structure type value will have the same
+configuration, a marshalable constant will be equal? to the current
+value, and so on.
+
+                                        *instance-unset-variable!*
+(instance-unset-variable! instance name) -> void? ~
+  instance : instance? ~ ~
+  name : symbol? ~ ~
+
+Changes instance so that it does not export a variable as name, as long
+as name does not exist as a constant variable. If a variable for name
+exists as constant, the exn:fail:contract exception is raised.
+
+                                        *instance-describe-variable!*
+(instance-describe-variable! instance      ~
+                             name         
+                             desc-v)  -> void?
+  instance : instance? ~ ~
+  name : symbol? ~ ~
+  desc-v : any/c ~ ~
+
+Registers information about name in instance that may be useful for
+compiling linklets where the instance is return via the get-import
+callback to compile-linklet. The desc-v description can be any value;
+the recognized descriptions depend on virtual machine, but may include
+the following:
+
+* `(procedure ,arity-mask) — the value is always a procedure that is not
+  impersonated and not a structure, and its arity in the style of
+  procedure-arity-mask is arity-mask.
+
+* `(procedure/succeeds ,arity-mask) — like `(procedure ,arity-mask), but
+  for a procedure that never raises an exception of otherwise captures
+  or escapes the calling context.
+
+* `(procedure/pure ,arity-mask) — like `(procedure/succeeds
+  ,arity-mask), but with no observable side effects, so a call to the
+  procedure can be reordered.
+
+Added in version 7.1.0.8 of package base.
+
+                                        *variable-reference->instance*
+(variable-reference->instance  varref       ~
+                              [ref-site?]) 
+ -> (if ref-site? (or/c instance? #f symbol?) instance?)
+  varref : variable-reference? ~ ~
+  ref-site? : any/c = #f ~ ~
+
+Extracts the instance where the variable of varref is defined if
+ref-site? is #f, and returns the instance where varref itself resides if
+ref-site? is true. This notion of variable reference is the same as at
+the module level and can reflect the linklet instance that implements a
+particular phase of a module instance.
+
+When ref-site? is #f, the result is #f when varref is from
+(#%variable-reference) with no identifier. The result is a symbol if
+varref refers to a primitive.
+
+                                        *correlated?*
+(correlated? v) -> boolean? ~
+  v : any/c ~ ~
+(correlated-source crlt) -> any
+  crlt : correlated? ~ ~
+(correlated-line crlt) -> (or/c exact-positive-integer? #f)
+  crlt : correlated? ~ ~
+(correlated-column crlt) -> (or/c exact-nonnegative-integer? #f)
+  crlt : correlated? ~ ~
+(correlated-position crlt) -> (or/c exact-positive-integer? #f)
+  crlt : correlated? ~ ~
+(correlated-span crlt) -> (or/c exact-nonnegative-integer? #f)
+  crlt : correlated? ~ ~
+(correlated-e crlt) -> any
+  crlt : correlated? ~ ~
+(correlated->datum crlt) -> any
+  crlt : (or/c correlated? any/c) ~ ~
+(datum->correlated v [srcloc prop]) -> correlated?
+  v : any/c ~ ~
+  srcloc : (or/c correlated? #f ~ ~
+                 (list/c any/c
+                         (or/c exact-positive-integer? #f)
+                         (or/c exact-nonnegative-integer? #f)
+                         (or/c exact-positive-integer? #f)
+                         (or/c exact-nonnegative-integer? #f))
+                 (vector/c any/c
+                          (or/c exact-positive-integer? #f)
+                          (or/c exact-nonnegative-integer? #f)
+                          (or/c exact-positive-integer? #f)
+                          (or/c exact-nonnegative-integer? #f)))
+         = #f
+  prop : (or/c correlated? #f) = #f ~ ~
+(correlated-property crlt key val) -> correlated?
+  crlt : correlated? ~ ~
+  key : any/c ~ ~
+  val : any/c ~ ~
+(correlated-property crlt key) -> any/c
+  crlt : correlated? ~ ~
+  key : any/c ~ ~
+(correlated-property-symbol-keys crlt) -> list?
+  crlt : correlated? ~ ~
+
+Like syntax?, syntax-source, syntax-line, syntax-column,
+syntax-position, syntax-span, syntax-e, syntax->datum, datum->syntax,
+syntax-property, and syntax-property-symbol-keys, but for correlated
+objects.
+
+Unlike datum->syntax, datum->correlated does not recur through the given
+S-expression and convert pieces to correlated objects. Instead, a
+correlated object is simply wrapped around the immediate value. In
+contrast, correlated->datum recurs through its argument (which is not
+necessarily a correlated object) to discover any correlated objects and
+convert them to plain S-expressions.
+
+Changed in version 7.6.0.6 of package base: Added the prop argument to
+datum->correlated.

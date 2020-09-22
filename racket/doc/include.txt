@@ -1,6 +1,6 @@
 File Inclusion
 
- (require racket/include) package: base ~
+ (require racket/include) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/include and racket libraries, but not racket/base.

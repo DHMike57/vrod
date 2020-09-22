@@ -123,15 +123,15 @@ finally, Racket provides functions such as string->bytes/locale to
 specifically invoke a locale-specific encoding.
 
 A Unix user selects a locale by setting environment variables, such as
-LC_ALL. On Windows and Mac OS X, the operating system provides other
+LC_ALL. On Windows and Mac OS, the operating system provides other
 mechanisms for setting the locale. Within Racket, the current locale can
 be changed by setting the current-locale parameter. The locale name
 within Racket is a string, and the available locale names depend on the
 platform and its configuration, but the "" locale means the current
-user’s default locale; on Windows and Mac OS X, the encoding for "" is
+user’s default locale; on Windows and Mac OS, the encoding for "" is
 always UTF-8, and locale-sensitive operations use the operating system’s
 native interface. (In particular, setting the LC_ALL and LC_CTYPE
-environment variables does not affect the locale "" on Mac OS X. Use
+environment variables does not affect the locale "" on Mac OS. Use
 getenv and current-locale to explicitly install the
 environment-specified locale, if desired.) Setting the current locale to
 #f makes locale-sensitive operations locale-insensitive, which means
@@ -141,7 +141,7 @@ encoding.
                                         *current-locale*
 (current-locale) -> (or/c string? #f) ~
 (current-locale locale) -> void?
-  locale : (or/c string? #f) ~
+  locale : (or/c string? #f) ~ ~
 
 A parameter that determines the current locale for procedures such as
 string-locale-ci=?.
@@ -164,26 +164,26 @@ parameter, and neither are symbol case or regular expressions (see
 
                                         *input-port?*
 (input-port? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an input port, #f otherwise.
 
                                         *output-port?*
 (output-port? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an output port, #f otherwise.
 
                                         *port?*
 (port? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if either (input-port? v) or (output-port? v) is #t, #f
 otherwise.
 
                                         *close-input-port*
 (close-input-port in) -> void? ~
-  in : input-port? ~
+  in : input-port? ~ ~
 
 Closes the input port in. For some kinds of ports, closing the port
 releases lower-level resources, such as a file handle. If the port is
@@ -191,7 +191,7 @@ already closed, close-input-port has no effect.
 
                                         *close-output-port*
 (close-output-port out) -> void? ~
-  out : output-port? ~
+  out : output-port? ~ ~
 
 Closes the output port out. For some kinds of ports, closing the port
 releases lower-level resources, such as a file handle. Also, if the port
@@ -201,13 +201,13 @@ close-output-port has no effect.
 
                                         *port-closed?*
 (port-closed? port) -> boolean? ~
-  port : port? ~
+  port : port? ~ ~
 
 Returns #t if the input or output port port is closed, #f otherwise.
 
                                         *port-closed-evt*
 (port-closed-evt port) -> evt? ~
-  port : port? ~
+  port : port? ~ ~
 
 Return a synchronizable event that becomes ready for synchronization
 when port is closed. The synchronization result of a port-closed event
@@ -216,7 +216,7 @@ is the port-closed event itself.
                                         *current-input-port*
 (current-input-port) -> input-port? ~
 (current-input-port in) -> void?
-  in : input-port? ~
+  in : input-port? ~ ~
 
 A parameter that determines a default input port for many operations,
 such as read.
@@ -224,7 +224,7 @@ such as read.
                                         *current-output-port*
 (current-output-port) -> output-port? ~
 (current-output-port out) -> void?
-  out : output-port? ~
+  out : output-port? ~ ~
 
 A parameter that determines a default output port for many operations,
 such as write.
@@ -232,33 +232,54 @@ such as write.
                                         *current-error-port*
 (current-error-port) -> output-port? ~
 (current-error-port out) -> void?
-  out : output-port? ~
+  out : output-port? ~ ~
 
 A parameter that determines an output port that is typically used for
 errors and logging. For example, the default error display handler
 writes to this port.
 
                                         *file-stream-port?*
-(file-stream-port? port) -> boolean? ~
-  port : port? ~
+(file-stream-port? v) -> boolean? ~
+  v : any/c ~ ~
 
-Returns #t if the given port is a file-stream port (see File Ports), #f
-otherwise.
+Returns #t if v is a file-stream port (see File Ports), #f otherwise.
+
+Changed in version 7.2.0.5: Extended file-stream-port? to any value,
+instead of resticting the domain to ports
 
                                         *terminal-port?*
-(terminal-port? port) -> boolean? ~
-  port : port? ~
+(terminal-port? v) -> boolean? ~
+  v : any/c ~ ~
 
-Returns #t if the given port is attached to an interactive terminal, #f
+Returns #t if v is a port that is attached to an interactive terminal,
+#f otherwise.
+
+Changed in version 7.2.0.5: Extended terminal-port? to any value,
+instead of resticting the domain to ports
+
+                                        *port-waiting-peer?*
+(port-waiting-peer? port) -> boolean? ~
+  port : port? ~ ~
+
+Returns #t if port is not ready for reading or writing because it is
+waiting for a peer process to complete a stream construction, #f
 otherwise.
 
-eof : eof-object? ~
+On Unix and Mac OS, opening a fifo for output creates a peer-waiting
+port if no reader for the same fifo is already opened. In that case, the
+output port is not ready for writing until a reader is opened; that is,
+write opertaions will block. Use sync if necessary to wait until writing
+will not block—that is, until the read end of the fifo is opened.
+
+Added in version 7.4.0.5.
+
+eof : eof-object? ~ ~
 
 A value (distinct from all other values) that represents an end-of-file.
 
                                         *eof-object?*
-(eof-object? a) -> boolean? ~
-  a : any/c ~
+(eof-object? v) -> boolean? ~
+  v : any/c ~ ~
 
 Returns #t if v is eof, #f otherwise.
 
@@ -301,19 +322,27 @@ port-read-handler).
 
                                         *flush-output*
 (flush-output [out]) -> void? ~
-  out : output-port? = (current-output-port) ~
+  out : output-port? = (current-output-port) ~ ~
 
 Forces all buffered data in the given output port to be physically
 written. Only file-stream ports, TCP ports, and custom ports (see Custom
 Ports) use buffers; when called on a port without a buffer, flush-output
 has no effect.
 
+If flushing a file-stream port or TCP port encounters an error when
+writing, then all buffered bytes in the port are discarded.
+Consequently, a further attempt to flush or close the port will not
+fail.
+
+Changed in version 7.4.0.10: Consistently, discard buffered bytes on
+error, including in a TCP output port.
+
                                         *file-stream-buffer-mode*
 (file-stream-buffer-mode port) -> (or/c 'none 'line 'block #f) ~
-  port : port? ~
+  port : port? ~ ~
 (file-stream-buffer-mode port mode) -> void?
-  port : port? ~
-  mode : (or/c 'none 'line 'block) ~
+  port : port? ~ ~
+  mode : (or/c 'none 'line 'block) ~ ~
 
 Gets or sets the buffer mode for port, if possible. File-stream ports
 support setting the buffer mode, TCP ports (see [missing]) support
@@ -330,10 +359,10 @@ if the mode cannot be determined. If port is an input port and mode is
 
                                         *file-position*
 (file-position port) -> exact-nonnegative-integer? ~
-  port : port? ~
+  port : port? ~ ~
 (file-position port pos) -> void?
-  port : port? ~
-  pos : (or/c exact-nonnegative-integer? eof-object?) ~
+  port : port? ~ ~
+  pos : (or/c exact-nonnegative-integer? eof-object?) ~ ~
 
 Returns or sets the current read/write position of port.
 
@@ -355,9 +384,14 @@ exn:fail:filesystem exception is raised.
 
 When file-position sets the position pos beyond the current size of an
 output file or (byte) string, the file/string is enlarged to size pos
-and the new region is filled with 0 bytes.  If pos is beyond the end of
-an input file or (byte) string, then reading thereafter returns eof
-without changing the port’s position.
+and the new region is filled with 0 bytes; in the case of a file. In the
+case of a file output port, the file might not be enlarged until more
+data is written to the file; in that case, beware that writing to a file
+opened in 'append mode on Unix and Mac OS will reset the file pointer to
+the end of a file before each write, which defeats file enlargement via
+file-position. If pos is beyond the end of an input file or (byte)
+string, then reading thereafter returns eof without changing the port’s
+position.
 
 When changing the file position for an output port, the port is first
 flushed if its buffer is not empty. Similarly, setting the position for
@@ -368,15 +402,15 @@ position via one port does not flush the other port’s buffer.
 
                                         *file-position**
 (file-position* port) -> (or/c exact-nonnegative-integer? #f) ~
-  port : port? ~
+  port : port? ~ ~
 
 Like file-position on a single argument, but returns #f if the position
 is not known.
 
                                         *file-truncate*
 (file-truncate port size) -> void? ~
-  port : (and/c output-port? file-stream-port?) ~
-  size : exact-nonnegative-integer? ~
+  port : (and/c output-port? file-stream-port?) ~ ~
+  size : exact-nonnegative-integer? ~ ~
 
 Sets the size of the file written by port to size, assuming that the
 port is associated to a file whose size can be set.
@@ -423,7 +457,7 @@ port-count-lines!.
 
                                         *port-count-lines!*
 (port-count-lines! port) -> void? ~
-  port : port? ~
+  port : port? ~ ~
 
 Turns on line location and column location counting for a port. Counting
 can be turned on at any time, though generally it is turned on before
@@ -439,7 +473,7 @@ port. Line counting cannot be disabled for a port after it is enabled.
 
                                         *port-counts-lines?*
 (port-counts-lines? port) -> boolean? ~
-  port : port? ~
+  port : port? ~ ~
 
 Returns #t if line location and column location counting has been
 enabled for port, #f otherwise.
@@ -449,7 +483,7 @@ enabled for port, #f otherwise.
  -> (or/c exact-positive-integer? #f)
     (or/c exact-nonnegative-integer? #f)
     (or/c exact-positive-integer? #f)
-  port : port? ~
+  port : port? ~ ~
 
 Returns three values: an integer or #f for the line number of the next
 read/written item, an integer or #f for the next item’s column, and an
@@ -474,10 +508,10 @@ somehow cannot keep track of lines, columns, or positions.
                          line          
                          column        
                          position) -> void?
-  port : port? ~
-  line : (or/c exact-positive-integer? #f) ~
-  column : (or/c exact-nonnegative-integer? #f) ~
-  position : (or/c exact-positive-integer? #f) ~
+  port : port? ~ ~
+  line : (or/c exact-positive-integer? #f) ~ ~
+  column : (or/c exact-nonnegative-integer? #f) ~ ~
+  position : (or/c exact-positive-integer? #f) ~ ~
 
 Sets the next line, column, and position for port. If line counting has
 not been enabled for port or if port is a custom port that defines its
@@ -486,7 +520,7 @@ own counting function, then set-port-next-location! has no effect.
                                         *port-count-lines-enabled*
 (port-count-lines-enabled) -> boolean? ~
 (port-count-lines-enabled on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that determines whether line counting is enabled
 automatically for newly created ports. The default value is #f.
@@ -505,11 +539,11 @@ to flush the port.
 
                                         *open-input-file*
 (open-input-file  path                             ~
-                 [#:mode mode-flag                 ~
-                  #:for-module? for-module?]) -> input-port? ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  for-module? : any/c = #f ~
+                 [#:mode mode-flag                 ~ ~
+                  #:for-module? for-module?]) -> input-port? ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  for-module? : any/c = #f ~ ~
 
 Opens the file specified by path for input. The mode-flag argument
 specifies how the file’s bytes are translated on input:
@@ -520,7 +554,7 @@ specifies how the file’s bytes are translated on input:
 * 'text — return and linefeed bytes (10 and 13) as read from the file
   are filtered by the port in a platform specific manner:
 
-  * Unix and Mac OS X: no filtering occurs.
+  * Unix and Mac OS: no filtering occurs.
 
   * Windows: a return-linefeed combination from a file is returned by
     the port as a single linefeed; no filtering occurs for return bytes
@@ -546,33 +580,34 @@ more automatically (see [missing]).
 A path value that is the cleansed version of path is used as the name of
 the opened port.
 
-If opening the file fails, if for-module? is true, and
-current-module-path-for-load has a non-#f value, then the raised
-exception is either exn:fail:syntax:missing-module (if the value of
-current-module-path-for-load is a syntax object) or
+If opening the file fails due to an error in the filesystem, then
+exn:fail:filesystem:errno exception is raised—as long as for-module? is
+#f, current-module-path-for-load has a non-#f value, or the filesystem
+error is not recognized as a file-not-found error. Otherwise, when
+for-module? is true, current-module-path-for-load has a non-#f value,
+and the filesystem error is recognized as a file-not-found error, then
+the raised exception is either exn:fail:syntax:missing-module (if the
+value of current-module-path-for-load is a syntax object) or
 exn:fail:filesystem:missing-module (otherwise).
 
 Changed in version 6.0.1.6: Added #:for-module?.
 
 Examples:
+
   > (with-output-to-file some-file
       (lambda () (printf "hello world")))
-
-  (define in (open-input-file some-file))
-
-
+  > (define in (open-input-file some-file))
   > (read-string 11 in)
   "hello world"
   > (close-input-port in)
 
-
                                         *open-output-file*
 (open-output-file  path                        ~
-                  [#:mode mode-flag            ~
-                   #:exists exists-flag]) -> output-port? ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update 'can-update ~
+                  [#:mode mode-flag            ~ ~
+                   #:exists exists-flag]) -> output-port? ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update 'can-update ~ ~
                       'replace 'truncate
                       'must-truncate 'truncate/replace)
               = 'error
@@ -623,7 +658,9 @@ The file specified by path need not be a regular file. It might be a
 device that is connected through the filesystem, such as "aux" on
 Windows or "/dev/null" on Unix. The output port is block-buffered by
 default, unless the file corresponds to a terminal, in which case it is
-line-buffered by default.
+line-buffered by default. On Unix and Mac OS, if the file is a fifo,
+then the port will block for writing until a reader for the fifo is
+available; see also port-waiting-peer?.
 
 The port produced by open-output-file should be explicitly closed,
 either though close-output-port or indirectly via
@@ -635,23 +672,29 @@ output port to close it more automatically (see [missing]).
 A path value that is the cleansed version of path is used as the name of
 the opened port.
 
+If opening the file fails due to an error in the underlying filesystem
+then exn:fail:filesystem:errno exception is raised.
+
 Examples:
-  (define out (open-output-file some-file))
 
-
+  > (define out (open-output-file some-file))
   > (write "hello world" out)
-
   > (close-output-port out)
 
+Changed in version 6.9.0.6: On Unix and Mac OS, make 'truncate/replace
+replace on a permission error. On Windows, make 'replace always replace
+instead truncating like 'truncate/replace. Changed in version 7.4.0.5:
+Changed handling of a fifo on Unix and Mac OS to make the port block for
+output until the fifo has a reader.
 
                                         *open-input-output-file*
 (open-input-output-file  path                    ~
-                        [#:mode mode-flag        ~
-                         #:exists exists-flag])  ~
+                        [#:mode mode-flag        ~ ~
+                         #:exists exists-flag])  ~ ~
  -> input-port? output-port?
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update 'can-update ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update 'can-update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -668,10 +711,10 @@ open-input-file and open-output-file calls to avoid confusion.
                                         *call-with-input-file*
 (call-with-input-file  path                    ~
                        proc                   
-                      [#:mode mode-flag]) -> any ~
-  path : path-string? ~
-  proc : (input-port? . -> . any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+                      [#:mode mode-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  proc : (input-port? . -> . any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Calls open-input-file with the path and mode-flag arguments, and passes
 the resulting port to proc. The result of proc is the result of the
@@ -679,9 +722,9 @@ call-with-input-file call, but the newly opened port is closed when proc
 returns.
 
 Examples:
+
   > (with-output-to-file some-file
       (lambda () (printf "text in a file")))
-
   > (call-with-input-file some-file
       (lambda (in) (read-string 14 in)))
   "text in a file"
@@ -689,12 +732,12 @@ Examples:
                                         *call-with-output-file*
 (call-with-output-file  path                        ~
                         proc                       
-                       [#:mode mode-flag            ~
-                        #:exists exists-flag]) -> any ~
-  path : path-string? ~
-  proc : (output-port? . -> . any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+                       [#:mode mode-flag            ~ ~
+                        #:exists exists-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  proc : (output-port? . -> . any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -702,10 +745,10 @@ Analogous to call-with-input-file, but passing path, mode-flag and
 exists-flag to open-output-file.
 
 Examples:
+
   > (call-with-output-file some-file
       (lambda (out)
         (write 'hello out)))
-
   > (call-with-input-file some-file
       (lambda (in)
         (read-string 5 in)))
@@ -714,10 +757,10 @@ Examples:
                                         *call-with-input-file**
 (call-with-input-file*  path                    ~
                         proc                   
-                       [#:mode mode-flag]) -> any ~
-  path : path-string? ~
-  proc : (input-port? . -> . any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+                       [#:mode mode-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  proc : (input-port? . -> . any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Like call-with-input-file, but the newly opened port is closed whenever
 control escapes the dynamic extent of the call-with-input-file* call,
@@ -727,12 +770,12 @@ prompt-based abort.
                                         *call-with-output-file**
 (call-with-output-file*  path                        ~
                          proc                       
-                        [#:mode mode-flag            ~
-                         #:exists exists-flag]) -> any ~
-  path : path-string? ~
-  proc : (output-port? . -> . any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+                        [#:mode mode-flag            ~ ~
+                         #:exists exists-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  proc : (output-port? . -> . any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -744,10 +787,10 @@ prompt-based abort.
                                         *with-input-from-file*
 (with-input-from-file  path                    ~
                        thunk                  
-                      [#:mode mode-flag]) -> any ~
-  path : path-string? ~
-  thunk : (-> any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+                      [#:mode mode-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  thunk : (-> any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Like call-with-input-file*, but instead of passing the newly opened port
 to the given procedure argument, the port is installed as the current
@@ -755,9 +798,9 @@ input port (see current-input-port) using parameterize around the call
 to thunk.
 
 Examples:
+
   > (with-output-to-file some-file
       (lambda () (printf "hello")))
-
   > (with-input-from-file some-file
       (lambda () (read-string 5)))
   "hello"
@@ -765,12 +808,12 @@ Examples:
                                         *with-output-to-file*
 (with-output-to-file  path                        ~
                       thunk                      
-                     [#:mode mode-flag            ~
-                      #:exists exists-flag]) -> any ~
-  path : path-string? ~
-  thunk : (-> any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+                     [#:mode mode-flag            ~ ~
+                      #:exists exists-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  thunk : (-> any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -780,17 +823,17 @@ current output port (see current-output-port) using parameterize around
 the call to thunk.
 
 Examples:
+
   > (with-output-to-file some-file
       (lambda () (printf "hello")))
-
   > (with-input-from-file some-file
       (lambda () (read-string 5)))
   "hello"
 
                                         *port-try-file-lock?*
 (port-try-file-lock? port mode) -> boolean? ~
-  port : file-stream-port? ~
-  mode : (or/c 'shared 'exclusive) ~
+  port : file-stream-port? ~ ~
+  mode : (or/c 'shared 'exclusive) ~ ~
 
 Attempts to acquire a lock on the file using the current platform’s
 facilities for file locking. Multiple processes can acquire a 'shared
@@ -809,10 +852,10 @@ affect only the ability of processes to acquire locks) or they may
 correspond to mandatory locks that prevent reads and writes to the
 locked file. Specifically, locks are mandatory on Windows and advisory
 on other platforms. Multiple tries for a 'shared lock on a single port
-can succeed; on Unix and Mac OS X, a single port-file-unlock release the
+can succeed; on Unix and Mac OS, a single port-file-unlock release the
 lock, while on other Windows, a port-file-unlock is needed for each
-successful port-try-file-lock?. On Unix and Mac OS X, multiple tries for
-a 'exclusive lock can succeed and a single port-file-unlock releases the
+successful port-try-file-lock?. On Unix and Mac OS, multiple tries for a
+'exclusive lock can succeed and a single port-file-unlock releases the
 lock, while on Windows, a try for an 'exclusive lock fails for a given
 port if the port already holds the lock.
 
@@ -822,11 +865,11 @@ vice versa. If the output port from open-input-output-file holds an
 'exclusive lock, the corresponding input port can still acquire a
 'shared lock, even multiple times; on Windows, a port-file-unlock is
 needed for each successful lock try, while a single port-file-unlock
-balances the lock tries on Unix and Mac OS X. A 'shared lock on an input
+balances the lock tries on Unix and Mac OS. A 'shared lock on an input
 port can be upgraded to an 'exclusive lock through the corresponding
-output port on Unix and Mac OS X, in which case a single
-port-file-unlock (on either port) releases the lock, while such upgrades
-are not allowed on Windows.
+output port on Unix and Mac OS, in which case a single port-file-unlock
+(on either port) releases the lock, while such upgrades are not allowed
+on Windows.
 
 Locking is normally supported only for file ports, and attempting to
 acquire a lock with other kinds of file-stream ports raises an
@@ -834,13 +877,13 @@ exn:fail:filesystem exception.
 
                                         *port-file-unlock*
 (port-file-unlock port) -> void? ~
-  port : file-stream-port? ~
+  port : file-stream-port? ~ ~
 
 Releases a lock held by the current process on the file of port.
 
                                         *port-file-identity*
 (port-file-identity port) -> exact-positive-integer? ~
-  port : file-stream-port? ~
+  port : file-stream-port? ~ ~
 
 Returns a number that represents the identity of the device and file
 read or written by port. For two ports whose open times overlap, the
@@ -853,20 +896,15 @@ exception is raised.  On Windows 95, 98, and Me, if port is connected to
 a pipe instead of a file, the exn:fail:filesystem exception is raised.
 
 Examples:
-  (define file1 (open-output-file some-file))
 
-
-  (define file2 (open-output-file some-other-file))
-
-
+  > (define file1 (open-output-file some-file))
+  > (define file2 (open-output-file some-other-file))
   > (port-file-identity file1)
-  4632302337
+  37797378607030872834203
   > (port-file-identity file2)
-  4632703489
+  37797378607030872840167
   > (close-output-port file1)
-
   > (close-output-port file2)
-
 
 6. String Ports
 
@@ -884,7 +922,7 @@ file-position procedure works for string ports in position-setting mode.
 
                                         *string-port?*
 (string-port? p) -> boolean? ~
-  p : port? ~
+  p : port? ~ ~
 
 Returns #t if p is a string port, #f otherwise.
 
@@ -892,8 +930,8 @@ Added in version 6.0.1.6.
 
                                         *open-input-bytes*
 (open-input-bytes bstr [name]) -> (and/c input-port? string-port?) ~
-  bstr : bytes? ~
-  name : any/c = 'string ~
+  bstr : bytes? ~ ~
+  name : any/c = 'string ~ ~
 
 Creates an input string port that reads characters from bstr (see
 [missing]). Modifying bstr afterward does not affect the byte stream
@@ -901,10 +939,9 @@ produced by the port. The optional name argument is used as the name for
 the returned port.
 
 Examples:
+
   > (define sp (open-input-bytes #"(apples 42 day)"))
-
   > (define sexp1 (read sp))
-
   > (first sexp1)
   'apples
   > (rest sexp1)
@@ -917,20 +954,19 @@ Examples:
 
                                         *open-input-string*
 (open-input-string str [name]) -> (and/c input-port? string-port?) ~
-  str : string? ~
-  name : any/c = 'string ~
+  str : string? ~ ~
+  name : any/c = 'string ~ ~
 
 Creates an input string port that reads bytes from the UTF-8 encoding
 (see Encodings and Locales) of str. The optional name argument is used
 as the name for the returned port.
 
 Examples:
-  > (define sp (open-input-string "(λ (x) x)"))
 
+  > (define sp (open-input-string "(λ (x) x)"))
   > (read sp)
   '(λ (x) x)
   > (define names (open-input-string "Günter Harder\nFrédéric Paulin\n"))
-
   > (read-line names)
   "Günter Harder"
   > (read-line names)
@@ -938,29 +974,24 @@ Examples:
 
                                         *open-output-bytes*
 (open-output-bytes [name]) -> (and/c output-port? string-port?) ~
-  name : any/c = 'string ~
+  name : any/c = 'string ~ ~
 
 Creates an output string port that accumulates the output into a byte
 string. The optional name argument is used as the name for the returned
 port.
 
 Examples:
+
   > (define op1 (open-output-bytes))
-
   > (write '((1 2 3) ("Tom" "Dick") ('a 'b 'c)) op1)
-
   > (get-output-bytes op1)
   #"((1 2 3) (\"Tom\" \"Dick\") ((quote a) (quote b) (quote c)))"
   > (define op2 (open-output-bytes))
-
   > (write "Hi " op2)
-
   > (write "there" op2)
-
   > (get-output-bytes op2)
   #"\"Hi \"\"there\""
   > (define op3 (open-output-bytes))
-
   > (write-bytes #"Hi " op3)
   3
   > (write-bytes #"there" op3)
@@ -970,27 +1001,22 @@ Examples:
 
                                         *open-output-string*
 (open-output-string [name]) -> (and/c output-port? string-port?) ~
-  name : any/c = 'string ~
+  name : any/c = 'string ~ ~
 
 The same as open-output-bytes.
 
 Examples:
+
   > (define op1 (open-output-string))
-
   > (write '((1 2 3) ("Tom" "Dick") ('a 'b 'c)) op1)
-
   > (get-output-string op1)
   "((1 2 3) (\"Tom\" \"Dick\") ((quote a) (quote b) (quote c)))"
   > (define op2 (open-output-string))
-
   > (write "Hi " op2)
-
   > (write "there" op2)
-
   > (get-output-string op2)
   "\"Hi \"\"there\""
   > (define op3 (open-output-string))
-
   > (write-string "Hi " op3)
   3
   > (write-string "there" op3)
@@ -1003,10 +1029,10 @@ Examples:
                   [reset?        
                    start-pos     
                    end-pos]) -> bytes?
-  out : (and/c output-port? string-port?) ~
-  reset? : any/c = #f ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = #f ~
+  out : (and/c output-port? string-port?) ~ ~
+  reset? : any/c = #f ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = #f ~ ~
 
 Returns the bytes accumulated in the string port out so far in a freshly
 allocated byte string (including any bytes written after the port’s
@@ -1028,10 +1054,9 @@ get-output-bytes can avoid an allocation. The end-pos argument can be
 #f, which corresponds to not passing a second argument to subbytes.
 
 Examples:
+
   > (define op (open-output-bytes))
-
   > (write '((1 2 3) ("Tom" "Dick") ('a 'b 'c)) op)
-
   > (get-output-bytes op)
   #"((1 2 3) (\"Tom\" \"Dick\") ((quote a) (quote b) (quote c)))"
   > (get-output-bytes op #f 3 16)
@@ -1043,17 +1068,15 @@ Examples:
 
                                         *get-output-string*
 (get-output-string out) -> string? ~
-  out : (and/c output-port? string-port?) ~
+  out : (and/c output-port? string-port?) ~ ~
 
 Returns (bytes->string/utf-8 (get-output-bytes out) #\?).
 
 Examples:
+
   > (define i (open-input-string "hello world"))
-
   > (define o (open-output-string))
-
   > (write (read i) o)
-
   > (get-output-string o)
   "hello"
 
@@ -1069,9 +1092,9 @@ pipes produced by make-pipe.
                                         *make-pipe*
 (make-pipe [limit input-name output-name]) ~
  -> input-port? output-port?
-  limit : exact-positive-integer? = #f ~
-  input-name : any/c = 'pipe ~
-  output-name : any/c = 'pipe ~
+  limit : exact-positive-integer? = #f ~ ~
+  input-name : any/c = 'pipe ~ ~
+  output-name : any/c = 'pipe ~ ~
 
 Returns two port values: the first port is an input port and the second
 is an output port. Data written to the output port is read from the
@@ -1091,7 +1114,7 @@ returned input and output ports, respectively.
 
                                         *pipe-content-length*
 (pipe-content-length pipe-port) -> exact-nonnegative-integer? ~
-  pipe-port : port? ~
+  pipe-port : port? ~ ~
 
 Returns the number of bytes contained in a pipe, where pipe-port is
 either of the pipe’s ports produced by make-pipe. The pipe’s content
@@ -1100,9 +1123,9 @@ read (though possibly peeked).
 
 8. Structures as Ports
 
-prop:input-port : struct-type-property? ~
+prop:input-port : struct-type-property? ~ ~
 
-prop:output-port : struct-type-property? ~
+prop:output-port : struct-type-property? ~ ~
 
 The prop:input-port and prop:output-port structure type properties
 identify structure types whose instances can serve as input and output
@@ -1146,15 +1169,15 @@ action of committing bytes as read or written.
                   count-lines!         
                   init-position        
                   buffer-mode])    -> input-port?
-  name : any/c ~
-  read-in : (or/c ~
+  name : any/c ~ ~
+  read-in : (or/c ~ ~
              (bytes?
               . -> . (or/c exact-nonnegative-integer?
                            eof-object?
                            procedure?
                            evt?))
              input-port?)
-  peek : (or/c ~
+  peek : (or/c ~ ~
           (bytes? exact-nonnegative-integer? (or/c evt? #f)
                   . -> . (or/c exact-nonnegative-integer?
                                eof-object?
@@ -1162,25 +1185,25 @@ action of committing bytes as read or written.
                                evt?
                                #f))
           input-port?)
-  close : (-> any) ~
-  get-progress-evt : (or/c (-> evt?) #f) = #f ~
-  commit : (or/c (exact-positive-integer? evt? evt? . -> . any) ~
+  close : (-> any) ~ ~
+  get-progress-evt : (or/c (-> evt?) #f) = #f ~ ~
+  commit : (or/c (exact-positive-integer? evt? evt? . -> . any) ~ ~
                  #f)
          = #f
-  get-location : (or/c ~
+  get-location : (or/c ~ ~
                   (->
                    (values (or/c exact-positive-integer? #f)
                            (or/c exact-nonnegative-integer? #f)
                            (or/c exact-positive-integer? #f)))
                   #f)
                = #f
-  count-lines! : (-> any) = void ~
-  init-position : (or/c exact-positive-integer? ~
+  count-lines! : (-> any) = void ~ ~
+  init-position : (or/c exact-positive-integer? ~ ~
                         port?
                         #f
                         (-> (or/c exact-positive-integer? #f)))
                 = 1
-  buffer-mode : (or/c (case-> ((or/c 'block 'none) . -> . any) ~
+  buffer-mode : (or/c (case-> ((or/c 'block 'none) . -> . any) ~ ~
                               (-> (or/c 'block 'none #f)))
                       #f)
               = #f
@@ -1203,8 +1226,8 @@ The arguments implement the port as follows:
   * eof;
 
   * a procedure of arity four (representing a “special” result, as
-    discussed further below) and optionally of arity zero, but a
-    procedure result is allowed only when peek is not #f;
+    discussed further below), but a procedure result is allowed only
+    when peek is not #f;
 
   * a pipe input port that supplies bytes to be used as long as the pipe
     has content (see pipe-content-length) or until read-in or peek is
@@ -1449,17 +1472,9 @@ these) returns a procedure, the procedure is used to obtain a  non-byte
 result. (This non-byte result is not intended to  return a character or
 eof; in particular, read-char  raises an exception if it encounters a
 special-result procedure, even  if the procedure produces a byte.) A
-special-result procedure must  accept four arguments, and it can
-optionally accept zero arguments:
-
-* When the special read is triggered by read-syntax or
-  read-syntax/recursive, the procedure is passed four arguments that
-  represent a source location.
-
-* When the special read is triggered by read, read-byte-or-special,
-  read-char-or-special, peek-byte-or-special, or peek-char-or-special,
-  the procedure is passed no arguments if it accepts zero arguments,
-  otherwise it is passed four arguments that are all #f.
+special-result procedure must  accept four arguments that represent a
+source location. The first  argument is #f when the special read is
+triggered by read  or read/recursive.
 
 The special-value procedure can return an arbitrary value, and it  will
 be called zero or one times (not necessarily before further  reads or
@@ -1472,9 +1487,10 @@ peek-char-or-special, read-byte-or-special, or  peek-byte-or-special,
 then the exn:fail:contract exception is raised.
 
 Examples:
+
   ; A port with no input...
-  ; Easy: (open-input-bytes #"") ~
-  ; Hard: ~
+  ; Easy: (open-input-bytes #"") ~ ~
+  ; Hard: ~ ~
   > (define /dev/null-in
       (make-input-port 'null
                        (lambda (s) eof)
@@ -1483,7 +1499,6 @@ Examples:
                        (lambda () never-evt)
                        (lambda (k progress-evt done-evt)
                          (error "no successful peeks!"))))
-
   > (read-char /dev/null-in)
   #<eof>
   > (peek-char /dev/null-in)
@@ -1492,7 +1507,7 @@ Examples:
   #<eof>
   > (peek-byte-or-special /dev/null-in 100)
   #<eof>
-  ; A port that produces a stream of 1s: ~
+  ; A port that produces a stream of 1s: ~ ~
   > (define infinite-ones
       (make-input-port
        'ones
@@ -1500,13 +1515,12 @@ Examples:
          (bytes-set! s 0 (char->integer #\1)) 1)
        #f
        void))
-
   > (read-string 5 infinite-ones)
   "11111"
   ; But we can't peek ahead arbitrarily far, because the
   ; automatic peek must record the skipped bytes, so
   ; we'd run out of memory.
-  ; An infinite stream of 1s with a specific peek procedure: ~
+  ; An infinite stream of 1s with a specific peek procedure: ~ ~
   > (define infinite-ones
       (let ([one! (lambda (s)
                     (bytes-set! s 0 (char->integer #\1)) 1)])
@@ -1515,29 +1529,27 @@ Examples:
          one!
          (lambda (s skip progress-evt) (one! s))
          void)))
-
   > (read-string 5 infinite-ones)
   "11111"
-  ; Now we can peek ahead arbitrarily far: ~
+  ; Now we can peek ahead arbitrarily far: ~ ~
   > (peek-string 5 (expt 2 5000) infinite-ones)
   "11111"
-  ; The port doesn't supply procedures to implement progress events: ~
+  ; The port doesn't supply procedures to implement progress events: ~ ~
   > (port-provides-progress-evts? infinite-ones)
   #f
   > (port-progress-evt infinite-ones)
   port-progress-evt: port does not provide progress evts
-    port: #<input-port:ones> ~
-  ; Non-byte port results: ~
+    port: #<input-port:ones> ~ ~
+  ; Non-byte port results: ~ ~
   > (define infinite-voids
       (make-input-port
        'voids
        (lambda (s) (lambda args 'void))
        (lambda (skip s evt) (lambda args 'void))
        void))
-
   > (read-char infinite-voids)
   read-char: non-character in an unsupported context
-    port: #<input-port:voids> ~
+    port: #<input-port:voids> ~ ~
   > (read-char-or-special infinite-voids)
   'void
   ; This port produces 0, 1, 2, 0, 1, 2, etc., but it is not
@@ -1555,7 +1567,6 @@ Examples:
          (lambda (s skip evt)
            (mod! s skip))
          void)))
-
   > (read-string 5 mod3-cycle/one-thread)
   "01201"
   > (peek-string 5 (expt 2 5000) mod3-cycle/one-thread)
@@ -1596,7 +1607,7 @@ Examples:
                response-evts)
           (map (make-handle-commit commit-reqs response-evts)
                commit-reqs))))
-      ; Read/peek request: fill in the string and commit ~
+      ; Read/peek request: fill in the string and commit ~ ~
       (define ((handle-read commit-reqs response-evts) r)
         (let ([s (car r)]
               [skip (cadr r)]
@@ -1610,7 +1621,7 @@ Examples:
               (mod! s skip)
               (unless peek?
                 (commit! 1)))
-            ; Add an event to respond: ~
+            ; Add an event to respond: ~ ~
             (serve commit-reqs
                    (cons (choice-evt
                           nack
@@ -1618,14 +1629,14 @@ Examples:
                                                   0
                                                   (if fail? #f 1))))
                          response-evts)))))
-      ; Progress request: send a peek evt for the current ~
+      ; Progress request: send a peek evt for the current ~ ~
       ;  progress-sema
       (define ((handle-progress commit-reqs response-evts) r)
         (let ([ch (car r)]
               [nack (cdr r)])
           (unless progress-sema
             (set! progress-sema (make-semaphore (if closed? 1 0))))
-          ; Add an event to respond: ~
+          ; Add an event to respond: ~ ~
           (serve commit-reqs
                  (cons (choice-evt
                         nack
@@ -1633,10 +1644,10 @@ Examples:
                          ch
                          (semaphore-peek-evt progress-sema)))
                        response-evts))))
-      ; Commit request: add the request to the list ~
+      ; Commit request: add the request to the list ~ ~
       (define ((add-commit commit-reqs response-evts) r)
         (serve (cons r commit-reqs) response-evts))
-      ; Commit handling: watch out for progress, in which case ~
+      ; Commit handling: watch out for progress, in which case ~ ~
       ;  the response is a commit failure; otherwise, try
       ;  to sync for a commit. In either event, remove the
       ;  request from the list
@@ -1646,7 +1657,7 @@ Examples:
               [done-evt (caddr r)]
               [ch (cadddr r)]
               [nack (cddddr r)])
-          ; Note: we don't check that k is <= the sum of ~
+          ; Note: we don't check that k is <= the sum of ~ ~
           ;  previous peeks, because the entire stream is actually
           ;  known, but we could send an exception in that case.
           (choice-evt
@@ -1667,14 +1678,14 @@ Examples:
                              (sync nack (channel-put-evt ch #t))
                              (serve (remq r commit-reqs)
                                     response-evts)))))))
-      ; Response handling: as soon as the respondee listens, ~
+      ; Response handling: as soon as the respondee listens, ~ ~
       ;  remove the response
       (define ((make-handle-response commit-reqs response-evts) evt)
         (handle-evt evt
                     (lambda (x)
                       (serve commit-reqs
                              (remq evt response-evts)))))
-      ; Close handling: post the progress sema, if any, and set ~
+      ; Close handling: post the progress sema, if any, and set ~ ~
       ;   the closed? flag
       (define ((handle-close commit-reqs response-evts) r)
         (let ([ch (car r)]
@@ -1686,22 +1697,22 @@ Examples:
                  (cons (choice-evt nack
                                    (channel-put-evt ch (void)))
                        response-evts))))
-      ; Helper for reads and post-peek commits: ~
+      ; Helper for reads and post-peek commits: ~ ~
       (define (commit! k)
         (when progress-sema
           (semaphore-post progress-sema)
           (set! progress-sema #f))
         (set! n (+ n k)))
-      ; Start the server thread: ~
+      ; Start the server thread: ~ ~
       (define server-thread (thread (lambda () (serve null null))))
       ; —————————————-
-      ; Client-side helpers: ~
+      ; Client-side helpers: ~ ~
       (define (req-evt f)
         (nack-guard-evt
          (lambda (nack)
-           ; Be sure that the server thread is running: ~
+           ; Be sure that the server thread is running: ~ ~
            (thread-resume server-thread (current-thread))
-           ; Create a channel to hold the reply: ~
+           ; Create a channel to hold the reply: ~ ~
            (let ([ch (make-channel)])
              (f ch nack)
              ch))))
@@ -1709,7 +1720,7 @@ Examples:
         (req-evt (lambda (ch nack)
                    (channel-put read-req-ch
                                 (list* s skip ch nack evt peek?)))))
-      ; Make the port: ~
+      ; Make the port: ~ ~
       (make-input-port 'mod3-cycle
                        ; Each handler for the port just sends
                        ;  a request to the server
@@ -1733,9 +1744,7 @@ Examples:
                                    commit-req-ch
                                    (list* k progress-evt done-evt ch
                                           nack))))))))
-
   > (define mod3-cycle (make-mod3-cycle))
-
   > (let ([result1 #f]
           [result2 #f])
       (let ([t1 (thread
@@ -1749,9 +1758,7 @@ Examples:
         (string-append result1 "," result2)))
   "12020,01201"
   > (define s (make-bytes 1))
-
   > (define progress-evt (port-progress-evt mod3-cycle))
-
   > (peek-bytes-avail! s 0 progress-evt mod3-cycle)
   1
   > s
@@ -1768,7 +1775,6 @@ Examples:
   #f
   > (close-input-port mod3-cycle)
 
-
                                         *make-output-port*
 (make-output-port  name                       ~
                    evt                       
@@ -1781,9 +1787,9 @@ Examples:
                    count-lines!              
                    init-position             
                    buffer-mode])         -> output-port?
-  name : any/c ~
-  evt : evt? ~
-  write-out : (or/c ~
+  name : any/c ~ ~
+  evt : evt? ~ ~
+  write-out : (or/c ~ ~
                (bytes? exact-nonnegative-integer?
                        exact-nonnegative-integer?
                        boolean?
@@ -1793,37 +1799,37 @@ Examples:
                              #f
                              evt?))
                output-port?)
-  close : (-> any) ~
-  write-out-special : (or/c (any/c boolean? boolean? = #f ~
+  close : (-> any) ~ ~
+  write-out-special : (or/c (any/c boolean? boolean? = #f ~ ~
                                    . -> .
                                    (or/c any/c
                                          #f
                                          evt?))
                             output-port?
                             #f)
-  get-write-evt : (or/c                               = #f ~
+  get-write-evt : (or/c                               = #f ~ ~
                    (bytes? exact-nonnegative-integer?
                            exact-nonnegative-integer?
                            . -> .
                            evt?)
                    #f)
-  get-write-special-evt : (or/c                = #f ~
+  get-write-special-evt : (or/c                = #f ~ ~
                            (any/c . -> . evt?)
                            #f)
-  get-location : (or/c ~
+  get-location : (or/c ~ ~
                   (->
                    (values (or/c exact-positive-integer? #f)
                            (or/c exact-nonnegative-integer? #f)
                            (or/c exact-positive-integer? #f)))
                   #f)
                = #f
-  count-lines! : (-> any) = void ~
-  init-position : (or/c exact-positive-integer? ~
+  count-lines! : (-> any) = void ~ ~
+  init-position : (or/c exact-positive-integer? ~ ~
                         port?
                         #f
                         (-> (or/c exact-positive-integer? #f)))
                 = 1
-  buffer-mode : (or/c (case-> ~
+  buffer-mode : (or/c (case-> ~ ~
                        ((or/c 'block 'line 'none) . -> . any)
                        (-> (or/c 'block 'line 'none #f)))
                       #f)
@@ -1888,7 +1894,7 @@ write-out-special procedures.
   write-out is to pass its first three arguments to the port’s
   get-write-evt. Some port implementors, however, may choose not to
   provide get-write-evt (perhaps because writes cannot be made atomic),
-  or may implement write-proc to enable a fast path for non-blocking
+  or may implement write-out to enable a fast path for non-blocking
   writes or to enable buffering.
 
   From a user’s perspective, the difference between buffered and
@@ -2060,7 +2066,8 @@ write-out-special procedures.
   buffer modes.
 
 Examples:
-  ; A port that writes anything to nowhere: ~
+
+  ; A port that writes anything to nowhere: ~ ~
   > (define /dev/null-out
       (make-output-port
        'null
@@ -2073,9 +2080,7 @@ Examples:
                               (lambda (x)
                                 (- end start))))
        (lambda (special) always-evt)))
-
   > (display "hello" /dev/null-out)
-
   > (write-bytes-avail #"hello" /dev/null-out)
   5
   > (write-special 'hello /dev/null-out)
@@ -2083,9 +2088,8 @@ Examples:
   > (sync (write-bytes-avail-evt #"hello" /dev/null-out))
   5
   ; A port that accumulates bytes as characters in a list,
-  ;  but not in a thread-safe way: ~
+  ;  but not in a thread-safe way: ~ ~
   > (define accum-list null)
-
   > (define accumulator/not-thread-safe
       (make-output-port
        'accum/not-thread-safe
@@ -2097,14 +2101,11 @@ Examples:
                             (bytes->list (subbytes s start end)))))
          (- end start))
        void))
-
   > (display "hello" accumulator/not-thread-safe)
-
   > accum-list
   '(#\h #\e #\l #\l #\o)
-  ; Same as before, but with simple thread-safety: ~
+  ; Same as before, but with simple thread-safety: ~ ~
   > (define accum-list null)
-
   > (define accumulator
       (let* ([lock (make-semaphore 1)]
              [lock-peek-evt (semaphore-peek-evt lock)])
@@ -2121,15 +2122,13 @@ Examples:
                                      (subbytes s start end)))))
                  (semaphore-post lock)
                  (- end start))
-               ; Cheap strategy: block until the list is unlocked, ~
+               ; Cheap strategy: block until the list is unlocked, ~ ~
                ;   then return 0, so we get called again
                (wrap-evt
                 lock-peek
                 (lambda (x) 0))))
          void)))
-
   > (display "hello" accumulator)
-
   > accum-list
   '(#\h #\e #\l #\l #\o)
   ; A port that transforms data before sending it on
@@ -2144,9 +2143,9 @@ Examples:
               (bytes->list (subbytes s start end)))))
       (make-output-port
        'byte-upcase
-       ; This port is ready when the original is ready: ~
+       ; This port is ready when the original is ready: ~ ~
        port
-       ; Writing procedure: ~
+       ; Writing procedure: ~ ~
        (lambda (s start end non-block? breakable?)
          (let ([s (byte-upcase s start end)])
            (if non-block?
@@ -2154,22 +2153,18 @@ Examples:
                (begin
                  (display s port)
                  (bytes-length s)))))
-       ; Close procedure — close original port: ~
+       ; Close procedure — close original port: ~ ~
        (lambda () (close-output-port port))
        #f
-       ; Write event: ~
+       ; Write event: ~ ~
        (and (port-writes-atomic? port)
             (lambda (s start end)
               (write-bytes-avail-evt
                (byte-upcase s start end)
                port)))))
-
   > (define orig-port (open-output-string))
-
   > (define cap-port (make-latin-1-capitalize orig-port))
-
   > (display "Hello" cap-port)
-
   > (get-output-string orig-port)
   "HELLO"
   > (sync (write-bytes-avail-evt #"Bye" cap-port))
@@ -2179,7 +2174,7 @@ Examples:
 
 10. More Port Constructors, Procedures, and Events
 
- (require racket/port) package: base ~
+ (require racket/port) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/port
 and racket libraries, but not racket/base.
@@ -2188,86 +2183,108 @@ and racket libraries, but not racket/base.
 
                                         *port->list*
 (port->list [r in]) -> (listof any/c) ~
-  r : (input-port? . -> . any/c) = read ~
-  in : input-port? = (current-input-port) ~
+  r : (input-port? . -> . any/c) = read ~ ~
+  in : input-port? = (current-input-port) ~ ~
 
 Returns a list whose elements are produced by calling r on in until it
 produces eof.
 
 Examples:
+
   > (define (read-number input-port)
       (define char (read-char input-port))
       (if (eof-object? char)
        char
        (string->number (string char))))
-
   > (port->list read-number (open-input-string "12345"))
   '(1 2 3 4 5)
 
                                         *port->string*
-(port->string [in]) -> string? ~
-  in : input-port? = (current-input-port) ~
+(port->string [in #:close? close?]) -> string? ~ ~ ~
+  in : input-port? = (current-input-port) ~ ~
+  close? : any/c = #f ~ ~
 
-Reads all characters from in and returns them as a string.
+Reads all characters from in and returns them as a string. The input
+port is closed unless close? is #f.
 
 Example:
+
   > (port->string (open-input-string "hello world"))
   "hello world"
 
-                                        *port->bytes*
-(port->bytes [in]) -> bytes? ~
-  in : input-port? = (current-input-port) ~
+Changed in version 6.8.0.2 of package base: Added the #:close? argument.
 
-Reads all bytes from in and returns them as a byte string.
+                                        *port->bytes*
+(port->bytes [in #:close? close?]) -> bytes? ~ ~ ~
+  in : input-port? = (current-input-port) ~ ~
+  close? : any/c = #f ~ ~
+
+Reads all bytes from in and returns them as a byte string. The input
+port is closed unless close? is #f.
 
 Example:
+
   > (port->bytes (open-input-string "hello world"))
   #"hello world"
 
+Changed in version 6.8.0.2 of package base: Added the #:close? argument.
+
                                         *port->lines*
-(port->lines [in #:line-mode line-mode]) -> (listof string?) ~ ~
-  in : input-port? = (current-input-port) ~
-  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~
+(port->lines [in                         ~
+              #:line-mode line-mode      ~ ~
+              #:close? close?])     -> (listof string?) ~ ~
+  in : input-port? = (current-input-port) ~ ~
+  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~ ~
             = 'any
+  close? : any/c = #f ~ ~
 
 Read all characters from in, breaking them into lines. The line-mode
 argument is the same as the second argument to read-line, but the
-default is 'any instead of 'linefeed.
+default is 'any instead of 'linefeed. The input port is closed unless
+close? is #f.
 
 Example:
+
   > (port->lines
      (open-input-string "line 1\nline 2\n  line 3\nline 4"))
   '("line 1" "line 2" "  line 3" "line 4")
 
+Changed in version 6.8.0.2 of package base: Added the #:close? argument.
+
                                         *port->bytes-lines*
-(port->bytes-lines [in                           ~
-                    #:line-mode line-mode]) -> (listof bytes?) ~
-  in : input-port? = (current-input-port) ~
-  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~
+(port->bytes-lines [in                         ~
+                    #:line-mode line-mode      ~ ~
+                    #:close? close?])     -> (listof bytes?) ~ ~
+  in : input-port? = (current-input-port) ~ ~
+  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~ ~
             = 'any
+  close? : any/c = #f ~ ~
 
 Like port->lines, but reading bytes and collecting them into lines like
-read-bytes-line.
+read-bytes-line. The input port is closed unless close? is #f.
 
 Example:
+
   > (port->bytes-lines
      (open-input-string "line 1\nline 2\n  line 3\nline 4"))
   '(#"line 1" #"line 2" #"  line 3" #"line 4")
 
+Changed in version 6.8.0.2 of package base: Added the #:close? argument.
+
                                         *display-lines*
 (display-lines  lst                          ~
                [out                         
-                #:separator separator]) -> void? ~
-  lst : list? ~
-  out : output-port? = (current-output-port) ~
-  separator : any/c = #"\n" ~
+                #:separator separator]) -> void? ~ ~
+  lst : list? ~ ~
+  out : output-port? = (current-output-port) ~ ~
+  separator : any/c = #"\n" ~ ~
 
 Uses display on each element of lst to out, adding separator after each
 element.
 
                                         *call-with-output-string*
 (call-with-output-string proc) -> string? ~
-  proc : (output-port? . -> . any) ~
+  proc : (output-port? . -> . any) ~ ~
 
 Calls proc with an output port that accumulates all output into a
 string, and returns the string.
@@ -2281,7 +2298,7 @@ data.
 
                                         *call-with-output-bytes*
 (call-with-output-bytes proc) -> bytes? ~
-  proc : (output-port? . -> . any) ~
+  proc : (output-port? . -> . any) ~ ~
 
 Like call-with-output-string, but returns the accumulated result in a
 byte string instead of a string. Furthermore, the port’s content is
@@ -2291,7 +2308,7 @@ bytes are returned.
 
                                         *with-output-to-string*
 (with-output-to-string proc) -> string? ~
-  proc : (-> any) ~
+  proc : (-> any) ~ ~
 
 Equivalent to
 
@@ -2301,7 +2318,7 @@ Equivalent to
 
                                         *with-output-to-bytes*
 (with-output-to-bytes proc) -> bytes? ~
-  proc : (-> any) ~
+  proc : (-> any) ~ ~
 
 Equivalent to
 
@@ -2311,22 +2328,22 @@ Equivalent to
 
                                         *call-with-input-string*
 (call-with-input-string str proc) -> any ~
-  str : string? ~
-  proc : (input-port? . -> . any) ~
+  str : string? ~ ~
+  proc : (input-port? . -> . any) ~ ~
 
 Equivalent to (proc (open-input-string str)).
 
                                         *call-with-input-bytes*
 (call-with-input-bytes bstr proc) -> any ~
-  bstr : bytes? ~
-  proc : (input-port? . -> . any) ~
+  bstr : bytes? ~ ~
+  proc : (input-port? . -> . any) ~ ~
 
 Equivalent to (proc (open-input-bytes bstr)).
 
                                         *with-input-from-string*
 (with-input-from-string str proc) -> any ~
-  str : string? ~
-  proc : (-> any) ~
+  str : string? ~ ~
+  proc : (-> any) ~ ~
 
 Equivalent to
 
@@ -2335,8 +2352,8 @@ Equivalent to
 
                                         *with-input-from-bytes*
 (with-input-from-bytes bstr proc) -> any ~
-  bstr : bytes? ~
-  proc : (-> any) ~
+  bstr : bytes? ~ ~
+  proc : (-> any) ~ ~
 
 Equivalent to
 
@@ -2346,9 +2363,12 @@ Equivalent to
 10.2. Creating Ports
 
                                         *input-port-append*
-(input-port-append close-at-eof? in ...) -> input-port? ~
-  close-at-eof? : any/c ~
-  in : input-port? ~
+(input-port-append  close-at-eof?      ~
+                    in ...            
+                   [#:name name]) -> input-port? ~ ~
+  close-at-eof? : any/c ~ ~
+  in : input-port? ~ ~
+  name : any/c = (map object-name in) ~ ~
 
 Takes any number of input ports and returns an input port. Reading from
 the input port draws bytes (and special non-byte values) from the given
@@ -2357,8 +2377,13 @@ when an end-of-file is encountered from the port, or when the result
 input port is closed. Otherwise, data not read from the returned input
 port remains available for reading in its original input port.
 
+The name argument determines the name as reported by object-name for the
+returned input port.
+
 See also merge-input, which interleaves data from multiple input ports
 as it becomes available.
+
+Changed in version 6.90.0.19 of package base: Added the name argument.
 
                                         *make-input-port/read-to-peek*
 (make-input-port/read-to-peek  name               ~
@@ -2371,13 +2396,13 @@ as it becomes available.
                                buffer-mode       
                                buffering?        
                                on-consumed]) -> input-port?
-  name : any/c ~
-  read-in : (bytes? ~
+  name : any/c ~ ~
+  read-in : (bytes? ~ ~
              . -> . (or/c exact-nonnegative-integer?
                           eof-object?
                           procedure?
                           evt?))
-  fast-peek : (or/c #f ~
+  fast-peek : (or/c #f ~ ~
                     (bytes? exact-nonnegative-integer?
                      (bytes? exact-nonnegative-integer?
                       . -> . (or/c exact-nonnegative-integer?
@@ -2390,22 +2415,22 @@ as it becomes available.
                                   procedure?
                                   evt?
                                   #f)))
-  close : (-> any) ~
-  get-location : (or/c                                   = #f ~
+  close : (-> any) ~ ~
+  get-location : (or/c                                   = #f ~ ~
                   (->
                    (values
                     (or/c exact-positive-integer? #f)
                     (or/c exact-nonnegative-integer? #f)
                     (or/c exact-positive-integer? #f)))
                   #f)
-  count-lines! : (-> any) = void ~
-  init-position : exact-positive-integer? = 1 ~
-  buffer-mode : (or/c (case-> ((or/c 'block 'none) . -> . any) ~
+  count-lines! : (-> any) = void ~ ~
+  init-position : exact-positive-integer? = 1 ~ ~
+  buffer-mode : (or/c (case-> ((or/c 'block 'none) . -> . any) ~ ~
                               (-> (or/c 'block 'none #f)))
                       #f)
               = #f
-  buffering? : any/c = #f ~
-  on-consumed : (or/c ((or/c exact-nonnegative-integer? eof-object? ~
+  buffering? : any/c = #f ~ ~
+  on-consumed : (or/c ((or/c exact-nonnegative-integer? eof-object? ~ ~
                              procedure? evt?)
                        . -> . any)
                       #f)
@@ -2444,9 +2469,9 @@ integer or any result from read-in.
 (make-limited-input-port  in                 ~
                           limit             
                          [close-orig?]) -> input-port?
-  in : input-port? ~
-  limit : exact-nonnegative-integer? ~
-  close-orig? : any/c = #t ~
+  in : input-port? ~ ~
+  limit : exact-nonnegative-integer? ~ ~
+  close-orig? : any/c = #t ~ ~
 
 Returns a port whose content is drawn from in, but where an end-of-file
 is reported after limit bytes (and non-byte special values) have been
@@ -2465,9 +2490,9 @@ original port’s stream.
 (make-pipe-with-specials [limit           ~
                           in-name        
                           out-name]) -> input-port? output-port?
-  limit : exact-nonnegative-integer? = #f ~
-  in-name : any/c = 'pipe ~
-  out-name : any/c = 'pipe ~
+  limit : exact-nonnegative-integer? = #f ~ ~
+  in-name : any/c = 'pipe ~ ~
+  out-name : any/c = 'pipe ~ ~
 
 Returns two ports: an input port and an output port. The ports behave
 like those returned by make-pipe, except that the ports support non-byte
@@ -2482,11 +2507,29 @@ is read from the pipe.
 The optional in-name and out-name arguments determine the names of the
 result ports.
 
+                                        *combine-output*
+(combine-output a-out b-out) -> output-port? ~
+  a-out : output-port? ~ ~
+  b-out : output-port? ~ ~
+
+Accepts two output ports and returns a new output port combining the
+original ports. When written to, the combined port first writes as many
+bytes as possible to a-out, and then tries to write the same number of
+bytes to b-out. If that doesn’t succeed, what is left over is buffered
+and no further writes can go through until the ports are evened out. The
+port is ready (for the purposes of synchronization) when each port
+reports being ready. However, the first port may stop being ready while
+waiting on the second port to sync, so it cannot be guaranteed that both
+ports are ready at once. Closing the combined port is done after writing
+all remaining bytes to b-out.
+
+Added in version 7.7.0.10 of package base.
+
                                         *merge-input*
 (merge-input a-in b-in [buffer-limit]) -> input-port? ~
-  a-in : input-port? ~
-  b-in : input-port? ~
-  buffer-limit : (or/c exact-nonnegative-integer? #f) = 4096 ~
+  a-in : input-port? ~ ~
+  b-in : input-port? ~ ~
+  buffer-limit : (or/c exact-nonnegative-integer? #f) = 4096 ~ ~
 
 Accepts two input ports and returns a new input port. The new port
 merges the data from two original ports, so data can be read from the
@@ -2509,8 +2552,8 @@ interleaving them.
 
                                         *open-output-nowhere*
 (open-output-nowhere [name special-ok?]) -> output-port? ~
-  name : any/c = 'nowhere ~
-  special-ok? : any/c = #t ~
+  name : any/c = 'nowhere ~ ~
+  special-ok? : any/c = #t ~ ~
 
 Creates and returns an output port that discards all output sent to it
 (without blocking). The name argument is used as the port’s name. If the
@@ -2521,11 +2564,11 @@ write-special, otherwise it does not.
 (peeking-input-port  in                                   ~
                     [name                                
                      skip                                
-                     #:init-position init-position]) -> input-port ~
-  in : input-port? ~
-  name : any/c = (object-name in) ~
-  skip : exact-nonnegative-integer? = 0 ~
-  init-position : exact-positive-integer? = 1 ~
+                     #:init-position init-position]) -> input-port ~ ~
+  in : input-port? ~ ~
+  name : any/c = (object-name in) ~ ~
+  skip : exact-nonnegative-integer? = 0 ~ ~
+  init-position : exact-positive-integer? = 1 ~ ~
 
 Returns an input port whose content is determined by peeking into in. In
 other words, the resulting port contains an internal skip count, and
@@ -2551,12 +2594,10 @@ For example, when you read from a peeking port, you see the same answers
 as when you read from the original port:
 
 Examples:
+
   > (define an-original-port (open-input-string "123456789"))
-
   > (define a-peeking-port (peeking-input-port an-original-port))
-
   > (file-stream-buffer-mode a-peeking-port 'none)
-
   > (read-string 3 a-peeking-port)
   "123"
   > (read-string 3 an-original-port)
@@ -2570,6 +2611,7 @@ peeking port, we end up skipping over the 456 in the port (but only
 because we disabled buffering above):
 
 Example:
+
   > (read-string 3 a-peeking-port)
   "789"
 
@@ -2589,13 +2631,13 @@ initial buffer mode to that of in.
                       name                  
                       convert-newlines?     
                       enc-error])       -> input-port?
-  in : input-port? ~
-  encoding : string? ~
-  error-bytes : (or/c #f bytes?) = #f ~
-  close? : any/c = #f ~
-  name : any/c = (object-name in) ~
-  convert-newlines? : any/c = #f ~
-  enc-error : (string? input-port? . -> . any) ~
+  in : input-port? ~ ~
+  encoding : string? ~ ~
+  error-bytes : (or/c #f bytes?) = #f ~ ~
+  close? : any/c = #f ~ ~
+  name : any/c = (object-name in) ~ ~
+  convert-newlines? : any/c = #f ~ ~
+  enc-error : (string? input-port? . -> . any) ~ ~
             = (lambda (msg port) (error ...))
 
 Produces an input port that draws bytes from in, but converts the byte
@@ -2626,13 +2668,13 @@ long as those bytes form an incomplete encoding sequence.)
                        name              
                        newline-bytes     
                        enc-error])   -> output-port?
-  out : output-port? ~
-  encoding : string? ~
-  error-bytes : (or/c #f bytes?) = #f ~
-  close? : any/c = #f ~
-  name : any/c = (object-name out) ~
-  newline-bytes : (or/c #f bytes?) = #f ~
-  enc-error : (string? output-port? . -> . any) ~
+  out : output-port? ~ ~
+  encoding : string? ~ ~
+  error-bytes : (or/c #f bytes?) = #f ~ ~
+  close? : any/c = #f ~ ~
+  name : any/c = (object-name out) ~ ~
+  newline-bytes : (or/c #f bytes?) = #f ~ ~
+  enc-error : (string? output-port? . -> . any) ~ ~
             = (lambda (msg port) (error ...))
 
 Produces an output port that directs bytes to out, but converts its byte
@@ -2667,8 +2709,8 @@ current plumber to flush the buffer.
 
                                         *dup-input-port*
 (dup-input-port in [close?]) -> input-port? ~
-  in : input-port? ~
-  close? : any/c = #f ~
+  in : input-port? ~ ~
+  close? : any/c = #f ~ ~
 
 Returns an input port that draws directly from in. Closing the resulting
 port closes in only if close? is #t.
@@ -2679,8 +2721,8 @@ from in.
 
                                         *dup-output-port*
 (dup-output-port out [close?]) -> output-port? ~
-  out : output-port? ~
-  close? : any/c = #f ~
+  out : output-port? ~ ~
+  close? : any/c = #f ~ ~
 
 Returns an output port that propagates data directly to out. Closing the
 resulting port closes out only if close? is #t.
@@ -2695,13 +2737,13 @@ affect writing directly to out.
                       column           
                       position         
                      [close?]          
-                      #:name name) -> input-port? ~
-  in : input-port? ~
-  line : (or/c exact-positive-integer? #f) ~
-  column : (or/c exact-nonnegative-integer? #f) ~
-  position : exact-positive-integer? ~
-  close? : any/c = #t ~
-  name : (object-name out) ~
+                      #:name name) -> input-port? ~ ~
+  in : input-port? ~ ~
+  line : (or/c exact-positive-integer? #f) ~ ~
+  column : (or/c exact-nonnegative-integer? #f) ~ ~
+  position : exact-positive-integer? ~ ~
+  close? : any/c = #t ~ ~
+  name : (object-name out) ~ ~
 
 Produces an input port that is equivalent to in except in how it reports
 location information (and possibly its name). The resulting port’s
@@ -2732,13 +2774,13 @@ default value keeps the same name as in.
                        column           
                        position         
                       [close?]          
-                       #:name name) -> output-port? ~
-  out : output-port? ~
-  line : (or/c exact-positive-integer? #f) ~
-  column : (or/c exact-nonnegative-integer? #f) ~
-  position : exact-positive-integer? ~
-  close? : any/c = #t ~
-  name : (object-name out) ~
+                       #:name name) -> output-port? ~ ~
+  out : output-port? ~ ~
+  line : (or/c exact-positive-integer? #f) ~ ~
+  column : (or/c exact-nonnegative-integer? #f) ~ ~
+  position : exact-positive-integer? ~ ~
+  close? : any/c = #t ~ ~
+  name : (object-name out) ~ ~
 
 Like relocate-input-port, but for output ports.
 
@@ -2748,19 +2790,19 @@ Like relocate-input-port, but for output ports.
                         init-pos          
                        [close?            
                         count-lines!]     
-                        #:name name)  -> input-port? ~
-  in : input-port? ~
-  get-location : (or/c ~
+                        #:name name)  -> input-port? ~ ~
+  in : input-port? ~ ~
+  get-location : (or/c ~ ~
                   (->
                    (values
                     (or/c exact-positive-integer? #f)
                     (or/c exact-nonnegative-integer? #f)
                     (or/c exact-positive-integer? #f)))
                   #f)
-  init-pos : exact-positive-integer? ~
-  close? : any/c = #t ~
-  count-lines! : (-> any) = void ~
-  name : (object-name out) ~
+  init-pos : exact-positive-integer? ~ ~
+  close? : any/c = #t ~ ~
+  count-lines! : (-> any) = void ~ ~
+  name : (object-name out) ~ ~
 
 Like relocate-input-port, except that arbitrary position information can
 be produced (when line counting is enabled) via get-location, which is
@@ -2777,19 +2819,19 @@ for the resulting port. The default is void.
                          init-pos          
                         [close?            
                          count-lines!]     
-                         #:name name)  -> output-port? ~
-  out : output-port? ~
-  get-location : (or/c ~
+                         #:name name)  -> output-port? ~ ~
+  out : output-port? ~ ~
+  get-location : (or/c ~ ~
                   (->
                    (values
                     (or/c exact-positive-integer? #f)
                     (or/c exact-nonnegative-integer? #f)
                     (or/c exact-positive-integer? #f)))
                   #f)
-  init-pos : exact-positive-integer? ~
-  close? : any/c = #t ~
-  count-lines! : (-> any) = void ~
-  name : (object-name out) ~
+  init-pos : exact-positive-integer? ~ ~
+  close? : any/c = #t ~ ~
+  count-lines! : (-> any) = void ~ ~
+  name : (object-name out) ~ ~
 
 Like transplant-input-port, but for output ports.
 
@@ -2798,8 +2840,8 @@ Like transplant-input-port, but for output ports.
                          read-wrap     
                          peek-wrap     
                         [close?])  -> input-port?
-  in : input-port? ~
-  read-wrap : (bytes? (or/c exact-nonnegative-integer? ~
+  in : input-port? ~ ~
+  read-wrap : (bytes? (or/c exact-nonnegative-integer? ~ ~
                             eof-object?
                             procedure?
                             evt?)
@@ -2808,7 +2850,7 @@ Like transplant-input-port, but for output ports.
                             eof-object?
                             procedure?
                             evt?))
-  peek-wrap : (bytes? exact-nonnegative-integer? (or/c evt? #f) ~
+  peek-wrap : (bytes? exact-nonnegative-integer? (or/c evt? #f) ~ ~
                       (or/c exact-nonnegative-integer?
                        eof-object?
                        procedure?
@@ -2819,7 +2861,7 @@ Like transplant-input-port, but for output ports.
                        procedure?
                        evt?
                        #f))
-  close? : any/c = #t ~
+  close? : any/c = #t ~ ~
 
 Creates a port that draws from in, but each result from the port’s read
 and peek procedures (in the sense of make-input-port) is filtered by
@@ -2831,12 +2873,12 @@ If close? is true, then closing the resulting port also closes in.
 
                                         *special-filter-input-port*
 (special-filter-input-port in proc [close?]) -> input-port? ~
-  in : input-port? ~
-  proc : (procedure? bytes? . -> . (or/c exact-nonnegative-integer? ~
+  in : input-port? ~ ~
+  proc : (procedure? bytes? . -> . (or/c exact-nonnegative-integer? ~ ~
                                          eof-object?
                                          procedure?
                                          evt?))
-  close? : any/c = #t ~
+  close? : any/c = #t ~ ~
 
 Produces an input port that is equivalent to in, except that when in
 produces a procedure to access a special value, proc is applied to the
@@ -2854,16 +2896,26 @@ If close? is true, then closing the resulting input port also closes in.
 
                                         *eof-evt*
 (eof-evt in) -> evt? ~
-  in : input-port? ~
+  in : input-port? ~ ~
 
 Returns a synchronizable event that is ready when in produces an eof. If
 in produces a mid-stream eof, the eof is consumed by the event only if
 the event is chosen in a synchronization.
 
+If attempting to read from in raises an exception during a
+synchronization attempt, then the exception may be reported during the
+synchronization attempt, but it will silently discarded if some another
+event in the same synchronization is selected or if some other event
+raises an exception first.
+
+Changed in version 7.5.0.3 of package base: Changed handling of read
+errors so they are propagated to a synchronization attempt, instead of
+treated as unhandled errors in a background thread.
+
                                         *read-bytes-evt*
 (read-bytes-evt k in) -> evt? ~
-  k : exact-nonnegative-integer? ~
-  in : input-port? ~
+  k : exact-nonnegative-integer? ~ ~
+  in : input-port? ~ ~
 
 Returns a synchronizable event that is ready when k bytes can be read
 from in, or when an end-of-file is encountered in in. If k is 0, then
@@ -2884,11 +2936,13 @@ synchronization corresponds to a distinct read request.
 The in must support progress events, and it must not produce a special
 non-byte value during the read attempt.
 
+Exceptions attempting to read from in are handled in the same way as by
+eof-evt.
+
                                         *read-bytes!-evt*
-(read-bytes!-evt bstr in progress-evt) -> evt? ~
-  bstr : (and/c bytes? (not/c immutable?)) ~
-  in : input-port? ~
-  progress-evt : (or/c progress-evt? #f) ~
+(read-bytes!-evt bstr in) -> evt? ~
+  bstr : (and/c bytes? (not/c immutable?)) ~ ~
+  in : input-port? ~ ~
 
 Like read-bytes-evt, except that the read bytes are placed into bstr,
 and the number of bytes to read corresponds to (bytes-length bstr). The
@@ -2904,10 +2958,13 @@ use the same result from read-bytes!-evt as long as there is no
 intervening read on in until one of the synchronization attempts selects
 the event.
 
+Exceptions attempting to read from in are handled in the same way as by
+eof-evt.
+
                                         *read-bytes-avail!-evt*
 (read-bytes-avail!-evt bstr in) -> evt? ~
-  bstr : (and/c bytes? (not/c immutable?)) ~
-  in : input-port? ~
+  bstr : (and/c bytes? (not/c immutable?)) ~ ~
+  in : input-port? ~ ~
 
 Like read-bytes!-evt, except that the event reads only as many bytes as
 are immediately available, after at least one byte or one eof becomes
@@ -2915,23 +2972,24 @@ available.
 
                                         *read-string-evt*
 (read-string-evt k in) -> evt? ~
-  k : exact-nonnegative-integer? ~
-  in : input-port? ~
+  k : exact-nonnegative-integer? ~ ~
+  in : input-port? ~ ~
 
 Like read-bytes-evt, but for character strings instead of byte strings.
 
                                         *read-string!-evt*
 (read-string!-evt str in) -> evt? ~
-  str : (and/c string? (not/c immutable?)) ~
-  in : input-port? ~
+  str : (and/c string? (not/c immutable?)) ~ ~
+  in : input-port? ~ ~
 
 Like read-bytes!-evt, but for a character string instead of a byte
 string.
 
                                         *read-line-evt*
-(read-line-evt in mode) -> evt? ~
-  in : input-port? ~
-  mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~
+(read-line-evt in [mode]) -> evt? ~
+  in : input-port? ~ ~
+  mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~ ~
+       = 'linefeed
 
 Returns a synchronizable event that is ready when a line of characters
 or end-of-file can be read from in. The meaning of mode is the same as
@@ -2942,53 +3000,57 @@ A line is read from the port if and only if the event is chosen in a
 synchronization, and the returned line always represents contiguous
 bytes in the port’s stream.
 
+Exceptions attempting to read from in are handled in the same way as by
+eof-evt.
+
                                         *read-bytes-line-evt*
-(read-bytes-line-evt in mode) -> evt? ~
-  in : input-port? ~
-  mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~
+(read-bytes-line-evt in [mode]) -> evt? ~
+  in : input-port? ~ ~
+  mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~ ~
+       = 'linefeed
 
 Like read-line-evt, but returns a byte string instead of a string.
 
                                         *peek-bytes-evt*
 (peek-bytes-evt k skip progress-evt in) -> evt? ~
-  k : exact-nonnegative-integer? ~
-  skip : exact-nonnegative-integer? ~
-  progress-evt : (or/c progress-evt? #f) ~
-  in : input-port? ~
+  k : exact-nonnegative-integer? ~ ~
+  skip : exact-nonnegative-integer? ~ ~
+  progress-evt : (or/c progress-evt? #f) ~ ~
+  in : input-port? ~ ~
 (peek-bytes!-evt bstr skip progress-evt in) -> evt?
-  bstr : (and/c bytes? (not/c immutable?)) ~
-  skip : exact-nonnegative-integer? ~
-  progress-evt : (or/c progress-evt? #f) ~
-  in : input-port? ~
+  bstr : (and/c bytes? (not/c immutable?)) ~ ~
+  skip : exact-nonnegative-integer? ~ ~
+  progress-evt : (or/c progress-evt? #f) ~ ~
+  in : input-port? ~ ~
 (peek-bytes-avail!-evt bstr             
                        skip             
                        progress-evt     
                        in)          -> evt?
-  bstr : (and/c bytes? (not/c immutable?)) ~
-  skip : exact-nonnegative-integer? ~
-  progress-evt : (or/c progress-evt? #f) ~
-  in : input-port? ~
+  bstr : (and/c bytes? (not/c immutable?)) ~ ~
+  skip : exact-nonnegative-integer? ~ ~
+  progress-evt : (or/c progress-evt? #f) ~ ~
+  in : input-port? ~ ~
 (peek-string-evt k skip progress-evt in) -> evt?
-  k : exact-nonnegative-integer? ~
-  skip : exact-nonnegative-integer? ~
-  progress-evt : (or/c progress-evt? #f) ~
-  in : input-port? ~
+  k : exact-nonnegative-integer? ~ ~
+  skip : exact-nonnegative-integer? ~ ~
+  progress-evt : (or/c progress-evt? #f) ~ ~
+  in : input-port? ~ ~
 (peek-string!-evt str skip progress-evt in) -> evt?
-  str : (and/c string? (not/c immutable?)) ~
-  skip : exact-nonnegative-integer? ~
-  progress-evt : (or/c progress-evt? #f) ~
-  in : input-port? ~
+  str : (and/c string? (not/c immutable?)) ~ ~
+  skip : exact-nonnegative-integer? ~ ~
+  progress-evt : (or/c progress-evt? #f) ~ ~
+  in : input-port? ~ ~
 
-Like the read-...-evt functions, but for peeking. The skip argument
-indicates the number of bytes to skip, and progress-evt indicates an
-event that effectively cancels the peek (so that the event never becomes
-ready). The progress-evt argument can be #f, in which case the event is
-never canceled.
+Like the read-bytes-evt, etc., functions, but for peeking. The skip
+argument indicates the number of bytes to skip, and progress-evt
+indicates an event that effectively cancels the peek (so that the event
+never becomes ready). The progress-evt argument can be #f, in which case
+the event is never canceled.
 
                                         *regexp-match-evt*
 (regexp-match-evt pattern in) -> any ~
-  pattern : (or/c string? bytes? regexp? byte-regexp?) ~
-  in : input-port? ~
+  pattern : (or/c string? bytes? regexp? byte-regexp?) ~ ~
+  in : input-port? ~ ~
 
 Returns a synchronizable event that is ready when pattern matches the
 stream of bytes/characters from in; see also regexp-match. The event’s
@@ -3013,6 +3075,9 @@ synchronization corresponds to a distinct match request.
 The in port must support progress events. If in returns a special
 non-byte value during the match attempt, it is treated like eof.
 
+Exceptions attempting to read from in are handled in the same way as by
+eof-evt.
+
 10.4. Copying Streams
 
                                         *convert-stream*
@@ -3020,10 +3085,10 @@ non-byte value during the match attempt, it is treated like eof.
                 in                
                 to-encoding       
                 out)          -> void?
-  from-encoding : string? ~
-  in : input-port? ~
-  to-encoding : string? ~
-  out : output-port? ~
+  from-encoding : string? ~ ~
+  in : input-port? ~ ~
+  to-encoding : string? ~ ~
+  out : output-port? ~ ~
 
 Reads data from in, converts it using (bytes-open-converter
 from-encoding to-encoding) and writes the converted bytes to out. The
@@ -3035,8 +3100,8 @@ in, then exn:fail exception is raised.
 
                                         *copy-port*
 (copy-port in out ...+) -> void? ~
-  in : input-port? ~
-  out : output-port? ~
+  in : input-port? ~ ~
+  out : output-port? ~ ~
 
 Reads data from in and writes it back out to out, returning when in
 produces eof.  The copy is efficient, and it is without significant
@@ -3048,9 +3113,8 @@ write-special.
 This function is often called from a “background” thread to continuously
 pump data from one stream to another.
 
-If multiple outs are provided, case data from in is written to every
-out. The different outs block output to each other, because each block
-of data read from in is written completely to one out before moving to
-the next out. The outs are written in the provided order, so
-non-blocking ports (e.g., file output ports) should be placed first in
-the argument list.
+If multiple outs are provided, data from in is written to every out. The
+different outs block output to each other, because each block of data
+read from in is written completely to one out before moving to the next
+out. The outs are written in the provided order, so non-blocking ports
+(e.g., file output ports) should be placed first in the argument list.

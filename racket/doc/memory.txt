@@ -22,14 +22,14 @@ through a value in an ephemeron where the value can be replaced by #f
 
                                         *make-weak-box*
 (make-weak-box v) -> weak-box? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns a new weak box that initially contains v.
 
                                         *weak-box-value*
 (weak-box-value weak-box [gced-v]) -> any/c ~
-  weak-box : weak-box? ~
-  gced-v : any/c = #f ~
+  weak-box : weak-box? ~ ~
+  gced-v : any/c = #f ~ ~
 
 Returns the value contained in weak-box. If the garbage collector has
 proven that the previous content value of weak-box was reachable only
@@ -38,7 +38,7 @@ returned.
 
                                         *weak-box?*
 (weak-box? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a weak box, #f otherwise.
 
@@ -79,23 +79,33 @@ More precisely,
 
                                         *make-ephemeron*
 (make-ephemeron key v) -> ephemeron? ~
-  key : any/c ~
-  v : any/c ~
+  key : any/c ~ ~
+  v : any/c ~ ~
 
 Returns a new ephemeron whose key is key and whose value is initially v.
 
                                         *ephemeron-value*
-(ephemeron-value ephemeron [gced-v]) -> any/c ~
-  ephemeron : ephemeron? ~
-  gced-v : any/c = #f ~
+(ephemeron-value ephemeron [gced-v retain-v]) -> any/c ~
+  ephemeron : ephemeron? ~ ~
+  gced-v : any/c = #f ~ ~
+  retain-v : any/c = #f ~ ~
 
 Returns the value contained in ephemeron. If the garbage collector has
 proven that the key for ephemeron is only weakly reachable, then the
 result is gced-v (which defaults to #f).
 
+The retain-v argument is retained as reachable until the ephemeron’s
+value is extracted. It is useful, for example, when ephemeron was
+obtained through a weak, eq?-based mapping from key and ephemeron was
+created with key as the key; in that case, supplying key as retain-v
+ensures that ephemeron retains its value long enough for it to be
+extracted, even if key is otherwise unreachable.
+
+Changed in version 7.1.0.10: Added the retain-v argument.
+
                                         *ephemeron?*
 (ephemeron? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an ephemeron, #f otherwise.
 
@@ -127,7 +137,7 @@ executed.  However, wills for distinct unreachable values are readied at
 the same time, regardless of whether the values are reachable from each
 other.
 
-A will executor’s register is held non-weakly until after the
+A will executor’s registrant is held non-weakly until after the
 corresponding will procedure is executed. Thus, if the content value of
 a weak box (see Weak Boxes) is registered with a will executor, the weak
 box’s content is not changed to #f until all wills have been executed
@@ -144,28 +154,21 @@ is necessary. It simply runs the registered executors as they become
 ready in another thread.
 
 Examples:
-  > (define an-executor (make-will-executor))
 
+  > (define an-executor (make-will-executor))
   > (void
      (thread
       (λ ()
         (let loop ()
           (will-execute an-executor)
           (loop)))))
-
   > (define (executor-proc v) (printf "a-box is now garbage\n"))
-
   > (define a-box-to-track (box #f))
-
   > (will-register an-executor a-box-to-track executor-proc)
-
   > (collect-garbage)
-
   > (set! a-box-to-track #f)
-
   > (collect-garbage)
   a-box is now garbage
-
 
                                         *make-will-executor*
 (make-will-executor) -> will-executor? ~
@@ -174,15 +177,15 @@ Returns a new will executor with no managed values.
 
                                         *will-executor?*
 (will-executor? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a will executor, #f otherwise.
 
                                         *will-register*
 (will-register executor v proc) -> void? ~
-  executor : will-executor? ~
-  v : any/c ~
-  proc : (any/c . -> . any) ~
+  executor : will-executor? ~ ~
+  v : any/c ~ ~
+  proc : (any/c . -> . any) ~ ~
 
 Registers the value v with the will procedure proc in the will executor
 executor. When v is proven unreachable, then the procedure proc is ready
@@ -192,7 +195,7 @@ will procedure is executed.
 
                                         *will-execute*
 (will-execute executor) -> any ~
-  executor : will-executor? ~
+  executor : will-executor? ~ ~
 
 Invokes the will procedure for a single “unreachable” value registered
 with the executor executor. The values returned by the will procedure
@@ -200,36 +203,53 @@ are the result of the will-execute call.  If no will is ready for
 immediate execution, will-execute blocks until one is ready.
 
                                         *will-try-execute*
-(will-try-execute executor) -> any ~
-  executor : any/c ~
+(will-try-execute executor [v]) -> any ~
+  executor : any/c ~ ~
+  v : any/c = #f ~ ~
 
 Like will-execute if a will is ready for immediate execution. Otherwise,
-#f is returned.
+v is returned.
+
+Changed in version 6.90.0.4: Added the v argument.
 
 4. Garbage Collection
 
 Set the PLTDISABLEGC environment variable (to any value) before Racket
-starts to disable garbage collection.
+starts to disable garbage collection. Set the PLT_INCREMENTAL_GC
+environment variable to a value that starts with 1, y, or Y to request
+incremental mode at all times, but calling (collect-garbage
+'incremental) in a program with a periodic task is generally a better
+mechanism for requesting incremental mode. Set the PLT_INCREMENTAL_GC
+environment variable to a value that starts with 0, n, or N to disable
+incremental-mode requests.
 
-In Racket 3m (the main variant of Racket), each garbage collection logs
-a message (see [missing]) at the 'debug level with topic 'GC. The data
-portion of the message is an instance of a gc-info prefab structure type
-with 10 fields as follows, but future versions of Racket may use a
-gc-info prefab structure with additional fields:
+Each garbage collection logs a message (see [missing]) at the 'debug
+level with topic 'GC. In Racket 3m and CS variants of Racket, “major”
+collections are also logged at the 'debug level with the topic
+'GC:major. In Racket 3m and CS variants of Racket, the data portion of
+the message is an instance of a gc-info prefab structure type with 10
+fields as follows, but future versions of Racket may use a gc-info
+prefab structure with additional fields:
 
-  (struct gc-info (major? pre-amount pre-admin-amount code-amount
-                          post-amount post-admin-amount
-                          start-process-time end-process-time
-                          start-time end-time)
-    #:prefab) ~
+  (struct gc-info (mode pre-amount pre-admin-amount code-amount
+                        post-amount post-admin-amount
+                        start-process-time end-process-time
+                        start-time end-time)
+    #:prefab) ~ ~
 
-* The major? field indicates whether the collection was a “major”
-  collection that inspects all memory or a “minor” collection that
-  mostly inspects just recent allocations.
+* The mode field is a symbol 'major, 'minor, or 'incremental; 'major
+  indicates a collection that inspects all memory, 'minor indicates
+  collection that mostly inspects just recent allocations, and
+  'incremental indicates a minor collection that performs extra work
+  toward the next major collection.
+
+  Changed in version 6.3.0.7: Changed first field from a boolean (#t for
+  'major, #f for 'minor) to a mode symbol.
 
 * The pre-amount field reports place-local memory use (i.e., not
   counting the memory use of child places) in bytes at the time that the
-  garbage collection started.
+  garbage collection started. Additional bytes registered via
+  make-phantom-bytes are included.
 
 * The pre-admin-amount is a larger number that includes memory use for
   the garbage collector’s overhead, such as space on memory pages that
@@ -271,42 +291,83 @@ has the format
   >elapsed<   Processor time used to perform garbage collection
   >timestamp< Processor time since startup of garbage collection’s start
 
+Changed in version 6.3.0.7: Added PLT_INCREMENTAL_GC. Changed in version
+7.6.0.9: Added major-collection logging for the topic 'GC:major.
+
                                         *collect-garbage*
-(collect-garbage) -> void? ~
+(collect-garbage [request]) -> void? ~
+  request : (or/c 'major 'minor 'incremental) = 'major ~ ~
 
-Forces an immediate garbage collection (unless garbage collection is
-disabled by setting PLTDISABLEGC). Some effectively unreachable data may
-remain uncollected, because the collector cannot prove that it is
-unreachable.
+Requests an immediate garbage collection or requests a
+garbage-collection mode, depending on request:
 
-The collect-garbage procedure provides some control over the timing of
-collections, but garbage will obviously be collected even if this
-procedure is never called (unless garbage collection is disabled).
+* 'major — Forces a “major” collection, which inspects all memory. Some
+  effectively unreachable data may remain uncollected, because the
+  collector cannot prove that it is unreachable.
+
+  This mode of collect-garbage procedure provides some control over the
+  timing of collections, but garbage will obviously be collected even if
+  this procedure is never called—unless garbage collection is disabled
+  by setting PLTDISABLEGC.
+
+* 'minor — Requests a “minor” collection, which mostly inspects only
+  recent allocations. If minor collection is not supported (e.g., when
+  (system-type 'gc) returns 'cgc) or if the next collection must be a
+  major collection, no collection is performed. More generally, minor
+  collections triggered by (collect-garbage 'minor) do not cause major
+  collections any sooner than they would occur otherwise.
+
+* 'incremental — Does not request an immediate collection, but requests
+  extra effort going forward to avoid major collections, even if it
+  requires more work per minor collection to incrementally perform the
+  work of a major collection. This incremental-mode request expires at
+  the next major collection.
+
+  The intent of incremental mode is to significantly reduce pause times
+  due to major collections, but incremental mode may imply longer
+  minor-collection times and higher memory use. Currently, incremental
+  mode is only meaningful when (system-type 'gc) returns '3m or 'cs; it
+  has no effect in other Racket variants.
+
+  If the PLT_INCREMENTAL_GC environment variable’s value starts with 0,
+  n, or N on start-up, then incremental-mode requests are ignored.
+
+Changed in version 6.3: Added the request argument. Changed in version
+6.3.0.2: Added 'incremental mode. Changed in version 7.7.0.4: Added
+'incremental effect for Racket CS.
 
                                         *current-memory-use*
-(current-memory-use [cust]) -> exact-nonnegative-integer? ~
-  cust : custodian? = #f ~
+(current-memory-use [mode]) -> exact-nonnegative-integer? ~
+  mode : (or/c #f 'cumulative custodian?) = #f ~ ~
 
-Returns an estimate of the number of bytes of memory occupied by
-reachable data from cust.  This estimate is calculated by the last
-garbage collection, and can be 0 if none occurred (or if none occurred
-since the given custodian was created).  The current-memory-use function
-does not perform a collection by itself; doing one before the call will
-generally decrease the result (or increase it from 0 if no collections
-happened yet).
+Returns information about memory use:
 
-If cust is not provided, the estimate is a total reachable from any
-custodians.
+* If mode is #f (the default), the result is an estimate of the number
+  of bytes reachable from any custodian.
 
-When Racket is compiled without support for memory accounting, the
-estimate is the same (i.e., all memory) for any individual custodian;
-see also custodian-memory-accounting-available?.
+* If mode is 'cumulative, returns an estimate of the total number of
+  bytes allocated since start up, including bytes that have since been
+  reclaimed by garbage collection.
+
+* If mode is a custodian, returns an estimate of the number of bytes of
+  memory occupied by reachable data from mode. This estimate is
+  calculated by the last garbage collection, and can be 0 if none
+  occurred (or if none occurred since the given custodian was created).
+  The current-memory-use function does not perform a collection by
+  itself; doing one before the call will generally decrease the result
+  (or increase it from 0 if no collections happened yet).
+
+  When Racket is compiled without support for memory accounting, the
+  estimate is the same as when mode is #f (i.e., all memory) for any
+  individual custodian. See also custodian-memory-accounting-available?.
 
 See also vector-set-performance-stats!.
 
+Changed in version 6.6.0.3: Added 'cumulative mode.
+
                                         *dump-memory-stats*
 (dump-memory-stats v ...) -> any ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Dumps information about memory usage to the low-level error port  or
 console.
@@ -332,13 +393,13 @@ main variant of Racket).
 
                                         *phantom-bytes?*
 (phantom-bytes? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a phantom byte string, #f otherwise.
 
                                         *make-phantom-bytes*
 (make-phantom-bytes k) -> phantom-bytes? ~
-  k : exact-nonnegative-integer? ~
+  k : exact-nonnegative-integer? ~ ~
 
 Creates a phantom byte string that is treated by the Racket memory
 manager as being k bytes in size. For a large enough k, the
@@ -348,8 +409,8 @@ custodian-limit-memory.
 
                                         *set-phantom-bytes!*
 (set-phantom-bytes! phantom-bstr k) -> phantom-bytes? ~
-  phantom-bstr : phantom-bytes? ~
-  k : exact-nonnegative-integer? ~
+  phantom-bstr : phantom-bytes? ~ ~
+  k : exact-nonnegative-integer? ~ ~
 
 Adjusts the size of a phantom byte string as it is treated by the Racket
 memory manager.

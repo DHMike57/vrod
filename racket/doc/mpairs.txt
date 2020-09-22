@@ -21,40 +21,40 @@ also in-mlist.
 
                                         *mpair?*
 (mpair? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a mutable pair, #f otherwise.
 
                                         *mcons*
 (mcons a d) -> mpair? ~
-  a : any/c ~
-  d : any/c ~
+  a : any/c ~ ~
+  d : any/c ~ ~
 
 Returns a newly allocated mutable pair whose first element is a and
 second element is d.
 
                                         *mcar*
 (mcar p) -> any/c ~
-  p : mpair? ~
+  p : mpair? ~ ~
 
 Returns the first element of the mutable pair p.
 
                                         *mcdr*
 (mcdr p) -> any/c ~
-  p : mpair? ~
+  p : mpair? ~ ~
 
 Returns the second element of the mutable pair p.
 
                                         *set-mcar!*
 (set-mcar! p v) -> void? ~
-  p : mpair? ~
-  v : any/v ~
+  p : mpair? ~ ~
+  v : any/c ~ ~
 
 Changes the mutable pair p so that its first element is v.
 
                                         *set-mcdr!*
 (set-mcdr! p v) -> void? ~
-  p : mpair? ~
-  v : any/v ~
+  p : mpair? ~ ~
+  v : any/c ~ ~
 
 Changes the mutable pair p so that its second element is v.

@@ -12,27 +12,28 @@ Defining Structure Types: struct
         field = field-id
               | [field-id field-option ...]
                  
-struct-option = #:mutable ~
-              | #:super super-expr ~
-              | #:inspector inspector-expr ~
-              | #:auto-value auto-expr ~
-              | #:guard guard-expr ~
-              | #:property prop-expr val-expr ~
-              | #:transparent ~
-              | #:prefab ~
-              | #:constructor-name constructor-id ~
-              | #:extra-constructor-name constructor-id ~
-              | #:reflection-name symbol-expr ~
-              | #:methods gen:name method-defs ~
-              | #:omit-define-syntaxes ~
-              | #:omit-define-values ~
+struct-option = #:mutable ~ ~
+              | #:super super-expr ~ ~
+              | #:inspector inspector-expr ~ ~
+              | #:auto-value auto-expr ~ ~
+              | #:guard guard-expr ~ ~
+              | #:property prop-expr val-expr ~ ~
+              | #:transparent ~ ~
+              | #:prefab ~ ~
+              | #:authentic ~ ~
+              | #:name name-id ~ ~
+              | #:extra-name name-id ~ ~
+              | #:constructor-name constructor-id ~ ~
+              | #:extra-constructor-name constructor-id ~ ~
+              | #:reflection-name symbol-expr ~ ~
+              | #:methods gen:name-id method-defs ~ ~
+              | #:omit-define-syntaxes ~ ~
+              | #:omit-define-values ~ ~
                  
- field-option = #:mutable ~
-              | #:auto ~
+ field-option = #:mutable ~ ~
+              | #:auto ~ ~
                  
   method-defs = (definition ...)
- 
-  gen:name : identifier? ~
 
 Creates a new structure type (or uses a pre-existing structure type if
 #:prefab is specified), and binds transformers and variables related to
@@ -47,19 +48,20 @@ A struct form with n fields defines up to 4+2n names:
   takes m arguments and returns a new instance of the structure type,
   where m is the number of fields that do not include an #:auto option.
 
-* id, a transformer binding that encapsulates information about the
-  structure type declaration. This binding is used to define subtypes,
-  and it also works with the shared and match forms. For detailed
-  information about the binding of id, see [missing].
+* name-id (which defaults to id), a transformer binding that
+  encapsulates information about the structure type declaration. This
+  binding is used to define subtypes, and it also works with the shared
+  and match forms. For detailed information about the binding of
+  name-id, see [missing].
 
-  The constructor-id and id can be the same, in which case id performs
-  both roles. In that case, the expansion of id as an expression
-  produces an otherwise inaccessible identifier that is bound to the
-  constructor procedure; the expanded identifier has a 'constructor-for
-  property whose value is an identifier that is free-identifier=? to id
-  as well as a syntax property accessible via
-  syntax-procedure-alias-property with an identifier that is
-  free-identifier=? to id.
+  The constructor-id and name-id can be the same, in which case name-id
+  performs both roles. In that case, the expansion of name-id as an
+  expression produces an otherwise inaccessible identifier that is bound
+  to the constructor procedure; the expanded identifier has a
+  'constructor-for property whose value is an identifier that is
+  free-identifier=? to name-id as well as a syntax property accessible
+  via syntax-procedure-alias-property with an identifier that is
+  free-identifier=? to name-id.
 
 * id?, a predicate procedure that returns #t for instances of the
   structure type (constructed by constructor-id or the constructor for a
@@ -76,19 +78,17 @@ A struct form with n fields defines up to 4+2n names:
   #<void> is returned.
 
 If super-id is provided, it must have a transformer binding of the same
-sort bound to id (see [missing]), and it specifies a supertype for the
-structure type. Alternately, the #:super option can be used to specify
-an expression that must produce a structure type descriptor. See
+sort bound to name-id (see [missing]), and it specifies a supertype for
+the structure type. Alternately, the #:super option can be used to
+specify an expression that must produce a structure type descriptor. See
 [missing] for more information on structure subtypes and supertypes. If
 both super-id and #:super are provided, a syntax error is reported.
 
 Examples:
+
   > (struct document (author title content))
-
   > (struct book document (publisher))
-
-  > (struct paper (journal) #:super struct:document) ~
-
+  > (struct paper (journal) #:super struct:document) ~ ~
 
 If the #:mutable option is specified for an individual field, then the
 field can be mutated in instances of the structure type, and a mutator
@@ -97,12 +97,10 @@ as supplying it for all fields. If #:mutable is specified as both a
 field-option and struct-option, a syntax error is reported.
 
 Examples:
-  > (struct cell ([content #:mutable]) #:transparent) ~
 
+  > (struct cell ([content #:mutable]) #:transparent) ~ ~
   > (define a-cell (cell 0))
-
   > (set-cell-content! a-cell 1)
-
 
 The #:inspector, #:auto-value, and #:guard options specify an inspector,
 value for automatic fields, and guard procedure, respectively. See
@@ -113,17 +111,16 @@ multiple times, attaches a property value to the structure type; see
 is a shorthand for #:inspector #f.
 
 Examples:
-  > (struct point (x y) #:inspector #f) ~
 
+  > (struct point (x y) #:inspector #f) ~ ~
   > (point 3 5)
   (point 3 5)
-  > (struct celcius (temp)
-      #:guard (λ (temp name) ~
+  > (struct celsius (temp)
+      #:guard (λ (temp name) ~ ~
                 (unless (and (real? temp) (>= temp -273.15))
                   (error "not a valid temperature"))
                 temp))
-
-  > (celcius -275)
+  > (celsius -275)
   not a valid temperature
 
 Use the prop:procedure property to implement an applicable structure,
@@ -135,33 +132,52 @@ The #:prefab option obtains a prefab (pre-defined, globally shared)
 structure type, as opposed to creating a new structure type. Such a
 structure type is inherently transparent and cannot have a guard or
 properties, so using #:prefab with #:transparent, #:inspector, #:guard,
-or #:property is a syntax error. If a supertype is specified, it must
-also be a prefab structure type.
+#:property, #:authentic, or #:methods is a syntax error. If a supertype
+is specified, it must also be a prefab structure type.
 
 Examples:
-  > (struct prefab-point (x y) #:prefab) ~
 
+  > (struct prefab-point (x y) #:prefab) ~ ~
   > (prefab-point 1 2)
   '#s(prefab-point 1 2)
   > (prefab-point? #s(prefab-point 1 2))
   #t
 
-If constructor-id is supplied, then the transformer binding of id
+The #:authentic option is a shorthand for #:property prop:authentic #t,
+which prevents instances of the structure type from being impersonated
+(see impersonate-struct), chaperoned (see chaperone-struct), or
+acquiring a non-flat contract (see struct/c). See prop:authentic for
+more information. If a supertype is specified, it must also have the
+prop:authentic property.
+
+If name-id is supplied via #:extra-name and it is not id, then both
+name-id and id are bound to information about the structure type. Only
+one of #:extra-name and #:name can be provided within a struct form, and
+#:extra-name cannot be combined with #:omit-define-syntaxes.
+
+Examples:
+
+  > (struct ghost (color name) #:prefab #:extra-name GHOST) ~ ~
+  > (match (ghost 'red 'blinky)
+      [(GHOST c n) c])
+  'red
+
+If constructor-id is supplied, then the transformer binding of name-id
 records constructor-id as the constructor binding; as a result, for
 example, struct-out includes constructor-id as an export. If
 constructor-id is supplied via #:extra-constructor-name and it is not
 id, applying object-name on the constructor produces the symbolic form
 of id rather than constructor-id. If constructor-id is supplied via
-#:constructor-name and it is not the same as id, then id does not serve
-as a constructor, and object-name on the constructor produces the
-symbolic form of constructor-id. Only one of #:extra-constructor-name
-and #:constructor-name can be provided within a struct form.
+#:constructor-name and it is not the same as name-id, then name-id does
+not serve as a constructor, and object-name on the constructor produces
+the symbolic form of constructor-id. Only one of
+#:extra-constructor-name and #:constructor-name can be provided within a
+struct form.
 
 Examples:
-  > (struct color (r g b) #:constructor-name -color) ~
 
-  > (struct rectangle (w h color) #:extra-constructor-name rect) ~
-
+  > (struct color (r g b) #:constructor-name -color) ~ ~
+  > (struct rectangle (w h color) #:extra-constructor-name rect) ~ ~
   > (rectangle 13 50 (-color 192 157 235))
   #<rectangle>
   > (rect 50 37 (-color 35 183 252))
@@ -174,54 +190,59 @@ first argument of make-struct-type. Structure printing uses the
 reflective name, as do the various procedures that are bound by struct.
 
 Examples:
-  > (struct circle (radius) #:reflection-name '<circle>) ~
 
+  > (struct circle (radius) #:reflection-name '<circle>) ~ ~
   > (circle 15)
-  #<|<circle>|>
+  #<<circle>>
   > (circle-radius "bad")
   <circle>-radius: contract violation
-    expected: <circle>? ~
-    given: "bad" ~
+    expected: <circle>? ~ ~
+    given: "bad" ~ ~
 
-If #:methods gen:name method-defs is provided, then gen:name must be a
-transformer binding for the static information about a generic interface
-produced by define-generics. The method-defs define the methods of the
-gen:name interface. A define/generic form or auxiliary definitions and
-expressions may also appear in method-defs.
+If #:methods gen:name-id method-defs is provided, then gen:name-id must
+be a transformer binding for the static information about a generic
+interface produced by define-generics. The method-defs define the
+methods of the gen:name-id interface. A define/generic form or auxiliary
+definitions and expressions may also appear in method-defs.
 
 Examples:
+
   > (struct constant-stream (val)
-      #:methods gen:stream ~
+      #:methods gen:stream ~ ~
       [(define (stream-empty? stream) #f)
        (define (stream-first stream)
          (constant-stream-val stream))
        (define (stream-rest stream) stream)])
-
   > (stream-ref (constant-stream 'forever) 0)
   'forever
   > (stream-ref (constant-stream 'forever) 50)
   'forever
 
-If the #:omit-define-syntaxes option is supplied, then id is not bound
-as a transformer. If the #:omit-define-values option is supplied, then
-none of the usual variables are bound, but id is bound. If both are
-supplied, then the struct form is equivalent to (begin).
+If the #:omit-define-syntaxes option is supplied, then name-id (and id,
+if #:extra-name is specified) is not bound as a transformer. If the
+#:omit-define-values option is supplied, then none of the usual
+variables are bound, but id is bound. If both are supplied, then the
+struct form is equivalent to (begin).
 
 Examples:
-  > (struct square (side) #:omit-define-syntaxes) ~
 
+  > (struct square (side) #:omit-define-syntaxes) ~ ~
   > (match (square 5)
       ; fails to match because syntax is omitted
       [(struct square x) x])
-  eval:26:0: match: square does not refer to a structure
+  eval:28:0: match: square does not refer to a structure
   definition
-    at: square ~
-    in: (struct square x) ~
-  > (struct ellipse (width height) #:omit-define-values) ~
-
+    at: square ~ ~
+    in: (struct square x) ~ ~
+  > (struct ellipse (width height) #:omit-define-values) ~ ~
   > ellipse-width
   ellipse-width: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
+
+Expressions supplied to #:auto-value are evaluated once and shared
+between every instance of the structure type. In particular, updates to
+a mutable #:auto-value affect all current and future instances.
 
 If #:auto is supplied as a field-option, then the constructor procedure
 for the structure type does not accept an argument corresponding to the
@@ -237,18 +258,21 @@ field-option or struct-option keyword is repeated, other than
 #:property, a syntax error is reported.
 
 Examples:
-  > (struct posn (x y [z #:auto]) ~
-      #:auto-value 0 ~
-      #:transparent) ~
 
+  (struct posn (x y [z #:auto #:mutable]) ~ ~
+    #:auto-value 0 ~ ~
+    #:transparent) ~ ~
+   
   > (posn 1 2)
   (posn 1 2 0)
   > (posn? (posn 1 2))
   #t
   > (posn-y (posn 1 2))
   2
-
-  (struct color-posn posn (hue) #:mutable) ~
+  > (posn-z (posn 1 2))
+  0
+   
+  (struct color-posn posn (hue) #:mutable) ~ ~
   (define cp (color-posn 1 2 "blue"))
    
   > (color-posn-hue cp)
@@ -256,10 +280,10 @@ Examples:
   > cp
   (color-posn 1 2 0 ...)
   > (set-posn-z! cp 3)
-  set-posn-z!: undefined;
-   cannot reference undefined identifier
 
 For serialization, see define-serializable-struct.
+
+Changed in version 6.9.0.4: Added #:authentic.
 
                                         *struct-field-index*
 (struct-field-index field-id) ~
@@ -271,12 +295,11 @@ exact, non-negative integer that corresponds to the position within the
 structure declaration of the field named by field-id.
 
 Examples:
-  > (struct mood-procedure (base rating)
-      #:property prop:procedure (struct-field-index base)) ~
 
+  (struct mood-procedure (base rating)
+    #:property prop:procedure (struct-field-index base)) ~ ~
   (define happy+ (mood-procedure add1 10))
-
-
+   
   > (happy+ 2)
   3
   > (mood-procedure-rating happy+)
@@ -297,11 +320,11 @@ implicitly supplied via #:extra-constructor-name if neither
 This form is provided for backwards compatibility; struct is preferred.
 
 Examples:
-  (define-struct posn (x y [z #:auto]) ~
-     #:auto-value 0 ~
-     #:transparent) ~
 
-
+  (define-struct posn (x y [z #:auto]) ~ ~
+     #:auto-value 0 ~ ~
+     #:transparent) ~ ~
+   
   > (make-posn 1 2)
   (posn 1 2 0)
   > (posn? (make-posn 1 2))
@@ -309,34 +332,70 @@ Examples:
   > (posn-y (make-posn 1 2))
   2
 
+                                        *struct/derived*
+(struct/derived (id . rest-form) ~
+id (field ...) struct-option ...)
+(struct/derived (id . rest-form)
+id super-id (field ...) struct-option ...)
+
+The same as struct, but with an extra (id . rest-form) sub-form that is
+treated as the overall form for syntax-error reporting and otherwise
+ignored.  The only constraint on the sub-form for error reporting is
+that it starts with id. The struct/derived form is intended for use by
+macros that expand to struct.
+
+Examples:
+
+  (define-syntax (fruit-struct stx)
+    (syntax-case stx ()
+     [(ds name . rest)
+      (with-syntax ([orig stx])
+        #'(struct/derived orig name (seeds color) . rest))]))
+   
+  > (fruit-struct apple)
+  > (apple-seeds (apple 12 "red"))
+  12
+  > (fruit-struct apple #:mutable) ~ ~
+  > (set-apple-seeds! (apple 12 "red") 8)
+  ; this next line will cause an error due to a bad keyword
+  > (fruit-struct apple #:bad-option) ~ ~
+  eval:54:0: fruit-struct: unrecognized struct-specification
+  keyword
+    at: #:bad-option ~ ~
+    in: (fruit-struct apple #:bad-option) ~ ~
+
+Added in version 7.5.0.16.
+
                                         *define-struct/derived*
 (define-struct/derived (id . rest-form) ~
   id-maybe-super (field ...) struct-option ...)
 
-The same as define-struct, but with an extra (id . rest-form) sub-form
-that is treated as the overall form for syntax-error reporting and
-otherwise ignored.  The only constraint on the sub-form for error
-reporting is that it starts with id. The define-struct/derived form is
-intended for use by macros that expand to define-struct.
+Like struct/derived, except that the syntax for supplying a super-id is
+different, and a constructor-id that has a make- prefix on id is
+implicitly supplied via #:extra-constructor-name if neither
+#:extra-constructor-name nor #:constructor-name is provided. The
+define-struct/derived form is intended for use by macros that expand to
+define-struct.
 
 Examples:
-  > (define-syntax (define-xy-struct stx)
-      (syntax-case stx ()
-       [(ds name . rest)
-        (with-syntax ([orig stx])
-          #'(define-struct/derived orig name (x y) . rest))]))
 
+  (define-syntax (define-xy-struct stx)
+    (syntax-case stx ()
+     [(ds name . rest)
+      (with-syntax ([orig stx])
+        #'(define-struct/derived orig name (x y) . rest))]))
+   
   > (define-xy-struct posn)
-
   > (posn-x (make-posn 1 2))
   1
-  > (define-xy-struct posn #:mutable) ~
-
+  > (define-xy-struct posn #:mutable) ~ ~
   > (set-posn-x! (make-posn 1 2) 0)
-
   ; this next line will cause an error due to a bad keyword
-  > (define-xy-struct posn #:bad-option) ~
-  eval:51:0: define-xy-struct: unrecognized
+  > (define-xy-struct posn #:bad-option) ~ ~
+  eval:60:0: define-xy-struct: unrecognized
   struct-specification keyword
-    at: #:bad-option ~
-    in: (define-xy-struct posn #:bad-option) ~
+    at: #:bad-option ~ ~
+    in: (define-xy-struct posn #:bad-option) ~ ~
+
+Changed in version 7.5.0.16: Moved main description to struct/derived
+and replaced with differences.

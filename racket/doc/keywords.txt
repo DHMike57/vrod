@@ -1,0 +1,100 @@
+Keywords
+
++[missing] in [missing] introduces keywords.
+
+A keyword is like an interned symbol, but its printed form starts with
+#:, and a keyword cannot be used as an identifier. Furthermore, a
+keyword by itself is not a valid expression, though a keyword can be
+quoted to form an expression that produces the symbol.
+
+Two keywords are eq? if and only if they print the same (i.e., keywords
+are always interned).
+
+Like symbols, keywords are only weakly held by the internal keyword
+table; see [missing] for more information.
+
+See [missing]     for information on reading     keywords and [missing]
+for information on printing keywords.
+
+                                        *keyword?*
+(keyword? v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t if v is a keyword, #f otherwise.
+
+Examples:
+
+  > (keyword? '#:apple) ~ ~
+  #t
+  > (keyword? 'define)
+  #f
+  > (keyword? '#:define) ~ ~
+  #t
+
+                                        *keyword->string*
+(keyword->string keyword) -> string? ~
+  keyword : keyword? ~ ~
+
+Returns a string for the displayed form of keyword, not including the
+leading #:.
+
+See also keyword->immutable-string from racket/keyword.
+
+Example:
+
+  > (keyword->string '#:apple) ~ ~
+  "apple"
+
+                                        *string->keyword*
+(string->keyword str) -> keyword? ~
+  str : string? ~ ~
+
+Returns a keyword whose displayed form is the same as that of str, but
+with a leading #:.
+
+Example:
+
+  > (string->keyword "apple")
+  '#:apple
+
+                                        *keyword<?*
+(keyword<? a-keyword b-keyword ...) -> boolean? ~
+  a-keyword : keyword? ~ ~
+  b-keyword : keyword? ~ ~
+
+Returns #t if the arguments are sorted, where the comparison for each
+pair of keywords is the same as using keyword->string with
+string->bytes/utf-8 and bytes<?.
+
+Example:
+
+  > (keyword<? '#:apple '#:banana) ~ ~
+  #t
+
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
+1. Additional Keyword Functions
+
+ (require racket/keyword) package: base ~ ~
+
+The bindings documented in this section are provided by the
+racket/keyword and racket libraries, but not racket/base.
+
+Added in version 7.6 of package base.
+
+                                        *keyword->immutable-string*
+(keyword->immutable-string sym) -> (and/c string? immutable?) ~
+  sym : keyword? ~ ~
+
+Like keyword->string, but the result is an immutable string, not
+necessarily freshly allocated.
+
+Examples:
+
+  > (keyword->immutable-string '#:apple) ~ ~
+  "apple"
+  > (immutable? (keyword->immutable-string '#:apple)) ~ ~
+  #t
+
+Added in version 7.6 of package base.

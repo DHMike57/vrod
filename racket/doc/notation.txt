@@ -13,11 +13,11 @@ provides.
 For example, the section that describes the functionality provided by
 racket/list starts
 
-   (require racket/list) package: base ~
+   (require racket/list) package: base ~ ~
 
 Instead of require, some modules are introduced with #lang:
 
-   #lang racket/base package: base ~
+   #lang racket/base package: base ~ ~
 
 Using #lang means that the module is normally used as the language of a
 whole module—that is, by a module that starts #lang followed by the
@@ -112,7 +112,7 @@ run time. For example,
   (parameterize ([parameter-expr value-expr] ...)
     body ...+)
    
-    parameter-expr : parameter? ~
+    parameter-expr : parameter? ~ ~
 
 indicates that the result of each parameter-expr must be a value v for
 which (parameter? v) returns true.
@@ -127,7 +127,7 @@ For example, the following is the header of the definition of a typical
 procedure:
 
   (char->integer char) -> exact-integer?
-    char : char? ~
+    char : char? ~ ~
 
 The function being defined, char->integer, is typeset as if it were
 being applied. The metavariables that come after the function name stand
@@ -148,8 +148,8 @@ Contract specifications can be more expressive than just names of
 predicates. Consider the following header for argmax:
 
   (argmax proc lst) -> any
-    proc : (-> any/c real?) ~
-    lst : (and/c pair? list?) ~
+    proc : (-> any/c real?) ~ ~
+    lst : (and/c pair? list?) ~ ~
 
 The contract (-> any/c real?) denotes a function contract specifying
 that proc’s argument can be any single value and the result should be a
@@ -165,7 +165,7 @@ A Racket function may be documented as having one or more optional
 arguments. The read function is an example of such a function:
 
   (read [in]) -> any
-    in : input-port? = (current-input-port) ~
+    in : input-port? = (current-input-port) ~ ~
 
 The brackets surrounding the in argument in the application syntax
 indicates that it is an optional argument.
@@ -180,12 +180,12 @@ optional, keyword-based arguments:
 
   (sort  lst                             
          less-than?                      
-        [#:key extract-key                ~
-         #:cache-keys? cache-keys?]) -> list? ~
-    lst : list? ~
-    less-than? : (any/c any/c . -> . any/c) ~
-    extract-key : (any/c . -> . any/c) = (lambda (x) x) ~
-    cache-keys? : boolean? = #f ~
+        [#:key extract-key                ~ ~
+         #:cache-keys? cache-keys?]) -> list? ~ ~
+    lst : list? ~ ~
+    less-than? : (any/c any/c . -> . any/c) ~ ~
+    extract-key : (any/c . -> . any/c) = (lambda (x) x) ~ ~
+    cache-keys? : boolean? = #f ~ ~
 
 The brackets around the extract-key and cache-keys?  arguments indicate
 that they are optional as before. The contract section of the header
@@ -196,10 +196,10 @@ shows the default values that are provided for these keyword arguments.
 A structure type is also documented using contract notation:
 
   (struct color (red green blue alpha))
-    red : (and/c natural-number/c (<=/c 255)) ~
-    green : (and/c natural-number/c (<=/c 255)) ~
-    blue : (and/c natural-number/c (<=/c 255)) ~
-    alpha : (and/c natural-number/c (<=/c 255)) ~
+    red : (and/c natural-number/c (<=/c 255)) ~ ~
+    green : (and/c natural-number/c (<=/c 255)) ~ ~
+    blue : (and/c natural-number/c (<=/c 255)) ~ ~
+    alpha : (and/c natural-number/c (<=/c 255)) ~ ~
 
 The structure type is typeset as it were declared in the source code of
 a program using the struct form. Each field of the structure is
@@ -215,10 +215,10 @@ Additional keywords may appear after the field names in the
 documentation for a structure type:
 
   (struct data-source (connector args extensions)
-      #:mutable) ~
-    connector : (or/c 'postgresql 'mysql 'sqlite3 'odbc) ~
-    args : list? ~
-    extensions : (listof (list/c symbol? any/c)) ~
+      #:mutable) ~ ~
+    connector : (or/c 'postgresql 'mysql 'sqlite3 'odbc) ~ ~
+    args : list? ~ ~
+    extensions : (listof (list/c symbol? any/c)) ~ ~
 
 Here, the #:mutable keyword indicates that the fields of instances of
 the data-source structure type can be mutated with their respective
@@ -230,7 +230,7 @@ A parameter is documented the same way as a function:
 
   (current-command-line-arguments) -> (vectorof string?)
   (current-command-line-arguments argv) -> void?
-    argv : (vectorof (and/c string? immutable?)) ~
+    argv : (vectorof (and/c string? immutable?)) ~ ~
 
 Since parameters can be referenced or set, there are two entries in the
 header above. Calling current-command-line-arguments with no arguments
@@ -245,7 +245,7 @@ coerces the strings to immutable form, if necessary).
 Some libraries provide bindings to constant values. These values are
 documented with a separate header:
 
-  object% : class? ~
+  object% : class? ~ ~
 
 The racket/class library provides the object% value, which is the root
 of the class hierarchy in Racket. Its documentation header just

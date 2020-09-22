@@ -1,6 +1,6 @@
 Printer Extension
 
-gen:custom-write : any/c ~
+gen:custom-write : any/c ~ ~
 
 A generic interface (see [missing]) that supplies a method, write-proc
 used by the default printer to display, write, or print instances of the
@@ -23,23 +23,27 @@ recursively to a port other than the one given to the custom-write
 procedure, copy the given port’s write handler, display handler, and
 print handler to the other port.
 
-The port given to a custom-write handler is not necessarily the actual
-target port. In particular, to detect cycles and sharing, the printer
-invokes a custom-write procedure with a port that records recursive
-prints, and does not retain any other output.
+The port given to write-proc is not necessarily the actual target port.
+In particular, to detect cycles, sharing, and quoting modes (in the case
+of print), the printer invokes a custom-write procedure with a port that
+records information about recursive prints, and does not retain any
+other output. This information-gathering phase needs the same objects
+(in the eq? sense) to be printed as later, so that the recorded
+information can be correlated with printed values.
 
-Recursive print operations may trigger an escape from the call to the
-custom-write procedure (e.g., for pretty-printing where a tentative
-print attempt overflows the line, or for printing error output of a
-limited width).
+Recursive print operations may trigger an escape from a call to
+write-proc. For example, printing may escape during pretty-printing
+where a tentative print attempt overflows the line, or it may escape
+while printing error output that is constrained to a limited width.
 
-The following example definition of a tuple type includes custom-write
-procedures that print the tuple’s list content using angle brackets in
+The following example definition of a tuple type includes a write-proc
+procedure that prints the tuple’s list content using angle brackets in
 write and print mode and no brackets in display mode. Elements of the
 tuple are printed recursively, so that graph and cycle structure can be
 represented.
 
 Examples:
+
   (define (tuple-print tuple port mode)
     (when mode (write-string "<" port))
     (let ([l (tuple-ref tuple)]
@@ -54,46 +58,62 @@ Examples:
                     (recur e port))
                   (cdr (vector->list l)))))
     (when mode (write-string ">" port)))
-
-
-  > (struct tuple (ref)
-            #:methods gen:custom-write ~
-            [(define write-proc tuple-print)])
-
+   
+  (struct tuple (ref)
+          #:methods gen:custom-write ~ ~
+          [(define write-proc tuple-print)])
+   
   > (display (tuple #(1 2 "a")))
   1, 2, a
-
   > (print (tuple #(1 2 "a")))
   <1, 2, "a">
-
   > (let ([t (tuple (vector 1 2 "a"))])
       (vector-set! (tuple-ref t) 0 t)
       (write t))
   #0=<#0#, 2, "a">
 
+The make-constructor-style-printer function can help in the
+implementation of a write-proc, as in this example:
 
-prop:custom-write : struct-type-property? ~
+Examples:
 
-A deprecated structure type property (see [missing]) that supplies a
-procedure that corresponds to gen:custom-write’s write-proc. Use
-gen:custom-write, instead.
+  (require racket/struct)
+   
+  (struct point (x y)
+    #:methods gen:custom-write ~ ~
+    [(define write-proc
+       (make-constructor-style-printer
+        (lambda (obj) 'point)
+        (lambda (obj) (list (point-x obj) (point-y obj)))))])
+   
+  > (print (point 1 2))
+  (point 1 2)
+  > (write (point 1 2))
+  #<point: 1 2>
+
+prop:custom-write : struct-type-property? ~ ~
+
+A structure type property (see [missing]) that supplies a procedure that
+corresponds to gen:custom-write’s write-proc. Using the
+prop:custom-write property is discouraged; use the gen:custom-write
+generic interface instead.
 
                                         *custom-write?*
 (custom-write? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v has the prop:custom-write property, #f otherwise.
 
                                         *custom-write-accessor*
 (custom-write-accessor v) ~
- -> (custom-write? output-port? boolean? . -> . any)
-  v : custom-write? ~
+ -> (custom-write? output-port? (or/c #t #f 0 1) . -> . any)
+  v : custom-write? ~ ~
 
 Returns the custom-write procedure associated with v.
 
-prop:custom-print-quotable : struct-type-property? ~
-custom-print-quotable? : struct-type-property? ~
-custom-print-quotable-accessor : struct-type-property? ~
+prop:custom-print-quotable : struct-type-property? ~ ~
+custom-print-quotable? : struct-type-property? ~ ~
+custom-print-quotable-accessor : struct-type-property? ~ ~
 
 A property and associated predicate and accessor. The property value is
 one of 'self, 'never, 'maybe, or 'always. When a structure has this

@@ -30,11 +30,12 @@ for information on printing symbols.
 
                                         *symbol?*
 (symbol? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is  a symbol, #f otherwise.
 
 Examples:
+
   > (symbol? 'Apple)
   #t
   > (symbol? 10)
@@ -42,11 +43,12 @@ Examples:
 
                                         *symbol-interned?*
 (symbol-interned? sym) -> boolean? ~
-  sym : symbol? ~
+  sym : symbol? ~ ~
 
 Returns #t if sym is  interned, #f otherwise.
 
 Examples:
+
   > (symbol-interned? 'Apple)
   #t
   > (symbol-interned? (gensym))
@@ -56,11 +58,12 @@ Examples:
 
                                         *symbol-unreadable?*
 (symbol-unreadable? sym) -> boolean? ~
-  sym : symbol? ~
+  sym : symbol? ~ ~
 
 Returns #t if sym is  an unreadable symbol, #f otherwise.
 
 Examples:
+
   > (symbol-unreadable? 'Apple)
   #f
   > (symbol-unreadable? (gensym))
@@ -70,22 +73,26 @@ Examples:
 
                                         *symbol->string*
 (symbol->string sym) -> string? ~
-  sym : symbol? ~
+  sym : symbol? ~ ~
 
 Returns a freshly  allocated mutable string whose characters are the
 same as in  sym.
 
+See also symbol->immutable-string from racket/symbol.
+
 Example:
+
   > (symbol->string 'Apple)
   "Apple"
 
                                         *string->symbol*
 (string->symbol str) -> symbol? ~
-  str : string? ~
+  str : string? ~ ~
 
 Returns an  interned symbol whose characters are the same as in  str.
 
 Examples:
+
   > (string->symbol "Apple")
   'Apple
   > (string->symbol "1")
@@ -93,13 +100,14 @@ Examples:
 
                                         *string->uninterned-symbol*
 (string->uninterned-symbol str) -> symbol? ~
-  str : string? ~
+  str : string? ~ ~
 
 Like  (string->symbol str), but the resulting symbol is a new
 uninterned symbol. Calling string->uninterned-symbol  twice with the
 same str returns two distinct symbols.
 
 Examples:
+
   > (string->uninterned-symbol "Apple")
   'Apple
   > (eq? 'a (string->uninterned-symbol "a"))
@@ -110,7 +118,7 @@ Examples:
 
                                         *string->unreadable-symbol*
 (string->unreadable-symbol str) -> symbol? ~
-  str : string? ~
+  str : string? ~ ~
 
 Like  (string->symbol str), but the resulting symbol is a new
 unreadable symbol. Calling string->unreadable-symbol  twice with
@@ -118,6 +126,7 @@ equivalent strs returns the same symbol, but  read never produces the
 symbol.
 
 Examples:
+
   > (string->unreadable-symbol "Apple")
   'Apple
   > (eq? 'a (string->unreadable-symbol "a"))
@@ -128,20 +137,49 @@ Examples:
 
                                         *gensym*
 (gensym [base]) -> symbol? ~
-  base : (or/c string? symbol?) = "g" ~
+  base : (or/c string? symbol?) = "g" ~ ~
 
 Returns a new uninterned symbol with an automatically-generated name.
 The optional base argument is a prefix symbol or string.
 
 Example:
+
   > (gensym "apple")
-  'apple173
+  'apple51
 
                                         *symbol<?*
 (symbol<? a-sym b-sym ...) -> boolean? ~
-  a-sym : symbol? ~
-  b-sym : symbol? ~
+  a-sym : symbol? ~ ~
+  b-sym : symbol? ~ ~
 
 Returns #t if the arguments are sorted, where the comparison for each
 pair of symbols is the same as using symbol->string with
 string->bytes/utf-8 and bytes<?.
+
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
+1. Additional Symbol Functions
+
+ (require racket/symbol) package: base ~ ~
+
+The bindings documented in this section are provided by the
+racket/symbol and racket libraries, but not racket/base.
+
+Added in version 7.6 of package base.
+
+                                        *symbol->immutable-string*
+(symbol->immutable-string sym) -> (and/c string? immutable?) ~
+  sym : symbol? ~ ~
+
+Like symbol->string, but the result is an immutable string, not
+necessarily freshly allocated.
+
+Examples:
+
+  > (symbol->immutable-string 'Apple)
+  "Apple"
+  > (immutable? (symbol->immutable-string 'Apple))
+  #t
+
+Added in version 7.6 of package base.

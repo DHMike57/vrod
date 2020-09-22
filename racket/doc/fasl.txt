@@ -1,35 +1,87 @@
 Fast-Load Serialization
 
- (require racket/fasl) package: base ~
+ (require racket/fasl) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/fasl
 library, not racket/base or racket.
 
                                         *s-exp->fasl*
-(s-exp->fasl v [out]) -> (or/c (void) bytes?) ~
-  v : any/c ~
-  out : (or/c output-port? #f) = #f ~
-(fasl->s-exp in) -> any/c
-  in : (or/c input-port? bytes?) ~
+(s-exp->fasl  v                                  ~
+             [out                               
+              #:keep-mutable? keep-mutable?      ~ ~
+              #:handle-fail handle-fail          ~ ~
+              #:external-lift? external-lift?])  ~ ~
+ -> (or/c (void) bytes?)
+  v : any/c ~ ~
+  out : (or/c output-port? #f) = #f ~ ~
+  keep-mutable? : any/c = #f ~ ~
+  handle-fail : (or/c #f (any/c . -> . any/c)) = #f ~ ~
+  external-lift? : (or/c #f (any/c . -> . any/c)) = #f ~ ~
+(fasl->s-exp  in                                    
+             [#:datum-intern? datum-intern?          ~ ~
+              #:external-lifts external-lifts]) -> any/c ~ ~
+  in : (or/c input-port? bytes?) ~ ~
+  datum-intern? : any/c = #t ~ ~
+  external-lifts : vector? = '#() ~ ~
 
 The s-exp->fasl function serializes v to a byte string, printing it
-directly to out if out is an output port or return the byte string
+directly to out if out is an output port or returning the byte string
 otherwise. The fasl->s-exp function decodes a value from a byte string
 (supplied either directly or as an input port) that was encoded with
 s-exp->fasl.
 
-The v argument must be a value that could be quoted as a literal,
-because s-exp->fasl essentially uses (compile `',v) to encode the value
-using Racket’s built-in fast-load format for bytecode.
+The v argument must be a value that could be quoted as a literal—that
+is, a value without syntax objects for which (compile `',v) would work
+and be readable after write—or it can include correlated objects mixed
+with those values. The byte string produced by s-exp->fasl does not use
+the same format as compiled code, however.
 
-The byte-string encoding produced by s-exp->fasl is specific to a
-version of Racket. That is, the resulting byte string can be decoded
-back to v only using the same version with which it was encoded.
+If a value within v is not valid as a quoted literal, and if handle-fail
+is not #f, then handle-fail is called on the nested value, and the
+result of handle-fail is written in that value’s place. The handle-fail
+procedure might raise an exception instead of returning a replacement
+value. If handle-fail is #f, then the exn:fail:contract exception is
+raised when an invalid value is encountered.
+
+If external-lift? is not #f, then it receives each value v-sub
+encountered in v by s-exp->fasl. If the result of external-lift? on
+v-sub is true, then v-sub is not encoded in the result, and it instead
+treated as externally lifted. A deserializing fasl->s-exp receives a
+external-lifts vector that has one value for each externally lifted
+value, in the same order as passed to external-lift? on serialization.
+
+Like (compile `',v), s-exp->fasl does not preserve graph structure,
+support cycles, or handle non-prefab structures. Compose s-exp->fasl
+with serialize to preserve graph structure, handle cyclic data, and
+encode serializable structures. The s-exp->fasl and fasl->s-exp
+functions consult current-write-relative-directory and
+current-load-relative-directory, respectively, in the same way as
+bytecode saving and loading to store paths in relative form, and they
+similarly allow and convert constrained srcloc values (see [missing]).
+
+Unless keep-mutable? is provided as true to s-exp->fasl, then mutable
+values in v are replaced by immutable values when the result is decoded
+by fasl->s-exp. Unless datum-intern? is provided as #f, then any
+immutable value produced by fasl->s-exp is filtered by
+datum-intern-literal. The defaults make the composition of s-exp->fasl
+and fasl->s-exp behave like the composition of write and read.
+
+The byte-string encoding produced by s-exp->fasl is independent of the
+Racket version, except as future Racket versions introduce extensions
+that are not currently recognized. In particular, the result of
+s-exp->fasl will be valid as input to any future version of fasl->s-exp.
 
 Examples:
-  > (define fasl (s-exp->fasl (list #("speed") 'racer #\!)))
 
+  > (define fasl (s-exp->fasl (list #("speed") 'racer #\!)))
   > fasl
-  #"#~\0056.1.1T\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\0\0\0\1\0\0\0\0\36\0\0\0\220$\24r\220$\20\0\20\0\25_\20\1\6\5\5speedAracer\a!"
+  #"racket/fasl:\0\24\34\3 \1\23\5speed\16\5racer\r!"
   > (fasl->s-exp fasl)
   '(#("speed") racer #\!)
+
+Changed in version 6.90.0.21 of package base: Made s-exp->fasl format
+version-independent and added the #:keep-mutable? and #:datum-intern?
+arguments. Changed in version 7.3.0.7: Added support for correlated
+objects. Changed in version 7.5.0.3: Added the #:handle-fail argument.
+Changed in version 7.5.0.9: Added the #:external-lift? and
+#:external-lifts arguments.

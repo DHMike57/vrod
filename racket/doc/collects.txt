@@ -141,8 +141,8 @@ information.
                                         *find-library-collection-paths*
 (find-library-collection-paths [pre-extras         ~
                                 post-extras]) -> (listof path?)
-  pre-extras : (listof path-string?) = null ~
-  post-extras : (listof path-string?) = null ~
+  pre-extras : (listof path-string?) = null ~ ~
+  post-extras : (listof path-string?) = null ~ ~
 
 Produces a list of paths, which is normally used to initialize
 current-library-collection-paths, as follows:
@@ -171,9 +171,9 @@ current-library-collection-paths, as follows:
   default collection path list (as constructed by the first three
   bullets above) is used directly.
 
-  Note that on Unix and Mac OS X, paths are separated by :, and on
-  Windows by ;.  Also, path-list-string->path-list splices the default
-  paths at an empty path, for example, with many Unix shells you can set
+  Note that on Unix and Mac OS, paths are separated by :, and on Windows
+  by ;.  Also, path-list-string->path-list splices the default paths at
+  an empty path, for example, with many Unix shells you can set
   PLTCOLLECTS to ":‘pwd‘", "‘pwd‘:", or "‘pwd‘" to specify search the
   current directory after, before, or instead of the default paths,
   respectively.
@@ -203,24 +203,26 @@ current-library-collection-links, as follows:
                                         *collection-file-path*
 (collection-file-path  file                                 ~
                        collection ...+                     
-                      [#:check-compiled? check-compiled?])  ~
+                      [#:check-compiled? check-compiled?])  ~ ~
  -> path?
-  file : path-string? ~
-  collection : path-string? ~
-  check-compiled? : any/c = (regexp-match? #rx"[.]rkt$" file) ~
+  file : path-string? ~ ~
+  collection : path-string? ~ ~
+  check-compiled? : any/c = (regexp-match? #rx"[.]rkt$" file) ~ ~
 (collection-file-path  file                                    
                        collection ...+                         
-                       #:fail fail-proc                         ~
-                      [#:check-compiled? check-compiled?]) -> any ~
-  file : path-string? ~
-  collection : path-string? ~
-  fail-proc : (string? . -> . any) ~
-  check-compiled? : any/c = (regexp-match? #rx"[.]rkt$" file) ~
+                       #:fail fail-proc                         ~ ~
+                      [#:check-compiled? check-compiled?]) -> any ~ ~
+  file : path-string? ~ ~
+  collection : path-string? ~ ~
+  fail-proc : (string? . -> . any) ~ ~
+  check-compiled? : any/c = (regexp-match? #rx"[.]rkt$" file) ~ ~
 
 Returns the path to the file indicated by file in the collection
 specified by the collections, where the second collection (if any) names
 a sub-collection, and so on.  The search uses the values of
 current-library-collection-links and current-library-collection-paths.
+
+See also collection-search in setup/collection-search.
 
 If file is not found, but file ends in ".rkt" and a file with the suffix
 ".ss" exists, then the directory of the ".ss" file is used. If file is
@@ -242,16 +244,27 @@ the result of collection-file-path.  If fail-proc is not provided and
 the collection is not found, then the exn:fail:filesystem exception is
 raised.
 
+Examples:
+
+  > (collection-file-path "main.rkt" "racket" "base")
+  #<path:path/to/collects/racket/base/main.rkt>
+  > (collection-file-path "sandwich.rkt" "bologna")
+  collection-file-path: collection not found
+    collection: "bologna" ~ ~
+    in collection directories: ~ ~
+     /usr/share/racket/collects
+     ... [171 additional linked and package directories]
+
 Changed in version 6.0.1.12: Added the check-compiled? argument.
 
                                         *collection-path*
 (collection-path collection ...+) -> path? ~
-  collection : path-string? ~
+  collection : path-string? ~ ~
 (collection-path collection            
                  ...+                  
-                 #:fail fail-proc) -> any ~
-  collection : path-string? ~
-  fail-proc : (string? . -> . any) ~
+                 #:fail fail-proc) -> any ~ ~
+  collection : path-string? ~ ~
+  fail-proc : (string? . -> . any) ~ ~
 
   NOTE: This function is deprecated; use collection-file-path, instead.
   Collection splicing implies that a given collection can have multiple
@@ -269,7 +282,7 @@ returned.
 (current-library-collection-paths) ~
  -> (listof (and/c path? complete-path?))
 (current-library-collection-paths paths) -> void?
-  paths : (listof (and/c path-string? complete-path?)) ~
+  paths : (listof (and/c path-string? complete-path?)) ~ ~
 
 Parameter that determines a list of complete directory paths for finding
 libraries (as referenced in require, for example) through the default
@@ -284,7 +297,7 @@ information.
                   (hash/c (or/c (and/c symbol? module-path?) #f)
                           (listof (and/c path? complete-path?)))))
 (current-library-collection-links paths) -> void?
-  paths : (listof (or/c #f ~
+  paths : (listof (or/c #f ~ ~
                         (and/c path-string? complete-path?)
                         (hash/c (or/c (and/c symbol? module-path?) #f)
                                 (listof (and/c path-string? complete-path?)))))
@@ -299,7 +312,7 @@ Configuration for more information.
                                         *use-user-specific-search-paths*
 (use-user-specific-search-paths) -> boolean? ~
 (use-user-specific-search-paths on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 Parameter that determines whether user-specific paths, which are in the
 directory produced by (find-system-path 'addon-dir), are included in
@@ -313,7 +326,7 @@ use-user-specific-search-paths is initialized to #f.
                                         *use-collection-link-paths*
 (use-collection-link-paths) -> boolean? ~
 (use-collection-link-paths on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 Parameter that determines whether collection links files are included in
 the result of find-library-collection-links.

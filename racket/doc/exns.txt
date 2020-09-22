@@ -23,9 +23,9 @@ incorrect.
 Racket’s error message convention is to produce error messages with the
 following shape:
 
-  >srcloc<: >name<: >message<; ~
+  >srcloc<: >name<: >message<; ~ ~
    >continued-message< ...
-    >field<: >detail< ~
+    >field<: >detail< ~ ~
     ...
 
 The message starts with an optional source location, >srcloc<, which is
@@ -69,8 +69,8 @@ example, prefer “given” to “given turtle” as a field name, where
 
                                         *raise*
 (raise v [barrier?]) -> any ~
-  v : any/c ~
-  barrier? : any/c = #t ~
+  v : any/c ~ ~
+  barrier? : any/c = #t ~ ~
 
 Raises an exception, where v represents the exception being raised. The
 v argument can be anything; it is passed to the current exception
@@ -87,12 +87,12 @@ parameterize-breaked to disable breaks initially; see [missing] for more
 information on breaks.
 
 Examples:
+
   > (with-handlers ([number? (lambda (n)
                                (+ n 5))])
       (raise 18 #t))
   23
-  > (define-struct (my-exception exn:fail:user) ()) ~
-
+  > (define-struct (my-exception exn:fail:user) ()) ~ ~
   > (with-handlers ([my-exception? (lambda (e)
                                      #f)])
       (+ 5 (raise (make-my-exception
@@ -103,33 +103,33 @@ Examples:
   uncaught exception: failed
 
                                         *error*
-(error sym) -> any ~
-  sym : symbol? ~
-(error msg v ...) -> any
-  msg : string? ~
-  v : any/c ~
-(error src format v ...) -> any
-  src : symbol? ~
-  format : string? ~
-  v : any/c ~
+(error message-sym) -> any ~
+  message-sym : symbol? ~ ~
+(error message-str v ...) -> any
+  message-str : string? ~ ~
+  v : any/c ~ ~
+(error who-sym format-str v ...) -> any
+  who-sym : symbol? ~ ~
+  format-str : string? ~ ~
+  v : any/c ~ ~
 
 Raises the exception exn:fail, which contains an error string. The
 different forms produce the error string in different ways:
 
-* (error sym) creates a message string by concatenating "error: " with
-  the string form of sym. Use this form sparingly.
+* (error message-sym) creates a message string by concatenating "error:
+  " with the string form of message-sym. Use this form sparingly.
 
-* (error msg v ...) creates a message string by concatenating msg with
-  string versions of the vs (as produced by the current error value
-  conversion handler; see error-value->string-handler). A space is
-  inserted before each v. Use this form sparingly, because it does not
-  conform well to Racket’s error message conventions; consider
+* (error message-str v ...) creates a message string by concatenating
+  message-str with string versions of the vs (as produced by the current
+  error value conversion handler; see error-value->string-handler). A
+  space is inserted before each v. Use this form sparingly, because it
+  does not conform well to Racket’s error message conventions; consider
   raise-arguments-error, instead.
 
-* (error src frmat v ...) creates a message string equivalent to the
-  string created by
+* (error who-sym format-str v ...) creates a message string equivalent
+  to the string created by
 
-    (format (string-append "~s: " frmat) src v ...) ~
+    (format (string-append "~s: " format-str) who-sym v ...) ~ ~
 
   When possible, use functions such as raise-argument-error, instead,
   which construct messages that follow Racket’s error message
@@ -139,6 +139,7 @@ In all cases, the constructed message string is passed to make-exn:fail,
 and the resulting exception is raised.
 
 Examples:
+
   > (error 'failed)
   error: failed
   > (error "failed" 23 'pizza (list 1 2 3))
@@ -147,15 +148,15 @@ Examples:
   method-a: failed because no argument supplied
 
                                         *raise-user-error*
-(raise-user-error sym) -> any ~
-  sym : symbol? ~
-(raise-user-error msg v ...) -> any
-  msg : string? ~
-  v : any/c ~
-(raise-user-error src format v ...) -> any
-  src : symbol? ~
-  format : string? ~
-  v : any/c ~
+(raise-user-error message-sym) -> any ~
+  message-sym : symbol? ~ ~
+(raise-user-error message-str v ...) -> any
+  message-str : string? ~ ~
+  v : any/c ~ ~
+(raise-user-error who-sym format-str v ...) -> any
+  who-sym : symbol? ~ ~
+  format-str : string? ~ ~
+  v : any/c ~ ~
 
 Like error, but constructs an exception with make-exn:fail:user instead
 of make-exn:fail. The default error display handler does not show a
@@ -165,17 +166,17 @@ users.
 
                                         *raise-argument-error*
 (raise-argument-error name expected v) -> any ~
-  name : symbol? ~
-  expected : string? ~
-  v : any/c ~
+  name : symbol? ~ ~
+  expected : string? ~ ~
+  v : any/c ~ ~
 (raise-argument-error name         
                       expected     
                       bad-pos      
                       v ...)   -> any
-  name : symbol? ~
-  expected : string? ~
-  bad-pos : exact-nonnegative-integer? ~
-  v : any/c ~
+  name : symbol? ~ ~
+  expected : string? ~ ~
+  bad-pos : exact-nonnegative-integer? ~ ~
+  v : any/c ~ ~
 
 Creates an exn:fail:contract value and raises it as an exception.  The
 name argument is used as the source procedure’s name in the error
@@ -193,52 +194,50 @@ lists the other arguments. If bad-pos is not less than the number of vs,
 the exn:fail:contract exception is raised.
 
 Examples:
+
   > (define (feed-machine bits)
       (if (not (integer? bits))
         (raise-argument-error 'feed-machine "integer?" bits)
         "fed the machine"))
-
   > (feed-machine 'turkey)
   feed-machine: contract violation
-    expected: integer? ~
-    given: 'turkey ~
+    expected: integer? ~ ~
+    given: 'turkey ~ ~
   > (define (feed-cow animal)
       (if (not (eq? animal 'cow))
         (raise-argument-error 'feed-cow "'cow" animal)
         "fed the cow"))
-
   > (feed-cow 'turkey)
   feed-cow: contract violation
-    expected: 'cow ~
-    given: 'turkey ~
+    expected: 'cow ~ ~
+    given: 'turkey ~ ~
   > (define (feed-animals cow sheep goose cat)
       (if (not (eq? goose 'goose))
         (raise-argument-error 'feed-animals "'goose" 2 cow sheep goose cat)
         "fed the animals"))
-
   > (feed-animals 'cow 'sheep 'dog 'cat)
   feed-animals: contract violation
-    expected: 'goose ~
-    given: 'dog ~
-    argument position: 3rd ~
-    other arguments...: ~
+    expected: 'goose ~ ~
+    given: 'dog ~ ~
+    argument position: 3rd ~ ~
+    other arguments...: ~ ~
      'cow
      'sheep
      'cat
 
                                         *raise-result-error*
 (raise-result-error name expected v) -> any ~
-  name : symbol? ~
-  expected : string? ~
-  v : any/c ~
+  name : symbol? ~ ~
+  expected : string? ~ ~
+  v : any/c ~ ~
 (raise-result-error name         
                     expected     
                     bad-pos      
                     v ...)   -> any
-  name : symbol? ~
-  expected : string? ~
-  bad-pos : exact-nonnegative-integer? ~
-  v : any/c ~
+  name : symbol? ~ ~
+  expected : string? ~ ~
+  bad-pos : exact-nonnegative-integer? ~ ~
+  v : any/c ~ ~
 
 Like raise-argument-error, but the error message describe v as a
 “result” instead of an “argument.”
@@ -249,10 +248,10 @@ Like raise-argument-error, but the error message describe v as a
                        field       
                        v ...       
                        ...)    -> any
-  name : symbol? ~
-  message : string? ~
-  field : string? ~
-  v : any/c ~
+  name : symbol? ~ ~
+  message : string? ~ ~
+  field : string? ~ ~
+  v : any/c ~ ~
 
 Creates an exn:fail:contract value and raises it as an exception.  The
 name is used as the source procedure’s name in the error message. The
@@ -260,17 +259,20 @@ message is the error message; if message contains newline characters,
 each extra line should be suitably indented (with one extra space at the
 start of each line), but it should not end with a newline character.
 Each field must have a corresponding v, and the two are rendered on
-their own line in the error message, with each v formatted using the
-error value conversion handler (see error-value->string-handler).
+their own line in the error message; each v is formatted using the error
+value conversion handler (see error-value->string-handler), unless v is
+a unquoted-printing string, in which case the string content is
+displayed without using the error value conversion handler.
 
 Example:
+
   > (raise-arguments-error 'eat
                            "fish is smaller than its given meal"
                            "fish" 12
                            "meal" 13)
   eat: fish is smaller than its given meal
-    fish: 12 ~
-    meal: 13 ~
+    fish: 12 ~ ~
+    meal: 13 ~ ~
 
                                         *raise-range-error*
 (raise-range-error name                  ~
@@ -281,14 +283,14 @@ Example:
                    lower-bound          
                    upper-bound          
                    alt-lower-bound) -> any
-  name : symbol? ~
-  type-description : string? ~
-  index-prefix : string? ~
-  index : exact-integer? ~
-  in-value : any/c ~
-  lower-bound : exact-integer? ~
-  upper-bound : exact-integer? ~
-  alt-lower-bound : (or/c #f exact-integer?) ~
+  name : symbol? ~ ~
+  type-description : string? ~ ~
+  index-prefix : string? ~ ~
+  index : exact-integer? ~ ~
+  in-value : any/c ~ ~
+  lower-bound : exact-integer? ~ ~
+  upper-bound : exact-integer? ~ ~
+  alt-lower-bound : (or/c #f exact-integer?) ~ ~
 
 Creates an exn:fail:contract value and raises it as an exception to
 report an out-of-range error. The type-description string describes the
@@ -306,36 +308,37 @@ size of a collection—for example, (sub1 (vector-length vec)), (sub1
 (length lst)), and so on.
 
 Examples:
+
   > (raise-range-error 'vector-ref "vector" "starting " 5 #(1 2 3 4) 0 3)
   vector-ref: starting index is out of range
-    starting index: 5 ~
-    valid range: [0, 3] ~
-    vector: '#(1 2 3 4) ~
+    starting index: 5 ~ ~
+    valid range: [0, 3] ~ ~
+    vector: '#(1 2 3 4) ~ ~
   > (raise-range-error 'vector-ref "vector" "ending " 5 #(1 2 3 4) 0 3)
   vector-ref: ending index is out of range
-    ending index: 5 ~
-    valid range: [0, 3] ~
-    vector: '#(1 2 3 4) ~
+    ending index: 5 ~ ~
+    valid range: [0, 3] ~ ~
+    vector: '#(1 2 3 4) ~ ~
   > (raise-range-error 'vector-ref "vector" "" 3 #() 0 -1)
   vector-ref: index is out of range for empty vector
-    index: 3 ~
+    index: 3 ~ ~
   > (raise-range-error 'vector-ref "vector" "ending " 1 #(1 2 3 4) 2 3 0)
   vector-ref: ending index is smaller than starting index
-    ending index: 1 ~
-    starting index: 2 ~
-    valid range: [0, 3] ~
-    vector: '#(1 2 3 4) ~
+    ending index: 1 ~ ~
+    starting index: 2 ~ ~
+    valid range: [0, 3] ~ ~
+    vector: '#(1 2 3 4) ~ ~
 
                                         *raise-type-error*
 (raise-type-error name expected v) -> any ~
-  name : symbol? ~
-  expected : string? ~
-  v : any/c ~
+  name : symbol? ~ ~
+  expected : string? ~ ~
+  v : any/c ~ ~
 (raise-type-error name expected bad-pos v ...) -> any
-  name : symbol? ~
-  expected : string? ~
-  bad-pos : exact-nonnegative-integer? ~
-  v : any/c ~
+  name : symbol? ~ ~
+  expected : string? ~ ~
+  bad-pos : exact-nonnegative-integer? ~ ~
+  v : any/c ~ ~
 
 Like raise-argument-error, but with Racket’s old formatting conventions,
 and where expected is used as a “type” description instead of a contract
@@ -346,9 +349,9 @@ expression. Use raise-argument-error or raise-result-error, instead.
                       message     
                       v ...+      
                       ...+)   -> any
-  name : symbol? ~
-  message : string? ~
-  v : any/c ~
+  name : symbol? ~ ~
+  message : string? ~ ~
+  v : any/c ~ ~
 
 Similar to raise-arguments-error, but using Racket’s old formatting
 conventions, with a required v immediately after the first message
@@ -358,13 +361,13 @@ instead.
 
                                         *raise-arity-error*
 (raise-arity-error name arity-v arg-v ...) -> any ~
-  name : (or/c symbol? procedure?) ~
-  arity-v : (or/c exact-nonnegative-integer? ~
+  name : (or/c symbol? procedure?) ~ ~
+  arity-v : (or/c exact-nonnegative-integer? ~ ~
                   arity-at-least?
                   (listof
                    (or/c exact-nonnegative-integer?
                          arity-at-least?)))
-  arg-v : any/c ~
+  arg-v : any/c ~ ~
 
 Creates an exn:fail:contract:arity value and raises it as an exception.
 The name is used for the source procedure’s name in the error message.
@@ -380,17 +383,74 @@ in the error message (using the error value conversion handler; see
 error-value->string-handler); also, the number of supplied arg-vs is
 explicitly mentioned in the message.
 
+Example:
+
+  > (raise-arity-error 'unite (arity-at-least 13) "Virginia" "Maryland")
+  unite: arity mismatch;
+   the expected number of arguments does not match the given
+  number
+    expected: at least 13 ~ ~
+    given: 2 ~ ~
+    arguments...: ~ ~
+     "Virginia"
+     "Maryland"
+
+                                        *raise-arity-mask-error*
+(raise-arity-mask-error name mask arg-v ...) -> any ~
+  name : (or/c symbol? procedure?) ~ ~
+  mask : exact-integer? ~ ~
+  arg-v : any/c ~ ~
+
+The same as raise-arity-error, but using the arity representation
+described with procedure-arity-mask.
+
+Added in version 7.0.0.11.
+
+                                        *raise-result-arity-error*
+(raise-result-arity-error name               ~
+                          arity-v           
+                          detail-str        
+                          result-v ...) -> any
+  name : (or/c symbol? #f) ~ ~
+  arity-v : exact-nonnegative-integer? ~ ~
+  detail-str : (or/c string? #f) ~ ~
+  result-v : any/c ~ ~
+
+Like raise-arity-error, but reports a “result” mismatch instead of an
+“argument” mismatch. The name argument can be #f to omit an initial
+source for the error. The detail-str argument, if non-#f, should be a
+string that starts with a newline, since it is added near the end of the
+generated error message.
+
+Example:
+
+  > (raise-result-arity-error 'let-values 2 "\n  in: ~ ~
+  example" 'a 2.0 "three")
+  let-values: result arity mismatch;
+   expected number of values not received
+    expected: 2 ~ ~
+    received: 3 ~ ~
+    in: example ~ ~
+    values...: ~ ~
+     'a
+     2.0
+     "three"
+
+Added in version 6.90.0.26.
+
                                         *raise-syntax-error*
-(raise-syntax-error  name                 ~
-                     message             
-                    [expr                
-                     sub-expr            
-                     extra-sources]) -> any
-  name : (or/c symbol? #f) ~
-  message : string? ~
-  expr : any/c = #f ~
-  sub-expr : any/c = #f ~
-  extra-sources : (listof syntax?) = null ~
+(raise-syntax-error  name                  ~
+                     message              
+                    [expr                 
+                     sub-expr             
+                     extra-sources        
+                     message-suffix]) -> any
+  name : (or/c symbol? #f) ~ ~
+  message : string? ~ ~
+  expr : any/c = #f ~ ~
+  sub-expr : any/c = #f ~ ~
+  extra-sources : (listof syntax?) = null ~ ~
+  message-suffix : string? = "" ~ ~
 
 Creates an exn:fail:syntax value and raises it as an exception.  Macros
 use this procedure to report syntax errors.
@@ -431,12 +491,41 @@ a combination of the name, expr, and sub-expr arguments:
 * When name is a symbol, then the symbol is used as the form name in the
   generated error message.
 
+The message-suffix string is appended to the end of the error message.
+If not "", it should normally start with a newline and two spaces to add
+extra fields to the message (see Error Message Conventions).
+
+Changed in version 6.90.0.18: Added the message-suffix optional
+argument.
+
+                                        *unquoted-printing-string?*
+(unquoted-printing-string? v) -> boolean? ~
+  v : any/c ~ ~
+(unquoted-printing-string s) -> unquoted-printing-string?
+  s : string? ~ ~
+(unquoted-printing-string-value ups) -> string?
+  ups : unquoted-printing-string? ~ ~
+
+An unquoted-printing string wraps a string and prints, writes, and
+displays the same way that the string displays. An unquoted-printing
+string is especially useful with raise-arguments-error to serve as a
+field “value” that causes literal text to be printed as the field
+content.
+
+The unquoted-printing-string? procedure returns #t if v is a
+unquoted-printing string, #f otherwise. The unquoted-printing-string
+creates a unquoted-printing string value that encapsulates the string s,
+and unquoted-printing-string-value returns the string within a
+unquoted-printing string.
+
+Added in version 6.10.0.2.
+
 3. Handling Exceptions
 
                                         *call-with-exception-handler*
 (call-with-exception-handler f thunk) -> any ~
-  f : (any/c . -> . any) ~
-  thunk : (-> any) ~
+  f : (any/c . -> . any) ~ ~
+  thunk : (-> any) ~ ~
 
 Installs f as the exception handler for the dynamic extent of the call
 to thunk. If an exception is raised during the evaluation of thunk (in
@@ -467,7 +556,7 @@ escape handler.
                                         *uncaught-exception-handler*
 (uncaught-exception-handler) -> (any/c . -> . any) ~
 (uncaught-exception-handler f) -> void?
-  f : (any/c . -> . any) ~
+  f : (any/c . -> . any) ~ ~
 
 A parameter that determines an uncaught-exception handler used by raise
 when the relevant continuation has no exception handler installed with
@@ -535,18 +624,17 @@ message, consider logging it via log-error or a logging form created by
 define-logger.
 
 Examples:
-  > (with-handlers ([exn:fail:syntax? ~
+
+  > (with-handlers ([exn:fail:syntax? ~ ~
                      (λ (e) (displayln "got a syntax error"))])
       (raise-syntax-error #f "a syntax error"))
   got a syntax error
-
-  > (with-handlers ([exn:fail:syntax? ~
+  > (with-handlers ([exn:fail:syntax? ~ ~
                      (λ (e) (displayln "got a syntax error"))]
-                    [exn:fail? ~
+                    [exn:fail? ~ ~
                      (λ (e) (displayln "fallback clause"))])
       (raise-syntax-error #f "a syntax error"))
   got a syntax error
-
 
                                         *with-handlers**
 (with-handlers* ([pred-expr handler-expr] ...) ~
@@ -561,7 +649,7 @@ with respect to the with-handlers* form.
                                         *error-escape-handler*
 (error-escape-handler) -> (-> any) ~
 (error-escape-handler proc) -> void?
-  proc : (-> any) ~
+  proc : (-> any) ~ ~
 
 A parameter for the error escape handler, which takes no arguments and
 escapes from the dynamic context of an exception.  The default error
@@ -583,7 +671,7 @@ call-with-escape-continuation).
                                         *error-display-handler*
 (error-display-handler) -> (string? any/c . -> . any) ~
 (error-display-handler proc) -> void?
-  proc : (string? any/c . -> . any) ~
+  proc : (string? any/c . -> . any) ~ ~
 
 A parameter for the error display handler, which is called by the
 default exception handler with an error message and the exception value.
@@ -606,7 +694,7 @@ of calling the error display handler directly.
                                         *error-print-width*
 (error-print-width) -> (and/c exact-integer? (>=/c 3)) ~
 (error-print-width width) -> void?
-  width : (and/c exact-integer? (>=/c 3)) ~
+  width : (and/c exact-integer? (>=/c 3)) ~ ~
 
 A parameter whose value is used as the maximum number of characters used
 to print a Racket value that is embedded in a primitive error message.
@@ -614,7 +702,7 @@ to print a Racket value that is embedded in a primitive error message.
                                         *error-print-context-length*
 (error-print-context-length) -> exact-nonnegative-integer? ~
 (error-print-context-length cnt) -> void?
-  cnt : exact-nonnegative-integer? ~
+  cnt : exact-nonnegative-integer? ~ ~
 
 A parameter whose value is used by the default error display handler as
 the maximum number of lines of context (or “stack trace”) to print; a
@@ -627,7 +715,7 @@ cnt lines. A 0 value for cnt disables context printing entirely.
            . -> .
            string?)
 (error-value->string-handler proc) -> void?
-  proc : (any/c exact-nonnegative-integer? ~
+  proc : (any/c exact-nonnegative-integer? ~ ~
                 . -> .
                 string?)
 
@@ -657,7 +745,7 @@ printing of unreadable values (see print-unreadable).
                                         *error-print-source-location*
 (error-print-source-location) -> boolean? ~
 (error-print-source-location include?) -> void?
-  include? : any/c ~
+  include? : any/c ~ ~
 
 A parameter that controls whether read and syntax error messages include
 source information, such as the source line and column or the
@@ -672,10 +760,10 @@ default is #t.
 
                                         *struct*
 (struct exn (message continuation-marks) ~
-    #:extra-constructor-name make-exn ~
-    #:transparent) ~
-  message : string? ~
-  continuation-marks : continuation-mark-set? ~
+    #:extra-constructor-name make-exn ~ ~
+    #:transparent) ~ ~
+  message : string? ~ ~
+  continuation-marks : continuation-mark-set? ~ ~
 
 The base structure type for exceptions. The message field contains an
 error message, and the continuation-marks field contains the value
@@ -685,93 +773,93 @@ exception was raised.
 Exceptions raised by Racket form a hierarchy under exn:
 
   exn
-    exn:fail ~
-      exn:fail:contract ~
-        exn:fail:contract:arity ~
-        exn:fail:contract:divide-by-zero ~
-        exn:fail:contract:non-fixnum-result ~
-        exn:fail:contract:continuation ~
-        exn:fail:contract:variable ~
-      exn:fail:syntax ~
-        exn:fail:syntax:unbound ~
-        exn:fail:syntax:missing-module ~
-      exn:fail:read ~
-        exn:fail:read:eof ~
-        exn:fail:read:non-char ~
-      exn:fail:filesystem ~
-        exn:fail:filesystem:exists ~
-        exn:fail:filesystem:version ~
-        exn:fail:filesystem:errno ~
-        exn:fail:filesystem:missing-module ~
-      exn:fail:network ~
-        exn:fail:network:errno ~
-      exn:fail:out-of-memory ~
-      exn:fail:unsupported ~
-      exn:fail:user ~
-    exn:break ~
-      exn:break:hang-up ~
-      exn:break:terminate ~
+    exn:fail ~ ~
+      exn:fail:contract ~ ~
+        exn:fail:contract:arity ~ ~
+        exn:fail:contract:divide-by-zero ~ ~
+        exn:fail:contract:non-fixnum-result ~ ~
+        exn:fail:contract:continuation ~ ~
+        exn:fail:contract:variable ~ ~
+      exn:fail:syntax ~ ~
+        exn:fail:syntax:unbound ~ ~
+        exn:fail:syntax:missing-module ~ ~
+      exn:fail:read ~ ~
+        exn:fail:read:eof ~ ~
+        exn:fail:read:non-char ~ ~
+      exn:fail:filesystem ~ ~
+        exn:fail:filesystem:exists ~ ~
+        exn:fail:filesystem:version ~ ~
+        exn:fail:filesystem:errno ~ ~
+        exn:fail:filesystem:missing-module ~ ~
+      exn:fail:network ~ ~
+        exn:fail:network:errno ~ ~
+      exn:fail:out-of-memory ~ ~
+      exn:fail:unsupported ~ ~
+      exn:fail:user ~ ~
+    exn:break ~ ~
+      exn:break:hang-up ~ ~
+      exn:break:terminate ~ ~
 
                                         *struct*
-(struct exn:fail exn () ~ ~
-    #:extra-constructor-name make-exn:fail ~
-    #:transparent) ~
+(struct exn:fail exn () ~ ~ ~
+    #:extra-constructor-name make-exn:fail ~ ~
+    #:transparent) ~ ~
 
 Raised for exceptions that represent errors, as opposed to exn:break.
 
                                         *struct*
-(struct exn:fail:contract exn:fail () ~ ~
-    #:extra-constructor-name make-exn:fail:contract ~
-    #:transparent) ~
+(struct exn:fail:contract exn:fail () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:contract ~ ~
+    #:transparent) ~ ~
 
 Raised for errors from the inappropriate run-time use of a function or
 syntactic form.
 
                                         *struct*
-(struct exn:fail:contract:arity exn:fail:contract () ~ ~
-    #:extra-constructor-name make-exn:fail:contract:arity ~
-    #:transparent) ~
+(struct exn:fail:contract:arity exn:fail:contract () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:contract:arity ~ ~
+    #:transparent) ~ ~
 
 Raised when a procedure is applied to the wrong number of arguments.
 
                                         *struct*
-(struct exn:fail:contract:divide-by-zero exn:fail:contract () ~ ~
-    #:extra-constructor-name ~
-    make-exn:fail:contract:divide-by-zero ~
-    #:transparent) ~
+(struct exn:fail:contract:divide-by-zero exn:fail:contract () ~ ~ ~
+    #:extra-constructor-name ~ ~
+    make-exn:fail:contract:divide-by-zero ~ ~
+    #:transparent) ~ ~
 
 Raised for division by exact zero.
 
                                         *struct*
-(struct exn:fail:contract:non-fixnum-result exn:fail:contract () ~ ~
-    #:extra-constructor-name ~
-    make-exn:fail:contract:non-fixnum-result ~
-    #:transparent) ~
+(struct exn:fail:contract:non-fixnum-result exn:fail:contract () ~ ~ ~
+    #:extra-constructor-name ~ ~
+    make-exn:fail:contract:non-fixnum-result ~ ~
+    #:transparent) ~ ~
 
 Raised by functions like fx+ when the result would not be a fixnum.
 
                                         *struct*
-(struct exn:fail:contract:continuation exn:fail:contract () ~ ~
-    #:extra-constructor-name make-exn:fail:contract:continuation ~
-    #:transparent) ~
+(struct exn:fail:contract:continuation exn:fail:contract () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:contract:continuation ~ ~
+    #:transparent) ~ ~
 
 Raised when a continuation is applied where the jump would cross a
 continuation barrier.
 
                                         *struct*
-(struct exn:fail:contract:variable exn:fail:contract (id) ~ ~
-    #:extra-constructor-name make-exn:fail:contract:variable ~
-    #:transparent) ~
-  id : symbol? ~
+(struct exn:fail:contract:variable exn:fail:contract (id) ~ ~ ~
+    #:extra-constructor-name make-exn:fail:contract:variable ~ ~
+    #:transparent) ~ ~
+  id : symbol? ~ ~
 
 Raised for a reference to a not-yet-defined top-level variable or
 module-level variable.
 
                                         *struct*
-(struct exn:fail:syntax exn:fail (exprs) ~ ~
-    #:extra-constructor-name make-exn:fail:syntax ~
-    #:transparent) ~
-  exprs : (listof syntax?) ~
+(struct exn:fail:syntax exn:fail (exprs) ~ ~ ~
+    #:extra-constructor-name make-exn:fail:syntax ~ ~
+    #:transparent) ~ ~
+  exprs : (listof syntax?) ~ ~
 
 Raised for a syntax error that is not a read error. The exprs indicate
 the relevant source expressions, least-specific to most-specific.
@@ -779,17 +867,17 @@ the relevant source expressions, least-specific to most-specific.
 This structure type implements the prop:exn:srclocs property.
 
                                         *struct*
-(struct exn:fail:syntax:unbound exn:fail:syntax () ~ ~
-    #:extra-constructor-name make-exn:fail:syntax:unbound ~
-    #:transparent) ~
+(struct exn:fail:syntax:unbound exn:fail:syntax () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:syntax:unbound ~ ~
+    #:transparent) ~ ~
 
 Raised by #%top or set! for an unbound identifier within a module.
 
                                         *struct*
-(struct exn:fail:syntax:missing-module exn:fail:syntax (path) ~ ~
-    #:extra-constructor-name make-exn:fail:syntax:missing-module ~
-    #:transparent) ~
-  path : module-path? ~
+(struct exn:fail:syntax:missing-module exn:fail:syntax (path) ~ ~ ~
+    #:extra-constructor-name make-exn:fail:syntax:missing-module ~ ~
+    #:transparent) ~ ~
+  path : module-path? ~ ~
 
 Raised by the default module name resolver or default load handler to
 report a module path—a reported in the path field—whose implementation
@@ -804,58 +892,58 @@ exprs field and the path field are determined by the syntax object.
 This structure type implements the prop:exn:missing-module property.
 
                                         *struct*
-(struct exn:fail:read exn:fail (srclocs) ~ ~
-    #:extra-constructor-name make-exn:fail:read ~
-    #:transparent) ~
-  srclocs : (listof srcloc?) ~
+(struct exn:fail:read exn:fail (srclocs) ~ ~ ~
+    #:extra-constructor-name make-exn:fail:read ~ ~
+    #:transparent) ~ ~
+  srclocs : (listof srcloc?) ~ ~
 
 Raised for a read error. The srclocs indicate the relevant source
 expressions.
 
                                         *struct*
-(struct exn:fail:read:eof exn:fail:read () ~ ~
-    #:extra-constructor-name make-exn:fail:read:eof ~
-    #:transparent) ~
+(struct exn:fail:read:eof exn:fail:read () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:read:eof ~ ~
+    #:transparent) ~ ~
 
 Raised for a read error, specifically when the error is due to an
 unexpected end-of-file.
 
                                         *struct*
-(struct exn:fail:read:non-char exn:fail:read () ~ ~
-    #:extra-constructor-name make-exn:fail:read:non-char ~
-    #:transparent) ~
+(struct exn:fail:read:non-char exn:fail:read () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:read:non-char ~ ~
+    #:transparent) ~ ~
 
 Raised for a read error, specifically when the error is due to an
 unexpected non-character (i.e., “special”) element in the input stream.
 
                                         *struct*
-(struct exn:fail:filesystem exn:fail () ~ ~
-    #:extra-constructor-name make-exn:fail:filesystem ~
-    #:transparent) ~
+(struct exn:fail:filesystem exn:fail () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:filesystem ~ ~
+    #:transparent) ~ ~
 
 Raised for an error related to the filesystem (such as a file not
 found).
 
                                         *struct*
-(struct exn:fail:filesystem:exists exn:fail:filesystem () ~ ~
-    #:extra-constructor-name make-exn:fail:filesystem:exists ~
-    #:transparent) ~
+(struct exn:fail:filesystem:exists exn:fail:filesystem () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:filesystem:exists ~ ~
+    #:transparent) ~ ~
 
 Raised for an error when attempting to create a file that exists
 already.
 
                                         *struct*
-(struct exn:fail:filesystem:version exn:fail:filesystem () ~ ~
-    #:extra-constructor-name make-exn:fail:filesystem:version ~
-    #:transparent) ~
+(struct exn:fail:filesystem:version exn:fail:filesystem () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:filesystem:version ~ ~
+    #:transparent) ~ ~
 
 Raised for a version-mismatch error when loading an extension.
 
                                         *struct*
-(struct exn:fail:filesystem:errno exn:fail:filesystem (errno) ~ ~
-    #:extra-constructor-name make-exn:fail:filesystem:errno ~
-    #:transparent) ~
-  errno : (cons/c exact-integer? (or/c 'posix 'windows 'gai)) ~
+(struct exn:fail:filesystem:errno exn:fail:filesystem (errno) ~ ~ ~
+    #:extra-constructor-name make-exn:fail:filesystem:errno ~ ~
+    #:transparent) ~ ~
+  errno : (cons/c exact-integer? (or/c 'posix 'windows 'gai)) ~ ~
 
 Raised for a filesystem error for which a system error code is
 available. The symbol part of an errno field indicates the category of
@@ -866,12 +954,12 @@ exn:fail:network:errno exceptions for operations that resolve hostnames,
 but is allowed in exn:fail:filesystem:errno instances for consistency).
 
                                         *struct*
-(struct exn:fail:filesystem:missing-module exn:fail:filesystem ~ ~
+(struct exn:fail:filesystem:missing-module exn:fail:filesystem ~ ~ ~
         (path)
-    #:extra-constructor-name ~
-    make-exn:fail:filesystem:missing-module ~
-    #:transparent) ~
-  path : module-path? ~
+    #:extra-constructor-name ~ ~
+    make-exn:fail:filesystem:missing-module ~ ~
+    #:transparent) ~ ~
+  path : module-path? ~ ~
 
 Raised by the default module name resolver or default load handler to
 report a module path—a reported in the path field—whose implementation
@@ -885,51 +973,51 @@ current-module-path-for-load is not a syntax object.
 This structure type implements the prop:exn:missing-module property.
 
                                         *struct*
-(struct exn:fail:network exn:fail () ~ ~
-    #:extra-constructor-name make-exn:fail:network ~
-    #:transparent) ~
+(struct exn:fail:network exn:fail () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:network ~ ~
+    #:transparent) ~ ~
 
 Raised for TCP and UDP errors.
 
                                         *struct*
-(struct exn:fail:network:errno exn:fail:network (errno) ~ ~
-    #:extra-constructor-name make-exn:fail:network:errno ~
-    #:transparent) ~
-  errno : (cons/c exact-integer? (or/c 'posix 'windows 'gai)) ~
+(struct exn:fail:network:errno exn:fail:network (errno) ~ ~ ~
+    #:extra-constructor-name make-exn:fail:network:errno ~ ~
+    #:transparent) ~ ~
+  errno : (cons/c exact-integer? (or/c 'posix 'windows 'gai)) ~ ~
 
 Raised for a TCP or UDP error for which a system error code is
 available, where the errno field is as for exn:fail:filesystem:errno.
 
                                         *struct*
-(struct exn:fail:out-of-memory exn:fail () ~ ~
-    #:extra-constructor-name make-exn:fail:out-of-memory ~
-    #:transparent) ~
+(struct exn:fail:out-of-memory exn:fail () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:out-of-memory ~ ~
+    #:transparent) ~ ~
 
 Raised for an error due to insufficient memory, in cases where
 sufficient memory is at least available for raising the exception.
 
                                         *struct*
-(struct exn:fail:unsupported exn:fail () ~ ~
-    #:extra-constructor-name make-exn:fail:unsupported ~
-    #:transparent) ~
+(struct exn:fail:unsupported exn:fail () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:unsupported ~ ~
+    #:transparent) ~ ~
 
 Raised for an error due to an unsupported feature on the current
 platform or configuration.
 
                                         *struct*
-(struct exn:fail:user exn:fail () ~ ~
-    #:extra-constructor-name make-exn:fail:user ~
-    #:transparent) ~
+(struct exn:fail:user exn:fail () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:user ~ ~
+    #:transparent) ~ ~
 
 Raised for errors that are intended to be seen by end users. In
 particular, the default error printer does not show the program context
 when printing the error message.
 
                                         *struct*
-(struct exn:break exn (continuation) ~ ~
-    #:extra-constructor-name make-exn:break ~
-    #:transparent) ~
-  continuation : continuation? ~
+(struct exn:break exn (continuation) ~ ~ ~
+    #:extra-constructor-name make-exn:break ~ ~
+    #:transparent) ~ ~
+  continuation : continuation? ~ ~
 
 Raised asynchronously (when enabled) in response to a break request. The
 continuation field can be used to resume the interrupted computation in
@@ -938,24 +1026,24 @@ with-handlers because it escapes from the exception context before
 evaluating any predicates or handlers).
 
                                         *struct*
-(struct exn:break:hang-up exn:break () ~ ~
-    #:extra-constructor-name make-exn:break:hang-up ~
-    #:transparent) ~
+(struct exn:break:hang-up exn:break () ~ ~ ~
+    #:extra-constructor-name make-exn:break:hang-up ~ ~
+    #:transparent) ~ ~
 
 Raised asynchronously for hang-up breaks. The default
 uncaught-exception handler reacts to this exception type by  calling the
 exit handler.
 
                                         *struct*
-(struct exn:break:terminate exn:break () ~ ~
-    #:extra-constructor-name make-exn:break:terminate ~
-    #:transparent) ~
+(struct exn:break:terminate exn:break () ~ ~ ~
+    #:extra-constructor-name make-exn:break:terminate ~ ~
+    #:transparent) ~ ~
 
 Raised asynchronously for termination-request breaks. The default
 uncaught-exception handler reacts to this exception type by  calling the
 exit handler.
 
-prop:exn:srclocs : struct-type-property? ~
+prop:exn:srclocs : struct-type-property? ~ ~
 
 A property that identifies structure types that provide a list of srcloc
 values. The property is normally attached to structure types used to
@@ -971,16 +1059,16 @@ As an example,
   #lang racket
    
   ;; We create a structure that supports the
-  ;; prop:exn:srcloc protocol.  It carries ~
+  ;; prop:exn:srcloc protocol.  It carries ~ ~
   ;; with it the location of the syntax that
   ;; is guilty.
-  (define-struct (exn:fail:he-who-shall-not-be-named ~
-                  exn:fail) ~
+  (define-struct (exn:fail:he-who-shall-not-be-named ~ ~
+                  exn:fail) ~ ~
     (a-srcloc)
-    #:property prop:exn:srclocs ~
+    #:property prop:exn:srclocs ~ ~
     (lambda (a-struct)
       (match a-struct
-        [(struct exn:fail:he-who-shall-not-be-named ~
+        [(struct exn:fail:he-who-shall-not-be-named ~ ~
            (msg marks a-srcloc))
          (list a-srcloc)])))
    
@@ -993,7 +1081,7 @@ As an example,
          [(and (identifier? #'expr)
                (eq? (syntax-e #'expr) 'voldemort))
           (quasisyntax/loc stx
-            (raise (make-exn:fail:he-who-shall-not-be-named ~
+            (raise (make-exn:fail:he-who-shall-not-be-named ~ ~
                     "oh dear don't say his name"
                     (current-continuation-marks)
                     (srcloc '#,(syntax-source #'expr)
@@ -1011,7 +1099,7 @@ As an example,
   (define (g voldemort)
     (* (skeeterize voldemort) voldemort))
    
-  ;; Examples: ~
+  ;; Examples: ~ ~
   (f 7)
   (g 7)
   ;; The error should highlight the use
@@ -1020,26 +1108,26 @@ As an example,
 
                                         *exn:srclocs?*
 (exn:srclocs? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v has the prop:exn:srclocs property, #f otherwise.
 
                                         *exn:srclocs-accessor*
 (exn:srclocs-accessor v) ~
- -> (exn:srclocs? . -> . (listof srcloc)) ~
-  v : exn:srclocs? ~
+ -> (exn:srclocs? . -> . (listof srcloc)) ~ ~
+  v : exn:srclocs? ~ ~
 
 Returns the srcloc-getting procedure associated with v.
 
                                         *struct*
 (struct srcloc (source line column position span) ~
-    #:extra-constructor-name make-srcloc ~
-    #:transparent) ~
-  source : any/c ~
-  line : (or/c exact-positive-integer? #f) ~
-  column : (or/c exact-nonnegative-integer? #f) ~
-  position : (or/c exact-positive-integer? #f) ~
-  span : (or/c exact-nonnegative-integer? #f) ~
+    #:extra-constructor-name make-srcloc ~ ~
+    #:transparent) ~ ~
+  source : any/c ~ ~
+  line : (or/c exact-positive-integer? #f) ~ ~
+  column : (or/c exact-nonnegative-integer? #f) ~ ~
+  position : (or/c exact-positive-integer? #f) ~ ~
+  span : (or/c exact-nonnegative-integer? #f) ~ ~
 
 The fields of a srcloc instance are as follows:
 
@@ -1055,16 +1143,19 @@ The fields of a srcloc instance are as follows:
 * span — The number of covered positions (counts from 0) or #f
   (unknown).
 
+See [missing] for information about the treatment of srcloc values that
+are embedded in compiled code.
+
                                         *srcloc->string*
 (srcloc->string srcloc) -> (or/c string? #f) ~
-  srcloc : srcloc? ~
+  srcloc : srcloc? ~ ~
 
 Formats srcloc as a string suitable for error reporting.  A path source
 in srcloc is shown relative to the value of current-directory-for-user.
 The result is #f if srcloc does not contain enough information to format
 a string.
 
-prop:exn:missing-module : struct-type-property? ~
+prop:exn:missing-module : struct-type-property? ~ ~
 
 A property that identifies structure types that provide a module path
 for a load that fails because a module is not found.
@@ -1075,27 +1166,29 @@ returns a module path.
 
                                         *exn:missing-module?*
 (exn:missing-module? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v has the prop:exn:missing-module property, #f otherwise.
 
                                         *exn:missing-module-accessor*
 (exn:missing-module-accessor v) ~
- -> (exn:missing-module? . -> . module-path?) ~
-  v : exn:srclocs? ~
+ -> (exn:missing-module? . -> . module-path?) ~ ~
+  v : exn:srclocs? ~ ~
 
 Returns the module path-getting procedure associated with v.
 
 6. Additional Exception Functions
 
- (require racket/exn) package: base ~
+ (require racket/exn) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/exn
 library, not racket/base or racket.
 
+Added in version 6.3 of package base.
+
                                         *exn->string*
 (exn->string exn) -> string? ~
-  exn : (or/c exn? any/c) ~
+  exn : (or/c exn? any/c) ~ ~
 
 Formats exn as a string. If exn is an exn?, collects and returns the
 output from the current (error-display-handler); otherwise, simply

@@ -1,6 +1,6 @@
 Interactive Help
 
- (require racket/help) package: base ~
+ (require racket/help) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/help
 and racket/init libraries, which means that they are available when  the
@@ -10,8 +10,8 @@ not provided by racket/base or racket.
 help
 (help string ...)
 (help id)
-(help id #:from module-path) ~
-(help #:search datum ...) ~
+(help id #:from module-path) ~ ~
+(help #:search datum ...) ~ ~
 
 For general help, see the main documentation page.
 
@@ -57,7 +57,7 @@ The (help id #:from module-path) variant is similar to (help id), but
 using only the exports of module-path. (The module-path module is
 required for-label in a temporary namespace.)
 
-  (help frame% #:from racket/gui) ; equivalent to the above ~
+  (help frame% #:from racket/gui) ; equivalent to the above ~ ~
 
 The (help #:search datum ...) form is similar to (help string ...),
 where any non-string form of datum is converted to a string using
@@ -65,7 +65,7 @@ display. No datum is evaluated as an expression.
 
 For example,
 
-  (help #:search "web browser" firefox) ~
+  (help #:search "web browser" firefox) ~ ~
 
 also searches the documentation index for references that include the
 phrase “web browser” or “firefox.”

@@ -1,9 +1,15 @@
 Evaluation and Compilation
 
++[missing] in [missing] introduces dynamic evaluation.
+
+Racket provides programmatic control over evaluation through eval and
+related functions. See [missing] for information about extra-linguistic
+facilities related to the Racket compiler.
+
                                         *current-eval*
 (current-eval) -> (any/c . -> . any) ~
 (current-eval proc) -> void?
-  proc : (any/c . -> . any) ~
+  proc : (any/c . -> . any) ~ ~
 
 A parameter that determines the current evaluation handler. The
 evaluation handler is a procedure that takes a top-level form and
@@ -27,8 +33,8 @@ evaluate later forms.
 
                                         *eval*
 (eval top-level-form [namespace]) -> any ~
-  top-level-form : any/c ~
-  namespace : namespace? = (current-namespace) ~
+  top-level-form : any/c ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 +See also [missing] in [missing].
 
@@ -55,8 +61,8 @@ bound to #%top-interaction, before passing it to eval.
 
                                         *eval-syntax*
 (eval-syntax stx [namespace]) -> any ~
-  stx : syntax? ~
-  namespace : namespace? = (current-namespace) ~
+  stx : syntax? ~ ~
+  namespace : namespace? = (current-namespace) ~ ~
 
 Like eval, except that stx must be a syntax object, and its lexical
 context is not enriched before it is passed to the evaluation handler.
@@ -70,7 +76,7 @@ context is not enriched before it is passed to the evaluation handler.
            . -> .
            any)
 (current-load proc) -> void?
-  proc : (path? (or/c #f ~
+  proc : (path? (or/c #f ~ ~
                       symbol?
                       (cons/c (or/c #f symbol?)
                               (non-empty-listof symbol?)))
@@ -98,7 +104,9 @@ loaded independently, the load handler should return without loading
 from a file. When the expected module name is a list that starts with a
 symbol, the root module and any other submodules can be loaded from the
 given file, which might be from source, and the load handler still
-should not complain if the expected submodule is not found.
+should not complain if the expected submodule is not found. When loading
+modules from a nonexistent source file, the load handler may raise an
+exception regardless of whether submodules are requested or not.
 
 The default load handler reads forms from the file in read-syntax mode
 with line-counting enabled for the file port, unless the path has a
@@ -154,7 +162,7 @@ of current-directory.
 
                                         *load*
 (load file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 +See also [missing] in [missing].
 
@@ -164,7 +172,7 @@ file, which is resolved relative to the value of current-directory.
 
                                         *load-relative*
 (load-relative file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 Like load/use-compiled, but when file is a relative path, it is resolved
 using the value of current-load-relative-directory instead of the value
@@ -173,39 +181,55 @@ current-directory is used.
 
                                         *load/cd*
 (load/cd file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 Like load, but load/cd sets both current-directory and
 current-load-relative-directory before calling the load handler.
 
                                         *current-load-extension*
 (current-load-extension) ~
- -> (path? (or/c symbol? #f) . -> . any)
+ -> (path? (or/c #f
+                 symbol?
+                 (cons/c (or/c #f symbol?)
+                         (non-empty-listof symbol?)))
+     . -> .
+     any)
 (current-load-extension proc) -> void?
-  proc : (path? (or/c symbol? #f) . -> . any) ~
+  proc : (path? (or/c #f ~ ~
+                      symbol?
+                      (cons/c (or/c #f symbol?)
+                              (non-empty-listof symbol?)))
+          . -> .
+          any)
 
 A parameter that determines a extension-load handler, which is called by
 load-extension and the default compiled-load handler.
 
 An extension-load handler takes the same arguments as a load handler,
 but the file should be a platform-specific dynamic extension, typically
-with the file suffix ".so" (Unix), ".dll" (Windows), or ".dylib" (Mac OS
-X).  The file is loaded using internal, OS-specific primitives. See
+with the file suffix ".so" (Unix), ".dll" (Windows), or ".dylib" (Mac
+OS).  The file is loaded using internal, OS-specific primitives. See
 [missing] for more information on dynamic extensions.
+
+Extensions are supported only when (system-type 'vm) returns 'racket.
 
                                         *load-extension*
 (load-extension file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 Sets current-load-relative-directory like load, and calls the
 extension-load handler in tail position.
 
+Extensions are supported only when (system-type 'vm) returns 'racket.
+
                                         *load-relative-extension*
 (load-relative-extension file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 Like load-extension, but resolves file using
 current-load-relative-directory like load-relative.
+
+Extensions are supported only when (system-type 'vm) returns 'racket.
 
                                         *current-load/use-compiled*
 (current-load/use-compiled) ~
@@ -215,7 +239,7 @@ current-load-relative-directory like load-relative.
                          (non-empty-listof symbol?)))
            . -> . any)
 (current-load/use-compiled proc) -> void?
-  proc : (path? (or/c #f ~
+  proc : (path? (or/c #f ~ ~
                       symbol?
                       (cons/c (or/c #f symbol?)
                               (non-empty-listof symbol?)))
@@ -227,12 +251,22 @@ called by load/use-compiled.
 
 The protocol for a compiled-load handler is the same as for the load
 handler (see current-load), except that a compiled-load handler is
-expected to set current-load-relative-directory itself. The default
-compiled-load handler, however, checks for a ".ss" file when the given
-path ends with ".rkt", no ".rkt" file exists, and when the handler’s
-second argument is a symbol. In addition, the default compiled-load
-handler checks for ".zo" (bytecode) files and ".so" (native Unix),
-".dll" (native Windows), or ".dylib" (native Mac OS X) files.
+expected to set current-load-relative-directory itself. Additionally,
+the default compiled-load handler does the following:
+
+* When the given path ends with ".rkt", no ".rkt" file exists, and when
+  the handler’s second argument is not #f, the default compiled-load
+  handler checks for a ".ss" file.
+
+* The default compiled-load handler checks for the opportunity to load
+  from ".zo" (bytecode) files and, when (system-type 'vm) returns
+  'racket, for ".so" (native Unix), ".dll" (native Windows), or ".dylib"
+  (native Mac OS) files.
+
+* When the default compiled-load handler needs to load from the given
+  path, the given path does not exist, and when the handler’s second
+  argument is not #f, the default compiled-load handler returns without
+  raising an exception.
 
 The check for a compiled file occurs whenever the given path file ends
 with any extension (e.g., ".rkt" or ".scrbl"), and the check consults
@@ -245,17 +279,21 @@ reroot-path and the root as the second argument; if the “root” is a
 relative path, then the relative path is instead suffixed onto the
 directory of file. The roots are tried in order, and the subdirectories
 are checked in order within each root. A ".zo" version of the file
-(whose name is formed by passing file and #".zo" to path-add-suffix) is
-loaded if it exists directly in one of the indicated subdirectories, or
-a ".so"/".dll"/".dylib" version of the file is loaded if it exists
-within a "native" subdirectory of a use-compiled-file-paths directory,
-in an even deeper subdirectory as named by system-library-subpath. A
-compiled file is loaded only if its modification date is not older than
-the date for file. If both ".zo" and ".so"/".dll"/".dylib" files are
-available, the ".so"/".dll"/".dylib" file is used.  If file ends with
-".rkt", no such file exists, the handler’s second argument is a symbol,
-and a ".ss" file exists, then ".zo" and ".so"/".dll"/".dylib" files are
-used only with names based on file with its suffixed replaced by ".ss".
+(whose name is formed by passing file and #".zo" to path-add-extension)
+is loaded if it exists directly in one of the indicated subdirectories,
+or when (system-type 'vm) returns 'racket, then a ".so"/".dll"/".dylib"
+version of the file is loaded if it exists within a "native"
+subdirectory of a use-compiled-file-paths directory, in an even deeper
+subdirectory as named by system-library-subpath. A compiled file is
+loaded only if it checks out according to (use-compiled-file-check);
+with the default parameter value of 'modify-seconds, a compiled file is
+used only if its modification date is not older than the date for file.
+If both ".zo" and ".so"/".dll"/".dylib" files are available when
+(system-type 'vm) returns 'racket, the ".so"/".dll"/".dylib" file is
+used.  If file ends with ".rkt", no such file exists, the handler’s
+second argument is a symbol, and a ".ss" file exists, then ".zo" and
+".so"/".dll"/".dylib" files are used only with names based on file with
+its suffixed replaced by ".ss".
 
 While a ".zo", ".so", ".dll", or ".dylib" file is loaded, the current
 load-relative directory is set to the directory of the original file.
@@ -283,7 +321,7 @@ independent but consistent loading of submodules from bytecode files.
 
                                         *load/use-compiled*
 (load/use-compiled file) -> any ~
-  file : path-string? ~
+  file : path-string? ~ ~
 
 Calls the current compiled-load handler in tail position.
 
@@ -291,7 +329,7 @@ Calls the current compiled-load handler in tail position.
 (current-load-relative-directory) ~
  -> (or/c (and/c path-string? complete-path?) #f)
 (current-load-relative-directory path) -> void?
-  path : (or/c (and/c path-string? complete-path?) #f) ~
+  path : (or/c (and/c path-string? complete-path?) #f) ~ ~
 
 A parameter that is set by load, load-relative, load-extension,
 load-relative-extension, and the default compiled-load handler, and used
@@ -306,16 +344,21 @@ directory need not exist.)
 (use-compiled-file-paths) ~
  -> (listof (and/c path? relative-path?))
 (use-compiled-file-paths paths) -> void?
-  paths : (listof (and/c path-string? relative-path?)) ~
+  paths : (listof (and/c path-string? relative-path?)) ~ ~
 
 A list of relative paths, which defaults to (list (string->path
 "compiled")). It is used by the compiled-load handler (see
 current-load/use-compiled).
 
+If the PLT_ZO_PATH environment variable is set on startup, it supplies a
+path instead of "compiled" to use for the initial parameter value.
+
+Changed in version 7.7.0.9: Added PLT_ZO_PATH.
+
                                         *current-compiled-file-roots*
 (current-compiled-file-roots) -> (listof (or/c path? 'same)) ~
 (current-compiled-file-roots paths) -> void?
-  paths : (listof (or/c path-string? 'same)) ~
+  paths : (listof (or/c path-string? 'same)) ~ ~
 
 A list of paths and 'sames that is is used by the default compiled-load
 handler (see current-load/use-compiled).
@@ -328,6 +371,24 @@ command-line flag, it is parsed by first replacing any @(version) with
 the result of (version), then using path-list-string->path-list with a
 default path list (list (build-path 'same)) to arrive at the parameter’s
 initial value.
+
+                                        *use-compiled-file-check*
+(use-compiled-file-check) -> (or/c 'modify-seconds 'exists) ~
+(use-compiled-file-check check) -> void?
+  check : (or/c 'modify-seconds 'exists) ~ ~
+
+A parameter that determines how a compiled file is checked against its
+source to enable use of the compiled file. By default, the file-check
+mode is 'modify-seconds, which uses a compiled file when its filesystem
+modification date is at least as new as the source file’s. The 'exists
+mode causes a compiled file to be used in place of its source as long as
+the compiled file exists.
+
+If the PLT_COMPILED_FILE_CHECK environment variable is set to
+modify-seconds or exists, then the environment variable’s value
+configures the parameter when Racket starts.
+
+Added in version 6.6.0.3.
 
                                         *read-eval-print-loop*
 (read-eval-print-loop) -> any ~
@@ -348,7 +409,7 @@ current-prompt-read, current-eval, and current-print parameters.
                                         *current-prompt-read*
 (current-prompt-read) -> (-> any) ~
 (current-prompt-read proc) -> void?
-  proc : (-> any) ~
+  proc : (-> any) ~ ~
 
 A parameter that determines a prompt read handler, which is a procedure
 that takes no arguments, displays a prompt string, and returns a
@@ -373,7 +434,7 @@ set-port-next-location! before returning the read result.
                                         *current-get-interaction-input-port*
 (current-get-interaction-input-port) -> (-> input-port?) ~
 (current-get-interaction-input-port proc) -> void?
-  proc : (-> input-port?) ~
+  proc : (-> input-port?) ~ ~
 
 A parameter that determines the interaction port handler, which returns
 a port to use for read-eval-print-loop inputs.
@@ -389,7 +450,7 @@ events can be handled when reading from the port blocks.
                                         *current-read-interaction*
 (current-read-interaction) -> (any/c input-port? -> any) ~
 (current-read-interaction proc) -> void?
-  proc : (any/c input-port? -> any) ~
+  proc : (any/c input-port? -> any) ~ ~
 
 A parameter that determines the current read interaction handler, which
 is procedure that takes an arbitrary value and an input port and returns
@@ -404,7 +465,7 @@ The default read interaction handler accepts src and in and returns
                                         *current-print*
 (current-print) -> (any/c -> any) ~
 (current-print proc) -> void?
-  proc : (any/c -> any) ~
+  proc : (any/c -> any) ~ ~
 
 A parameter that determines the print handler that is called  by
 read-eval-print-loop to print the result of an evaluation  (and the
@@ -418,7 +479,7 @@ newline,  except that it prints nothing when the value is #<void>.
 (current-compile) ~
  -> (any/c boolean? . -> . compiled-expression?)
 (current-compile proc) -> void?
-  proc : (any/c boolean? . -> . compiled-expression?) ~
+  proc : (any/c boolean? . -> . compiled-expression?) ~ ~
 
 A parameter that determines the current compilation handler. The
 compilation handler is a procedure that takes a top-level form and
@@ -438,32 +499,46 @@ starts with #~. See [missing] for more information.
 
 For internal testing purposes, when the PLT_VALIDATE_COMPILE environment
 variable is set, the default compilation handler runs a bytecode
-validator on its own compilation results.
+validator immediately on its own compilation results (instead of relying
+only on validation when compiled bytecode is loaded).
 
                                         *compile*
 (compile top-level-form) -> compiled-expression? ~
-  top-level-form : any/c ~
+  top-level-form : any/c ~ ~
 
 Like eval, but calls the current compilation handler in tail position
 with top-level-form.
 
                                         *compile-syntax*
 (compile-syntax stx) -> compiled-expression? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Like eval-syntax, but calls the current compilation handler in tail
 position with stx.
 
+                                        *compiled-expression-recompile*
+(compiled-expression-recompile ce) -> compiled-expression? ~
+  ce : compiled-expression? ~ ~
+
+Recompiles ce. If ce was compiled as machine-independent and
+current-compile-target-machine is not set to #f, then recompiling
+effectively converts to the current machine format. Otherwise,
+recompiling effectively re-runs optimization passes to produce an
+equivalent compiled form with potentially different performance
+characteristics.
+
+Added in version 6.3.
+
                                         *compiled-expression?*
 (compiled-expression? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a compiled form, #f otherwise.
 
                                         *compile-enforce-module-constants*
 (compile-enforce-module-constants) -> boolean? ~
 (compile-enforce-module-constants on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that determines how a module declaration is compiled.
 
@@ -481,7 +556,7 @@ that skips certain run-time checks.
                                         *compile-allow-set!-undefined*
 (compile-allow-set!-undefined) -> boolean? ~
 (compile-allow-set!-undefined allow?) -> void?
-  allow? : any/c ~
+  allow? : any/c ~ ~
 
 A parameter that determines how a set! expression is compiled when it
 mutates a global variable. If the value of this parameter is a true
@@ -495,7 +570,7 @@ used when an expression is compiled, not when it is evaluated.
                                         *compile-context-preservation-enabled*
 (compile-context-preservation-enabled) -> boolean? ~
 (compile-context-preservation-enabled on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that determines whether compilation should avoid
 function-call inlining and other optimizations that may cause
@@ -503,28 +578,68 @@ information to be lost from stack traces (as reported by
 continuation-mark-set->context). The default is #f, which allows such
 optimizations.
 
+                                        *current-compile-target-machine*
+(current-compile-target-machine) ~
+ -> (or/c #f (and/c symbol? compile-target-machine?))
+(current-compile-target-machine target) -> void?
+  target : (or/c #f (and/c symbol? compile-target-machine?)) ~ ~
+
+A parameter that determines the platform and/or virtual machine target
+for a newly compiled expression.
+
+If the target is #f, the the compiled expression writes in a
+machine-independent format (usually in ".zo" files). Machine-independent
+compiled code works for any platform and any Racket virtual machine.
+When the machine-independent compiled expression is read back in, it is
+subject to further compilation for the current platform and virtual
+machine, which can be considerably slower than reading a format that is
+fully compiled for a platform and virtual machine.
+
+The default is something other than #f, unless machine-independent mode
+is enabled through the -M/--compile-any command-line flag to stand-alone
+Racket (or GRacket) or through the PLT_COMPILE_ANY environment variable
+(set to any value).
+
+Added in version 7.1.0.6.
+
+                                        *compile-target-machine?*
+(compile-target-machine? sym) -> boolean? ~
+  sym : symbol? ~ ~
+
+Reports whether sym is a supported compilation target for the currently
+running Racket.
+
+When (system-type 'vm) reports 'racket, then the only target symbol is
+'racket. When (system-type 'vm) reports 'chez-scheme, then a symbol
+corresponding to the current platform is a target, and other targets may
+also be supported. The 'target-machine mode of system-type reports the
+running Racket’s native target machine.
+
+Added in version 7.1.0.6.
+
                                         *eval-jit-enabled*
 (eval-jit-enabled) -> boolean? ~
 (eval-jit-enabled on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 +See also [missing] in [missing].
 
 A parameter that determines whether the native-code just-in-time
 compiler (JIT) is enabled for code (compiled or not) that is passed to
 the default evaluation handler. A true parameter value is effective only
-on platforms for which the JIT is supported, and changing the value from
-its initial setting affects only forms that are outside of module.
+on platforms for which the JIT is supported and for Racket virtual
+machines that rely on a JIT.
 
 The default is #t, unless the JIT is not supported by the current
-platform, unless it is disabled through the -j/--no-jit command-line
+platform but is supported on the same virtual machine for other
+platforms, unless it is disabled through the -j/--no-jit command-line
 flag to stand-alone Racket (or GRacket), and unless it is disabled
 through the PLTNOMZJIT environment variable (set to any value).
 
                                         *load-on-demand-enabled*
 (load-on-demand-enabled) -> boolean? ~
 (load-on-demand-enabled on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that determines whether the default load handler sets
 read-on-demand-source. See current-load for more information. The

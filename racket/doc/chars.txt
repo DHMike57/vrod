@@ -20,23 +20,24 @@ Changed in version 6.1.1.8: Updated from Unicode 5.0.1 to Unicode 7.0.0.
 
                                         *char?*
 (char? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Return #t if v is a character, #f otherwise.
 
                                         *char->integer*
 (char->integer char) -> exact-integer? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns a character’s code-point number.
 
 Example:
+
   > (char->integer #\A)
   65
 
                                         *integer->char*
 (integer->char k) -> char? ~
-  k : (and/c exact-integer? ~
+  k : (and/c exact-integer? ~ ~
              (or/c (integer-in 0 55295)
                    (integer-in 57344 1114111)))
 
@@ -44,40 +45,46 @@ Return the character whose code-point number is k. For k less than 256,
 the result is the same object for the same k.
 
 Example:
+
   > (integer->char 65)
   #\A
 
-                                        *char-utf-*
+                                        *char-utf-8-length*
 (char-utf-8-length char) -> (integer-in 1 6) ~
-  char : char? ~
+  char : char? ~ ~
 
 Produces the same result as (bytes-length (string->bytes/utf-8 (string
 char))).
 
 2. Character Comparisons
 
-                                        *char*
-(char=? char1 char2 ...+) -> boolean? ~
-  char1 : char? ~
-  char2 : char? ~
+                                        *char=?*
+(char=? char1 char2 ...) -> boolean? ~
+  char1 : char? ~ ~
+  char2 : char? ~ ~
 
 Returns #t if all of the arguments are eqv?.
 
 Examples:
+
   > (char=? #\a #\a)
   #t
   > (char=? #\a #\A #\a)
   #f
 
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
                                         *char<?*
-(char<? char1 char2 ...+) -> boolean? ~
-  char1 : char? ~
-  char2 : char? ~
+(char<? char1 char2 ...) -> boolean? ~
+  char1 : char? ~ ~
+  char2 : char? ~ ~
 
 Returns #t if the arguments are sorted increasing, where two characters
 are ordered by their scalar values, #f otherwise.
 
 Examples:
+
   > (char<? #\A #\a)
   #t
   > (char<? #\a #\A)
@@ -85,14 +92,18 @@ Examples:
   > (char<? #\a #\b #\c)
   #t
 
-                                        *char<*
-(char<=? char1 char2 ...+) -> boolean? ~
-  char1 : char? ~
-  char2 : char? ~
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
+                                        *char<=?*
+(char<=? char1 char2 ...) -> boolean? ~
+  char1 : char? ~ ~
+  char2 : char? ~ ~
 
 Like char<?, but checks whether the arguments are nondecreasing.
 
 Examples:
+
   > (char<=? #\A #\a)
   #t
   > (char<=? #\a #\A)
@@ -100,14 +111,18 @@ Examples:
   > (char<=? #\a #\b #\b)
   #t
 
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
                                         *char>?*
-(char>? char1 char2 ...+) -> boolean? ~
-  char1 : char? ~
-  char2 : char? ~
+(char>? char1 char2 ...) -> boolean? ~
+  char1 : char? ~ ~
+  char2 : char? ~ ~
 
 Like char<?, but checks whether the arguments are decreasing.
 
 Examples:
+
   > (char>? #\A #\a)
   #f
   > (char>? #\a #\A)
@@ -115,14 +130,18 @@ Examples:
   > (char>? #\c #\b #\a)
   #t
 
-                                        *char>*
-(char>=? char1 char2 ...+) -> boolean? ~
-  char1 : char? ~
-  char2 : char? ~
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
+                                        *char>=?*
+(char>=? char1 char2 ...) -> boolean? ~
+  char1 : char? ~ ~
+  char2 : char? ~ ~
 
 Like char<?, but checks whether the arguments are nonincreasing.
 
 Examples:
+
   > (char>=? #\A #\a)
   #f
   > (char>=? #\a #\A)
@@ -130,30 +149,38 @@ Examples:
   > (char>=? #\c #\b #\b)
   #t
 
-                                        *char-ci*
-(char-ci=? char1 char2 ...+) -> boolean? ~
-  char1 : char? ~
-  char2 : char? ~
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
+                                        *char-ci=?*
+(char-ci=? char1 char2 ...) -> boolean? ~
+  char1 : char? ~ ~
+  char2 : char? ~ ~
 
 Returns #t if all of the arguments are eqv? after  locale-insensitive
 case-folding via char-foldcase.
 
 Examples:
+
   > (char-ci=? #\A #\a)
   #t
   > (char-ci=? #\a #\a #\a)
   #t
 
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
                                         *char-ci<?*
-(char-ci<? char1 char2 ...+) -> boolean? ~
-  char1 : char? ~
-  char2 : char? ~
+(char-ci<? char1 char2 ...) -> boolean? ~
+  char1 : char? ~ ~
+  char2 : char? ~ ~
 
 Like char<?, but checks whether the arguments would be in  increasing
 order if each was first case-folded using  char-foldcase (which is
 locale-insensitive).
 
 Examples:
+
   > (char-ci<? #\A #\a)
   #f
   > (char-ci<? #\a #\b)
@@ -161,15 +188,19 @@ Examples:
   > (char-ci<? #\a #\b #\c)
   #t
 
-                                        *char-ci<*
-(char-ci<=? char1 char2 ...+) -> boolean? ~
-  char1 : char? ~
-  char2 : char? ~
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
+                                        *char-ci<=?*
+(char-ci<=? char1 char2 ...) -> boolean? ~
+  char1 : char? ~ ~
+  char2 : char? ~ ~
 
 Like char-ci<?, but checks whether the arguments would be nondecreasing
 after case-folding.
 
 Examples:
+
   > (char-ci<=? #\A #\a)
   #t
   > (char-ci<=? #\a #\A)
@@ -177,15 +208,19 @@ Examples:
   > (char-ci<=? #\a #\b #\b)
   #t
 
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
                                         *char-ci>?*
-(char-ci>? char1 char2 ...+) -> boolean? ~
-  char1 : char? ~
-  char2 : char? ~
+(char-ci>? char1 char2 ...) -> boolean? ~
+  char1 : char? ~ ~
+  char2 : char? ~ ~
 
 Like char-ci<?, but checks whether the arguments would be decreasing
 after case-folding.
 
 Examples:
+
   > (char-ci>? #\A #\a)
   #f
   > (char-ci>? #\b #\A)
@@ -193,15 +228,19 @@ Examples:
   > (char-ci>? #\c #\b #\a)
   #t
 
-                                        *char-ci>*
-(char-ci>=? char1 char2 ...+) -> boolean? ~
-  char1 : char? ~
-  char2 : char? ~
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
+                                        *char-ci>=?*
+(char-ci>=? char1 char2 ...) -> boolean? ~
+  char1 : char? ~ ~
+  char2 : char? ~ ~
 
 Like char-ci<?, but checks whether the arguments would be nonincreasing
 after case-folding.
 
 Examples:
+
   > (char-ci>=? #\A #\a)
   #t
   > (char-ci>=? #\a #\A)
@@ -209,55 +248,58 @@ Examples:
   > (char-ci>=? #\c #\b #\b)
   #t
 
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
 3. Classifications
 
                                         *char-alphabetic?*
 (char-alphabetic? char) -> boolean? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns #t if char has the Unicode “Alphabetic” property.
 
                                         *char-lower-case?*
 (char-lower-case? char) -> boolean? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns #t if char has the Unicode “Lowercase” property.
 
                                         *char-upper-case?*
 (char-upper-case? char) -> boolean? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns #t if char has the Unicode “Uppercase” property.
 
                                         *char-title-case?*
 (char-title-case? char) -> boolean? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns #t if char’s Unicode general category is Lt, #f otherwise.
 
                                         *char-numeric?*
 (char-numeric? char) -> boolean? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns #t if char has the Unicode “Numeric” property.
 
                                         *char-symbolic?*
 (char-symbolic? char) -> boolean? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns #t if char’s Unicode general category is Sm, Sc, Sk, or So, #f
 otherwise.
 
                                         *char-punctuation?*
 (char-punctuation? char) -> boolean? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns #t if char’s Unicode general category is Pc, Pd, Ps, Pe, Pi, Pf,
 or Po, #f otherwise.
 
                                         *char-graphic?*
 (char-graphic? char) -> boolean? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns #t if char’s Unicode general category is Ll, Lm, Lo, Lt, Lu, Nd,
 Nl, No, Mn, Mc, or Me, or if one of the following produces #t when
@@ -266,27 +308,27 @@ char-punctuation?.
 
                                         *char-whitespace?*
 (char-whitespace? char) -> boolean? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns #t if char has the Unicode “White_Space” property.
 
                                         *char-blank?*
 (char-blank? char) -> boolean? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns #t if char’s Unicode general category is Zs or if char is #\tab.
 (These correspond to horizontal whitespace.)
 
                                         *char-iso-control?*
 (char-iso-control? char) -> boolean? ~
-  char : char? ~
+  char : char? ~ ~
 
 Return #t if char is between #\nul and #\u001F inclusive or #\rubout and
 #\u009F inclusive.
 
                                         *char-general-category*
 (char-general-category char) -> symbol? ~
-  char : char? ~
+  char : char? ~ ~
 
 Returns a symbol representing the character’s Unicode general category,
 which is 'lu, 'll, 'lt, 'lm, 'lo, 'mn, 'mc, 'me, 'nd, 'nl, 'no, 'ps,
@@ -306,16 +348,19 @@ contains two integers and a boolean; the first integer is a starting
 code-point value (inclusive), the second integer is an ending code-point
 value (inclusive), and the boolean is #t when all characters in the
 code-point range have identical results for all of the character
-predicates above. The three-element lists are ordered in the overall
-result list such that later lists represent larger code-point values,
-and all three-element lists are separated from every other by at least
-one code-point value that is not specified by Unicode.
+predicates above, have analogous transformations (shifting by the same
+amount, if any, in code-point space) for char-downcase, char-upcase, and
+char-titlecase, and have the same decomposition–normalization behavior.
+The three-element lists are ordered in the overall result list such that
+later lists represent larger code-point values, and all three-element
+lists are separated from every other by at least one code-point value
+that is not specified by Unicode.
 
 4. Character Conversions
 
                                         *char-upcase*
 (char-upcase char) -> char? ~
-  char : char? ~
+  char : char? ~ ~
 
 Produces a character consistent with the 1-to-1 code point mapping
 defined by Unicode. If char has no upcase mapping, char-upcase produces
@@ -326,6 +371,7 @@ defines a locale-independent mapping from the code point to a code-point
 sequence (in addition to the 1-1 mapping on scalar values).
 
 Examples:
+
   > (char-upcase #\a)
   #\A
   > (char-upcase #\λ)
@@ -335,11 +381,12 @@ Examples:
 
                                         *char-downcase*
 (char-downcase char) -> char? ~
-  char : char? ~
+  char : char? ~ ~
 
 Like char-upcase, but for the Unicode downcase mapping.
 
 Examples:
+
   > (char-downcase #\A)
   #\a
   > (char-downcase #\Λ)
@@ -349,11 +396,12 @@ Examples:
 
                                         *char-titlecase*
 (char-titlecase char) -> char? ~
-  char : char? ~
+  char : char? ~ ~
 
 Like char-upcase, but for the Unicode titlecase mapping.
 
 Examples:
+
   > (char-upcase #\a)
   #\A
   > (char-upcase #\λ)
@@ -363,11 +411,12 @@ Examples:
 
                                         *char-foldcase*
 (char-foldcase char) -> char? ~
-  char : char? ~
+  char : char? ~ ~
 
 Like char-upcase, but for the Unicode case-folding mapping.
 
 Examples:
+
   > (char-foldcase #\A)
   #\a
   > (char-foldcase #\Σ)

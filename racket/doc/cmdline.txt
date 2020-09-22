@@ -1,6 +1,6 @@
 Command-Line Parsing
 
- (require racket/cmdline) package: base ~
+ (require racket/cmdline) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/cmdline and racket libraries, but not racket/base.
@@ -11,18 +11,18 @@ racket/cmdline and racket libraries, but not racket/base.
               finish-clause)
  
 optional-name-expr = 
-                   | #:program name-expr ~
+                   | #:program name-expr ~ ~
                       
 optional-argv-expr = 
-                   | #:argv argv-expr ~
+                   | #:argv argv-expr ~ ~
                       
-       flag-clause = #:multi flag-spec ... ~
-                   | #:once-each flag-spec ... ~
-                   | #:once-any flag-spec ... ~
-                   | #:final flag-spec ... ~
-                   | #:usage-help string ... ~
-                   | #:help-labels string ... ~
-                   | #:ps string ... ~
+       flag-clause = #:multi flag-spec ... ~ ~
+                   | #:once-each flag-spec ... ~ ~
+                   | #:once-any flag-spec ... ~ ~
+                   | #:final flag-spec ... ~ ~
+                   | #:usage-help string ... ~ ~
+                   | #:help-labels string ... ~ ~
+                   | #:ps string ... ~ ~
                       
          flag-spec = (flags id ... help-spec body ...+)
                    | (flags => handler-expr help-expr)
@@ -34,8 +34,8 @@ optional-argv-expr = 
                    | (string-expr ...+)
                       
      finish-clause = 
-                   | #:args arg-formals body ...+ ~
-                   | #:handlers handlers-exprs ~
+                   | #:args arg-formals body ...+ ~ ~
+                   | #:handlers handlers-exprs ~ ~
                       
        arg-formals = rest-id
                    | (arg ...)
@@ -170,24 +170,24 @@ Example:
    
   (define file-to-compile
     (command-line
-     #:program "compiler" ~
-     #:once-each ~
+     #:program "compiler" ~ ~
+     #:once-each ~ ~
      [("-v" "--verbose") "Compile with verbose messages"
                          (verbose-mode #t)]
      [("-p" "--profile") "Compile with profiling"
                          (profiling-on #t)]
-     #:once-any ~
+     #:once-any ~ ~
      [("-o" "--optimize-1") "Compile with optimization level 1"
                             (optimize-level 1)]
      ["--optimize-2"        (; show help on separate lines
                              "Compile with optimization level 2,"
                              "which includes all of level 1")
                             (optimize-level 2)]
-     #:multi ~
+     #:multi ~ ~
      [("-l" "--link-flags") lf ; flag takes one argument
                             "Add a flag <lf> for the linker"
                             (link-flags (cons lf (link-flags)))]
-     #:args (filename) ; expect one command-line argument: <filename> ~
+     #:args (filename) ; expect one command-line argument: <filename> ~ ~
      ; return the argument as a filename to compile
      filename))
 
@@ -199,13 +199,13 @@ Example:
                      arg-help-strs      
                     [help-proc          
                      unknown-proc]) -> any
-  name : (or/c string? path?) ~
-  argv : (or/c (listof string?) (vectorof string?)) ~
-  table : (listof (cons/c symbol? list?)) ~
-  finish-proc : ((list?) () #:rest list? . ->* . any) ~
-  arg-help-strs : (listof string?) ~
-  help-proc : (string? . -> . any) = (lambda (str) ....) ~
-  unknown-proc : (string? . -> . any) = (lambda (str) ...) ~
+  name : (or/c string? path?) ~ ~
+  argv : (or/c (listof string?) (vectorof string?)) ~ ~
+  table : (listof (cons/c symbol? list?)) ~ ~
+  finish-proc : ((list?) () #:rest list? . ->* . any) ~ ~
+  arg-help-strs : (listof string?) ~ ~
+  help-proc : (string? . -> . any) = (lambda (str) ....) ~ ~
+  unknown-proc : (string? . -> . any) = (lambda (str) ...) ~ ~
 
 Parses a command-line using the specification in table. For an overview
 of command-line parsing, see the command-line form, which provides a

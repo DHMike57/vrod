@@ -7,12 +7,13 @@ Pattern-Based Syntax Matching
       clause = [pattern result-expr]
              | [pattern fender-expr result-expr]
                 
-     pattern = _
-             | id
+     pattern = np-pattern
              | (pattern ...)
-             | (pattern ...+ . pattern)
-             | (pattern ... pattern ellipsis pattern ...)
-             | (pattern ... pattern ellipsis pattern ... . pattern)
+             | (pattern ...+ . np-pattern)
+             | (pattern ... pattern ellipsis pattern ... . np-pattern)
+                
+  np-pattern = _
+             | id
              | #(pattern ...)
              | #(pattern ... pattern ellipsis pattern ...)
              | #&pattern
@@ -66,14 +67,11 @@ Any pattern variables bound by the sub-patterns are bound by the
 complete pattern; the bindings must all be distinct.
 
                                         *pattern*
-(pattern ...+ . pattern) ~
-The last pattern must not be a (pattern ...), (pattern ...+ . pattern),
-(pattern ... pattern ellipsis pattern ...), or (pattern ... pattern
-ellipsis pattern ... . pattern) form.
+(pattern ...+ . np-pattern) ~
 Like the previous kind of pattern, but matches syntax objects that are
-not necessarily lists; for n sub-patterns before the last sub-pattern,
+not necessarily lists; for n sub-patterns before the final np-pattern,
 the syntax object’s datum must be a pair such that n-1 cdrs produce
-pairs. The last sub-pattern is matched against the syntax object
+pairs. The final np-pattern is matched against the syntax object
 corresponding to the nth cdr (or the datum->syntax coercion of the datum
 using the nearest enclosing syntax object’s lexical context and source
 location).
@@ -92,10 +90,10 @@ ellipsis, leading to a pattern variables bound to lists of lists of
 syntax objects with a depth marker of 2, and so on.)
 
                                         *pattern*
-(pattern ... pattern ellipsis pattern ... . pattern) ~
-Like the previous kind of pattern, but with a final sub-pattern as for
-(pattern ...+ . pattern).  The final pattern never matches a syntax
-object whose datum is a pair.
+(pattern ... pattern ellipsis pattern ... . np-pattern) ~
+Like the previous kind of pattern, but with a final np-pattern as for
+(pattern ...+ . np-pattern).  The final np-pattern never matches a
+syntax object whose datum is a pair.
 
 #(pattern ...)
 Like a (pattern ...) pattern, but matching a vector syntax object whose
@@ -139,28 +137,27 @@ corresponds to the whole syntax object produced by stx-expr, in which
 case it remains tainted or armed.
 
 Examples:
-  > (require (for-syntax racket/base))
 
+  > (require (for-syntax racket/base))
   > (define-syntax (swap stx)
       (syntax-case stx ()
         [(_ a b) #'(let ([t a])
                      (set! a b)
                      (set! b t))]))
-
   > (let ([x 5] [y 10])
       (swap x y)
       (list x y))
   '(10 5)
   > (syntax-case #'(ops 1 2 3 => +) (=>)
       [(_ x ... => op) #'(op x ...)])
-  #<syntax:4:0 (+ 1 2 3)>
+  #<syntax:eval:4:0 (+ 1 2 3)>
   > (syntax-case #'(let ([x 5] [y 9] [z 12])
                      (+ x y z))
                  (let)
       [(let ([var expr] ...) body ...)
        (list #'(var ...)
              #'(expr ...))])
-  '(#<syntax:5:0 (x y z)> #<syntax:5:0 (5 9 12)>)
+  '(#<syntax:eval:5:0 (x y z)> #<syntax:eval:5:0 (5 9 12)>)
 
                                         *syntax-case**
 (syntax-case* stx-expr (literal-id ...) id-compare-expr ~
@@ -200,6 +197,7 @@ it is converted to one using datum->syntax and the lexical context and
 source location of the individual stx-expr.
 
 Examples:
+
   > (define-syntax (hello stx)
       (syntax-case stx ()
         [(_ name place)
@@ -214,19 +212,15 @@ Examples:
                  (printf "From\n")
                  (for ([i (in-range 0 times)])
                       print-place))))]))
-
   > (hello jon utah)
-
   > (jon 2)
   Hello
   jon
   jon
-
   > (utah 2)
   From
   utah
   utah
-
   > (define-syntax (math stx)
       (define (make+1 expression)
         (with-syntax ([e expression])
@@ -239,7 +233,6 @@ Examples:
            #'(begin
                (printf "got ~a\n" added)
                ...))]))
-
   > (math 3 1 4 1 5 9)
   got 4
   got 2
@@ -248,35 +241,38 @@ Examples:
   got 6
   got 10
 
-
                                         *syntax*
 (syntax template) ~
  
      template = id
-              | (template-elem ...)
-              | (template-elem ...+ . template)
-              | #(template-elem ...)
+              | (head-template ...)
+              | (head-template ...+ . template)
+              | #(head-template ...)
               | #&template
-              | #s(key-datum template-elem ...)
+              | #s(key-datum head-template ...)
+              | (~? template template)
               | (ellipsis stat-template)
               | const
                  
-template-elem = template ellipsis ...
+head-template = template
+              | head-template ellipsis ...+
+              | (~@ . template)
+              | (~? head-template head-template)
+              | (~? head-template)
                  
-stat-template = id
-              | (stat-template ...)
-              | (stat-template ... . stat-template)
-              | #(stat-template ...)
-              | #&stat-template
-              | #s(key-datum stat-template ...)
-              | const
+stat-template = like template, but without ..., ~?, and ~@
                  
      ellipsis = ...
 
 Constructs a syntax object based on a template, which can include
 pattern variables bound by syntax-case or with-syntax.
 
-Template forms produce a syntax object as follows:
+A template produces a single syntax object. A head-template produces a
+sequence of zero or more syntax objects. A stat-template is like a
+template, except that ..., ~?, and ~@ are interpreted as constants
+instead of template forms.
+
+A template produces a syntax object as follows:
 
 id
 If id is bound as a pattern variable, then id as a template produces the
@@ -291,67 +287,115 @@ times to use each match result at least once.
 If id is not bound as a pattern variable, then id as a template produces
 (quote-syntax id).
 
-                                        *template-elem*
-(template-elem ...) ~
+                                        *head-template*
+(head-template ...) ~
 Produces a syntax object whose datum is a list, and where the elements
-of the list correspond to syntax objects produced by the template-elems.
-A template-elem is a sub-template replicated by any number of
-ellipsises:
-* If the sub-template is replicated by no ellipsises, then it generates
-  a single syntax object to incorporate into the result syntax object.
+of the list correspond to syntax objects produced by the head-templates.
 
-* If the sub-template is replicated by one ellipsis, then it generates a
-  sequence of syntax objects that is “inlined” into the resulting syntax
-  object.
-
-  The number of generated elements depends on the values of pattern
-  variables referenced within the sub-template. There must be at least
-  one pattern variable whose value has a depth marker less than the
-  number of ellipsises after the pattern variable within the
-  sub-template.
-
-  If a pattern variable is replicated by more ellipsises in a template
-  than the depth marker of its binding, then the pattern variable’s
-  result is determined normally for inner ellipsises (up to the
-  binding’s depth marker), and then the result is replicated as
-  necessary to satisfy outer ellipsises.
-
-* For each ellipsis after the first one, the preceding element (with
-  earlier replicating ellipsises) is conceptually wrapped with
-  parentheses for generating output, and then the wrapping parentheses
-  are removed in the resulting syntax object.
-
-                                        *template-elem*
-(template-elem ... . template) ~
+                                        *head-template*
+(head-template ... . template) ~
 Like the previous form, but the result is not necessarily a list;
 instead, the place of the empty list in the resulting syntax object’s
 datum is taken by the syntax object produced by template.
 
-#(template-elem ...)
-Like the (template-elem ...) form, but producing a syntax object whose
+#(head-template ...)
+Like the (head-template ...) form, but producing a syntax object whose
 datum is a vector instead of a list.
 
 #&template
 Produces a syntax object whose datum is a box holding the syntax object
 produced by template.
 
-#s(key-datum template-elem ...)
-Like the (template-elem ...) form, but producing a syntax object whose
+#s(key-datum head-template ...)
+Like the (head-template ...) form, but producing a syntax object whose
 datum is a prefab structure instead of a list. The key-datum must
 correspond to a valid first argument of make-prefab-struct.
+
+                                        *~?*
+(~? template1 template2)
+Produces the result of template1 if template1 has no pattern variables
+with “missing values”; otherwise, produces the result of template2.
+A pattern variable bound by syntax-case never has a missing value, but
+pattern variables bound by syntax-parse (for example, ~or or ~optional
+patterns) can.
+Examples:
+
+  > (syntax-parse #'(m 1 2 3)
+      [(_ (~optional (~seq #:op op:expr)) arg:expr ...) ~ ~
+       #'((~? op +) arg ...)])
+  #<syntax:eval:3:0 (+ 1 2 3)>
+  > (syntax-parse #'(m #:op max 1 2 3) ~ ~
+      [(_ (~optional (~seq #:op op:expr)) arg:expr ...) ~ ~
+       #'((~? op +) arg ...)])
+  #<syntax:eval:4:0 (max 1 2 3)>
 
                                         *ellipsis*
 (ellipsis stat-template) ~
 Produces the same result as stat-template, which is like a template, but
-... is treated like an id (with no pattern binding).
+..., ~?, and ~@ are treated like an id (with no pattern binding).
 
 const
 A const template is any form that does not match the preceding cases,
 and it produces the result (quote-syntax const).
 
+A head-template produces a sequence of syntax objects; that sequence is
+“inlined” into the result of the enclosing template. The result of a
+head-template is defined as follows:
+
+template
+Produces one syntax object, according to the rules for template above.
+
+head-template ellipsis ...+
+Generates a sequence of syntax objects by “mapping” the head-template
+over the values of its pattern variables. The number of iterations
+depends on the values of the pattern variables referenced within the
+sub-template.
+To be more precise: Let outer be inner followed by one ellipsis. A
+pattern variable is an iteration pattern variable for outer if occurs at
+a depth equal to its depth marker. There must be at least one;
+otherwise, an error is raised. If there are multiple iteration
+variables, then all of their values must be lists of the same length.
+The result for outer is produced by mapping the inner template over the
+iteration pattern variable values and decreasing their effective depth
+markers by 1 within inner. The outer result is formed by appending the
+inner results.
+Consequently, if a pattern variable occurs at a depth greater than its
+depth marker, it is used as an iteration pattern variable for the
+innermost ellipses but not the outermost. A pattern variable must not
+occur at a depth less than its depth marker; otherwise, an error is
+raised.
+
+                                        *~*
+(~@ . template)
+Produces the sequence of elements in the syntax list produced by
+template. If template does not produce a proper syntax list, an
+exception is raised.
+Examples:
+
+  > (with-syntax ([(key ...) #'('a 'b 'c)]
+                  [(val ...) #'(1 2 3)])
+      #'(hash (~@ key val) ...))
+  #<syntax:eval:2:0 (hash (quote a) 1 (quote b) 2 (quote c) 3)>
+  > (with-syntax ([xs #'(2 3 4)])
+      #'(list 1 (~@ . xs) 5))
+  #<syntax:eval:3:0 (list 1 2 3 4 5)>
+
+                                        *~?*
+(~? head-template1 head-template2)
+Produces the result of head-template1 if none of its pattern variables
+have “missing values”; otherwise produces the result of head-template2.
+
+                                        *~?*
+(~? head-template)
+Produces the result of head-template if none of its pattern variables
+have “missing values”; otherwise produces nothing.
+Equivalent to (~? head-template (~@)).
+
 A (syntax template) form is normally abbreviated as #'template; see also
 [missing]. If template contains no pattern variables, then #'template is
 equivalent to (quote-syntax template).
+
+Changed in version 6.90.0.25: Added ~@ and ~?.
 
                                         *quasisyntax*
 (quasisyntax template) ~
@@ -384,14 +428,28 @@ only with a quasisyntax template.
 
                                         *syntax/loc*
 (syntax/loc stx-expr template) ~
+ 
+  stx-expr : syntax? ~ ~
 
 Like syntax, except that the immediate resulting syntax object takes its
 source-location information from the result of stx-expr (which must
-produce a syntax object), unless the template is just a pattern
-variable, or both the source and position of stx-expr are #f.
+produce a syntax object).
+
+Only the source location of the immediate result—the “outermost” syntax
+object—is adjusted. The source location is not adjusted if both the
+source and position of stx-expr are #f. The source location is adjusted
+only if the resulting syntax object comes from the template itself
+rather than the value of a syntax pattern variable. For example, if x is
+a syntax pattern variable, then (syntax/loc stx-expr x) does not use the
+location of stx-expr.
+
+Changed in version 6.90.0.25: Previously, syntax/loc did not enforce the
+contract on stx-expr if template was just a pattern variable.
 
                                         *quasisyntax/loc*
 (quasisyntax/loc stx-expr template) ~
+ 
+  stx-expr : syntax? ~ ~
 
 Like quasisyntax, but with source-location assignment like syntax/loc.
 
@@ -442,9 +500,10 @@ but with syntax errors potentially phrased in terms of pattern.
 ...
 
 The ... transformer binding prohibits ... from being used as an
-expression. This binding is useful only in syntax patterns and
-templates, where it indicates repetitions of a pattern or template. See
-syntax-case and syntax.
+expression. This binding is useful only in syntax patterns and templates
+(or other unrelated expression forms that treat it specially like ->),
+where it indicates repetitions of a pattern or template. See syntax-case
+and syntax.
 
 _
 
@@ -452,9 +511,18 @@ The _ transformer binding prohibits _ from being used as an expression.
 This binding is useful only in syntax patterns, where it indicates a
 pattern that matches any syntax object. See syntax-case.
 
+~?
+~@
+
+The ~? and ~@ transformer bindings prohibit these forms from being used
+as an expression. The bindings are useful only in syntax templates. See
+syntax.
+
+Added in version 6.90.0.25.
+
                                         *syntax-pattern-variable?*
 (syntax-pattern-variable? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a value that, as a transformer-binding value, makes
 the bound variable as pattern variable in syntax and other forms. To

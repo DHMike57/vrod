@@ -179,7 +179,7 @@ the programmer clicks on the Stop button or closes the canvas.
 
 The only mandatory clause of a big-bang description is to-draw (or
 on-draw for backwards compatibility):
-
+                                             *to-draw*
 * (to-draw render-expr)
    
     render-expr : (-> WorldState scene?) ~
@@ -207,7 +207,7 @@ data definition:
 
 HandlerResult : is a synonym for WorldState until The World is not
 Enough
-
+						*on-tick*
 * (on-tick tick-expr)
    
     tick-expr : (-> WorldState HandlerResult) ~
@@ -237,7 +237,7 @@ Enough
   the clock has ticked more than limit-expr times.
 
 * A KeyEvent represents key board events.
-
+							*KeyEvent*			
   KeyEvent : string?
 
   For simplicity, we represent key events with strings, but not all
@@ -402,7 +402,7 @@ Enough
   current image, suitably scaled to its size:
 
 
-
+							*PadEvent*
   PadEvent : key-event?
 
   It is one of the following:
@@ -548,7 +548,7 @@ Enough
     ; some tests: ~
     (check-expect (handler 9 "left") 8)
     (check-expect (handler 8 "up")   8-1i)
-
+							*MouseEvent*
 * A MouseEvent represents mouse events, e.g., mouse movements  or mouse
   clicks, by the computer’s user.
 
@@ -612,7 +612,7 @@ Enough
   signaling a "move" event immediately after a "button-up"  event is
   discovered.  Programmers must design the on-mouse  handler to handle
   any possible mouse event at any moment.
-
+						*stop-when*
 * (stop-when last-world?)
    
     last-world? : (-> WorldState boolean?) ~

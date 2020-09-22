@@ -25,13 +25,13 @@ prefix, and the list’s elements are printed at quoting depth 1.
 When the print-graph parameter is set to #t, then the printer first
 scans an object to detect cycles. The scan traverses the components of
 pairs, mutable pairs, vectors, boxes (when print-box is #t), hash tables
-(when print-hash-table is #t), fields of structures exposed by
-struct->vector (when print-struct is #t), and fields of structures
-exposed by printing when the structure’s type has the prop:custom-write
-property. If print-graph is #t, then this information is used to print
-sharing through graph definitions and references (see [missing]). If a
-cycle is detected in the initial scan, then print-graph is effectively
-set to #t automatically.
+(when print-hash-table is #t and when key are held strongly), fields of
+structures exposed by struct->vector (when print-struct is #t), and
+fields of structures exposed by printing when the structure’s type has
+the prop:custom-write property. If print-graph is #t, then this
+information is used to print sharing through graph definitions and
+references (see [missing]). If a cycle is detected in the initial scan,
+then print-graph is effectively set to #t automatically.
 
 With the exception of displaying byte strings, printing is defined in
 terms of Unicode characters; see [missing] for information on how a
@@ -54,7 +54,7 @@ instead of quoting them with |s.
 When read-accept-bar-quote is #f, then | is not treated as a special
 character. The following are always special characters:
 
-   ( ) [ ] } } " , ' ` ; \
+   ( ) [ ] { } " , ' ` ; \
 
 In addition, # is a special character when it appears at the beginning
 of the symbol, and when it is not followed by %.
@@ -73,37 +73,50 @@ printing enclosing datatypes, a symbol is quotable.
 A number prints the same way in write, display, and print modes. For the
 purposes of printing enclosing datatypes, a number is quotable.
 
-A complex number that is not a real number always prints as >m<+>n<i,
-where >m< and >n< are the printed forms of its real and imaginary parts,
-respectively.
+A complex number that is not a real number always prints as >m<+>n<i or
+>m<->n<i, where >m< and >n< (for a non-negative imaginary part) or ->n<
+(for a negative imaginary part) are the printed forms of its real and
+imaginary parts, respectively.
 
-An inexact real number prints with either a . decimal point, an e
-exponent marker, or both.  The form is selected so that the output is as
-short as possible, with the constraint that reading the printed form
-back in produces an equal? number.
+An exact 0 prints as 0. A positive, exact integer prints as a sequence
+of digits that does not start with 0. A positive, exact, real,
+non-integer number prints as >m</>n<, where >m< and >n< are the printed
+forms of the number’s numerator and denominator (as determined by
+numerator and denominator). A negative exact number prints with a -
+prefix on the printed form of the number’s exact negation. When printing
+a number as hexadecimal (e.g., via number->string), digits a though f
+are printed in lowercase. A #e or radix marker such as #d does not
+prefix the number.
 
-An exact 0 prints as 0.
+A double-precision inexact number (i.e., a flonum) that is a rational
+number prints with either a . decimal point, an e exponent marker and
+non-zero exponent, or both. The form is selected to keep the output
+short, with the constraint that reading the printed form back in
+produces an equal? number. A #i does not prefix the number, and # is
+never used in place of a digit. A + does not prefix a positive number,
+but a + or - is printed before the exponent if e is present. Positive
+infinity prints as +inf.0, negative infinity prints as -inf.0, and
+not-a-number prints as +nan.0.
 
-A positive, exact integer prints as a sequence of decimal digits that
-does not start with 0.
-
-A positive, exact, real, non-integer number prints as >m</>n<, where >m<
-and >n< are the printed forms of the number’s numerator and denominator
-(as determined by numerator and denominator).
-
-A negative exact number prints with a - prefix on the printed form of
-the number’s exact negation.
+A single-precision inexact number that is a rational number prints like
+a double-precision number, but always with an exponent, using f in place
+of e to indicate the number’s precision; if the number would otherwise
+print without an exponent, 0 (with no +) is printed as the exponent
+part. Single-precision positive infinity prints as +inf.f, negative
+infinity prints as -inf.f, and not-a-number prints as +nan.f.
 
 3. Printing Extflonums
 
 An extflonum prints the same way in write, display, and print modes. For
 the purposes of printing enclosing datatypes, an extflonum is quotable.
 
-An extflonum prints in the same way an inexact number, but always with a
-t or T exponent marker. When extflonum operations are supported,
-printing always uses t; when extflonum operations are not supported, an
-extflonum prints the same as its reader (see [missing]) source, since
-reading is the only way to produce an extflonum.
+An extflonum prints in the same way a single-precision inexact number
+(see Printing Numbers), but always with a t or T exponent marker or as a
+suffix for +inf.t, -inf.t, or +nan.t. When extflonum operations are
+supported, printing always uses lowercase t; when extflonum operations
+are not supported, an extflonum prints the same as its reader (see
+[missing]) source, since reading is the only way to produce an
+extflonum.
 
 4. Printing Booleans
 
@@ -134,7 +147,9 @@ the pair is printed with the corresponding reader syntax: ', `, ,, ,@,
 element of the list is printed. When the list is a tail of an enclosing
 list, the tail is printed after a . in the enclosing list (after which
 the reader abbreviations work), instead of including the tail as two
-elements of the enclosing list.
+elements of the enclosing list. If the reader syntax , or #, is followed
+by a symbol that prints with a leading @, then the printer adds an extra
+space before the @.
 
 The printed form of a pair is the same in both write and display modes,
 except as the printed form of the pair’s car and cdr vary with the mode.
@@ -170,6 +185,9 @@ set to #f, then mutable pairs print using ( and ) in that mode.
 For the purposes of printing enclosing datatypes, an empty list is
 always quotable, a pair is quotable when its car and cdr are quotable,
 and a mutable list is never quotable.
+
+Changed in version 6.9.0.6: Added a space when printing , or #, followed
+by a symbol that prints with a leading @.
 
 6. Printing Strings
 
@@ -216,7 +234,7 @@ elements are not all quotable, then the vector prints as (vector , the
 elements at quoting depth 0, and a closing ). A vector is quotable when
 all of its elements are quotable.
 
-In write or display mode, an flvector prints like a vector, but with a
+In write or display mode, a flvector prints like a vector, but with a
 #fl prefix instead of #. A fxvector similarly prints with a #fx prefix
 instead of #. The print-vector-length parameter affects flvector and
 fxvector printing the same as vector printing. In print mode, flvectors
@@ -296,12 +314,12 @@ Unreadable Values) and count as quotable.
 
 When the print-hash-table parameter is set to #t, in write and display
 modes, a hash table prints starting with #hash(, #hasheqv(, or #hasheq(
-for a table using equal?, eqv?, or eq? key comparisons, respectively.
-After the prefix, each key–value mapping is shown as (, the printed form
-of a key, a space, ., a space, the printed form the corresponding value,
-and ), with an additional space if the key–value pair is not the last to
-be printed.  After all key–value pairs, the printed form completes with
-).
+for a table using equal?, eqv?, or eq? key comparisons, respectively, as
+long as the hash table retains keys strongly. After the prefix, each
+key–value mapping is shown as (, the printed form of a key, a space, .,
+a space, the printed form the corresponding value, and ), with an
+additional space if the key–value pair is not the last to be printed.
+After all key–value pairs, the printed form completes with ).
 
 In print mode when print-as-expression is #f or the quoting depth is 1,
 the printed form is the same as for write. Otherwise, if the hash
@@ -312,8 +330,9 @@ If some key or value is not quotable, the hash table prints as (hash ,
 at quoting depth 1 and separated by spaces, and finally a closing ). A
 hash table is quotable when all of its keys and values are quotable.
 
-When the print-hash-table parameter is set to #f, a hash table prints as
-#<hash> and counts as quotable.
+When the print-hash-table parameter is set to #f or when a hash table
+retains its keys weakly, a hash table prints as #<hash> and counts as
+quotable.
 
 10. Printing Boxes
 
@@ -401,15 +420,15 @@ printed with #~ is essentially assembly code for Racket, and reading
 such a form produces a compiled form when the read-accept-compiled
 parameter is set to #t.
 
-When a compiled form contains syntax object constants, they must not be
-tainted or armed; the #~-marshaled form drops source-location
-information and properties (see [missing]) for the syntax objects.
-
-Compiled code parsed from #~ may contain references to unexported or
-protected bindings from a module. At read time, such references are
-associated with the current code inspector (see current-code-inspector),
-and the code will only execute if that inspector controls the relevant
-module invocation (see [missing]).
+Compiled code parsed from #~ is marked as non-runnable if the current
+code inspector (see current-code-inspector) is not the original code
+inspector; on attempting to evaluate or reoptimize non-runnable
+bytecode, exn:fail exception is raised. Otherwise, compiled code parsed
+from #~ may contain references to unexported or protected bindings from
+a module. Conceptually, the references in bytecode are associated with
+the current code inspector, where the code will only execute if that
+inspector controls the relevant module invocation (see [missing])—but
+the original code inspector controls all other inspectors, anyway.
 
 A compiled-form object may contain uninterned symbols (see [missing])
 that were created by gensym or string->uninterned-symbol. When the
@@ -431,20 +450,42 @@ identifier; those functions lead to top-level and module variables with
 unreadable symbolic names, and the names are deterministic as long as
 expansion is otherwise deterministic.
 
-Despite the problems inherent with uninterned symbols as variable names,
-they are partially supported even across multiple #~s: When compiled
-code contains a reference to a module-defined variable whose name is an
-uninterned symbol, the relative position of the variable among the
-module’s definitions is recorded, and the reference can be linked back
-to the definition based on its position and the characters in its name.
-This accommodation works only for variable references in compiled code;
-it does not work for syntax-quoted identifiers, for example.
-
-Finally, a compiled form may contain path literals. Although paths are
-not normally printed in a way that can be read back in, path literals
-can be written and read as part of compiled code. The
+A compiled form may contain path literals. Although paths are not
+normally printed in a way that can be read back in, path literals can be
+written and read as part of compiled code. The
 current-write-relative-directory parameter is used to convert the path
 to a relative path as is it written, and then
 current-load-relative-directory parameter is used to convert any
 relative path back as it is read. The relative-path conversion applies
 on reading whether the path was originally relative or not.
+
+For a path in a syntax object’s source, if the
+current-load-relative-directory parameter is not set of the path is not
+relative to the value of the current-load-relative-directory parameter,
+then the path is coerced to a string that preserves only part of the
+path (an in effort to make it less tied to the build-time filesystem,
+which can be different than the run-time filesystem).
+
+Finally, a compiled form may contain srcloc structures if the source
+field of the structure is a path for some system, a string, a byte
+string, a symbol, or #f. For a path value (matching the current
+platform’s convention), if the path cannot be recorded as a relative
+path based on current-write-relative-directory, then it is converted to
+a string with at most two path elements; if the path contains more than
+two elements, then the string contains .../, the next-to-last element, /
+and the last element. The intent of the constraints on srcloc values and
+the conversion of the source field is to preserve some source
+information but not expose or record a path that makes no sense on a
+different filesystem or platform.
+
+For internal testing purposes, when the PLT_VALIDATE_LOAD environment
+variable is set, the reader runs a validator on bytecode parsed from #~.
+The validator may catch miscompilations or bytecode-file corruption. The
+validator may run lazily, such as checking a procedure only when the
+procedure is called.
+
+Changed in version 6.90.0.21: Adjusted the effect of changing the code
+inspector on parsed bytecode, causing the reader to mark the loaded code
+as generally unrunnable instead of rejecting at read time references to
+unsafe operations. Changed in version 7.0: Allowed some srcloc values
+embedded in compiled code.

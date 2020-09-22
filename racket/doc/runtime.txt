@@ -2,12 +2,14 @@ Environment and Runtime Information
 
                                         *system-type*
 (system-type [mode]) ~
- -> (or/c symbol? string? bytes? exact-positive-integer? vector?)
-  mode : (or/c 'os 'word 'gc 'link 'machine    = 'os ~
-               'so-suffix 'so-mode 'fs-change)
+ -> (or/c symbol? string? bytes? exact-positive-integer? vector? #f)
+  mode : (or/c 'os 'word 'vm 'gc 'link 'machine 'target-machine ~ ~
+               'so-suffix 'so-mode 'fs-change 'cross)
+       = 'os
 
 Returns information about the operating system, build mode, or machine
-for a running Racket.
+for a running Racket. (Installation tools should use cross-system-type,
+instead, to support cross-installation.)
 
 In 'os mode,  the possible symbol results are:
 
@@ -20,11 +22,21 @@ In 'os mode,  the possible symbol results are:
 In 'word mode, the result is either 32 or 64 to indicate whether Racket
 is running as a 32-bit program or 64-bit program.
 
+See [missing] for more information about the 'vm and 'gc mode results.
+
+In 'vm mode, the possible symbol results are:
+
+* 'racket
+
+* 'chez-scheme
+
 In 'gc mode, the possible symbol results are:
 
-* 'cgc
+* 'cgc — when (system-type 'vm) is 'racket
 
-* '3m
+* '3m — when (system-type 'vm) is 'racket
+
+* 'cs — when (system-type 'vm) is 'chez-scheme
 
 In 'link mode, the possible symbol results are:
 
@@ -34,13 +46,19 @@ In 'link mode, the possible symbol results are:
 
 * 'dll (Windows)
 
-* 'framework (Mac OS X)
+* 'framework (Mac OS)
 
-Future ports of Racket may expand the list of 'os, 'gc, and 'link
+Future ports of Racket may expand the list of 'os, 'vm, 'gc, and 'link
 results.
 
 In 'machine mode, then the result is a string, which contains further
 details about the current machine in a platform-specific format.
+
+In 'target-machine mode, the result is a symbol for the running Racket’s
+native bytecode format, or it is #f if there is no native format other
+than the machine-independent format. If the result is a symbol, then
+compile-target-machine? returns #t when applied to the symbol; see also
+current-compile-target-machine.
 
 In 'so-suffix mode, then the result is a byte string that represents the
 file extension used for shared objects on the current platform. The byte
@@ -62,8 +80,8 @@ possible symbols, in order, are:
 
 * 'scalable — resources consumed by a filesystem change event are
   effectively limited only by available memory, as opposed to
-  file-descriptor limits; this property is #f on Mac OS X and BSD
-  variants of Unix
+  file-descriptor limits; this property is #f on Mac OS and BSD variants
+  of Unix
 
 * 'low-latency — creation and checking of a filesystem change event is
   practically instantaneous; this property is #f on Linux
@@ -72,12 +90,27 @@ possible symbols, in order, are:
   of a file, as opposed to the file’s directory; this property is #f on
   Windows
 
+In 'cross mode, the result reports whether cross-platform build mode has
+been selected (through the -C or --cross argument to racket; see
+[missing]). The possible symbols are:
+
+* 'infer — infer cross-platform mode based on whether (system-type) and
+  (cross-system-type) report the same symbol
+
+* 'force — use cross-platform mode, even if the current and target
+  system types are the same, because the current and target executables
+  can be different
+
+Changed in version 6.8.0.2: Added 'vm mode. Changed in version 6.9.0.1:
+Added 'cross mode. Changed in version 7.1.0.6: Added 'target-machine
+mode.
+
                                         *system-language+country*
 (system-language+country) -> string? ~
 
 Returns a string to identify the current user’s language and country.
 
-On Unix and Mac OS X, the string is five characters: two lowercase ASCII
+On Unix and Mac OS, the string is five characters: two lowercase ASCII
 letters for the language, an underscore, and two uppercase ASCII letters
 for the country. On Windows, the string can be arbitrarily long, but the
 language and country are in English (all ASCII letters or spaces)
@@ -87,12 +120,12 @@ On Unix, the result is determined by checking the LC_ALL, LC_TYPE, and
 LANG environment variables, in that order (and the result is used if the
 environment variable’s value starts with two lowercase ASCII letters, an
 underscore, and two uppercase ASCII letters, followed by either nothing
-or a period). On Windows and Mac OS X, the result is determined by
-system calls.
+or a period). On Windows and Mac OS, the result is determined by system
+calls.
 
                                         *system-library-subpath*
 (system-library-subpath [mode]) -> path? ~
-  mode : (or/c 'cgc '3m #f) = (system-type 'gc) ~
+  mode : (or/c 'cgc '3m 'cs #f) = (system-type 'gc) ~ ~
 
 Returns a relative directory path. This string can be used to build
 paths to system-specific files. For example, when Racket is running on
@@ -101,14 +134,20 @@ while the subpath for Windows on an i386 architecture starts
 "win32\\i386".
 
 The optional mode argument specifies the relevant garbage-collection
-variant, which one of the possible results of (system-type 'gc): 'cgc or
-'3m. It can also be #f, in which case the result is independent of the
-garbage-collection variant.
+variant, which one of the possible results of (system-type 'gc): 'cgc,
+'3m, or 'cs. It can also be #f, in which case the result is independent
+of the garbage-collection variant.
+
+Installation tools should use cross-system-library-subpath, instead, to
+support cross-installation.
+
+Changed in version 7.0: Added 'cs mode.
 
                                         *version*
 (version) -> (and/c string? immutable?) ~
 
-Returns an string indicating the currently executing version of Racket.
+Returns an immutable string indicating the currently executing version
+of Racket.
 
                                         *banner*
 (banner) -> (and/c string? immutable?) ~
@@ -118,18 +157,23 @@ banner text for an embedding program, such as GRacket). The banner
 string ends with a newline.
 
                                         *current-command-line-arguments*
-(current-command-line-arguments) -> (vectorof string?) ~
+(current-command-line-arguments) ~
+ -> (vectorof (and/c string? immutable?))
 (current-command-line-arguments argv) -> void?
-  argv : (vectorof (and/c string? immutable?)) ~
+  argv : (vectorof string?) ~ ~
 
 A parameter that is initialized with command-line arguments when Racket
 starts (not including any command-line arguments that were treated as
 flags for the system).
 
+On Unix and Mac OS, command-line arguments are provided to the Racket
+process as byte strings. The arguments are converted to strings using
+bytes->string/locale and #\uFFFD as the encoding-error character.
+
                                         *current-thread-initial-stack-size*
 (current-thread-initial-stack-size) -> exact-positive-integer? ~
 (current-thread-initial-stack-size size) -> void?
-  size : exact-positive-integer? ~
+  size : exact-positive-integer? ~ ~
 
 A parameter that provides a hint about how much space to reserve for a
 newly created thread’s local variables. The actual space used by a
@@ -138,14 +182,14 @@ platform-independent.
 
                                         *vector-set-performance-stats!*
 (vector-set-performance-stats! results [thd]) -> void? ~
-  results : (and/c vector? ~
+  results : (and/c vector? ~ ~
                    (not/c immutable?))
-  thd : (or/c thread? #f) = #f ~
+  thd : (or/c thread? #f) = #f ~ ~
 
 Sets elements in results to report current performance statistics. If
 thd is not #f, a particular set of thread-specific statistics are
 reported, otherwise a different set of global (within the current place)
-statics are reported.
+statistics are reported.
 
 For global statistics, up to 12 elements are set in the vector, starting
 from the beginning. If results has n elements where n < 12, then the n

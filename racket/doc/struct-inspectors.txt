@@ -18,13 +18,13 @@ through an optional inspector argument to make-struct-type.
 
                                         *inspector?*
 (inspector? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an inspector, #f otherwise.
 
                                         *make-inspector*
 (make-inspector [inspector]) -> inspector? ~
-  inspector : inspector? = (current-inspector) ~
+  inspector : inspector? = (current-inspector) ~ ~
 
 Returns a new inspector that is a subinspector of inspector. Any
 structure type controlled by the new inspector is also controlled by its
@@ -32,23 +32,34 @@ ancestor inspectors, but no other inspectors.
 
                                         *make-sibling-inspector*
 (make-sibling-inspector [inspector]) -> inspector? ~
-  inspector : inspector? = (current-inspector) ~
+  inspector : inspector? = (current-inspector) ~ ~
 
 Returns a new inspector that is a subinspector of the same inspector as
 inspector. That is, inspector and the result inspector control mutually
 disjoint sets of structure types.
 
+                                        *inspector-superior?*
+(inspector-superior? inspector                ~
+                     maybe-subinspector) -> boolean?
+  inspector : inspector? ~ ~
+  maybe-subinspector : inspector? ~ ~
+
+Returns #t if inspector is an ancestor of maybe-subinspector (and not
+equal to maybe-subinspector), #f otherwise.
+
+Added in version 6.5.0.6.
+
                                         *current-inspector*
 (current-inspector) -> inspector? ~
 (current-inspector insp) -> void?
-  insp : inspector? ~
+  insp : inspector? ~ ~
 
 A parameter that determines the default inspector for newly created
 structure types.
 
                                         *struct-info*
 (struct-info v) -> (or/c struct-type? #f) boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns two values:
 
@@ -71,7 +82,7 @@ Returns two values:
     (listof exact-nonnegative-integer?)
     (or/c struct-type? #f)
     boolean?
-  struct-type : struct-type? ~
+  struct-type : struct-type? ~ ~
 
 Returns eight values that provide information about the structure type
 descriptor struct-type, assuming that the type is controlled  by the
@@ -107,17 +118,21 @@ If the type for struct-type is not controlled by the current inspector,
 the exn:fail:contract exception is raised.
 
                                         *struct-type-make-constructor*
-(struct-type-make-constructor struct-type) ~
+(struct-type-make-constructor  struct-type         ~
+                              [constructor-name]) 
  -> struct-constructor-procedure?
-  struct-type : struct-type? ~
+  struct-type : struct-type? ~ ~
+  constructor-name : (or/c symbol? #f) = #f ~ ~
 
 Returns a constructor procedure to create instances of the type for
-struct-type.  If the type for struct-type is not controlled by the
-current inspector, the exn:fail:contract exception is raised.
+struct-type.  If constructor-name is not #f, it is used as the name of
+the generated constructor procedure. If the type for struct-type is not
+controlled by the current inspector, the exn:fail:contract exception is
+raised.
 
                                         *struct-type-make-predicate*
 (struct-type-make-predicate struct-type) -> any ~
-  struct-type : any/c ~
+  struct-type : any/c ~ ~
 
 Returns a predicate procedure to recognize instances of the type for
 struct-type.  If the type for struct-type is not controlled by the
@@ -125,7 +140,7 @@ current inspector, the exn:fail:contract exception is raised.
 
                                         *object-name*
 (object-name v) -> any ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns a value for the name of v if v has a name, #f otherwise. The
 argument v can be any value, but only (some) procedures, structures,
@@ -155,7 +170,7 @@ name as the port’s for (to report source locations, for example).
 
 The name of a logger is either a symbol or #f.
 
-prop:object-name : struct-type-property? ~
+prop:object-name : struct-type-property? ~ ~
 
 A structure type property that allows structure types to customize  the
 result of object-name applied to their instances. The property value can

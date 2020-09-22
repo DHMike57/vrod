@@ -2,7 +2,7 @@ Places
 
 +[missing] in [missing] introduces places.
 
- (require racket/place) package: base ~
+ (require racket/place) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/place
 and racket libraries, but not racket/base.
@@ -10,14 +10,21 @@ and racket libraries, but not racket/base.
 Places enable the development of parallel programs that take advantage
 of machines with multiple processors, cores, or hardware threads.
 
-Currently, parallel support for places is enabled only for Racket 3m
-(which is the main variant of Racket), and only by default for Windows,
-Linux x86/x86_64, and Mac OS X x86/x86_64. To enable support for other
+Currently, parallel support for places is enabled only for the 3m (main)
+and CS variants of Racket, and only by default for Windows, Linux
+x86/x86_64, and Mac OS x86/x86_64. To enable support for other
 platforms, use --enable-places with configure when building Racket. The
 place-enabled? function reports whether places run in parallel.
+Implementation and operating-system constraints may limit the
+scalability of places. For example, although places can perform garbage
+collections independently in the 3m variant, a garbage collection may
+need to manipulate a page table that is shared across all places, and
+that shared page table can be a bottleneck with enough places—perhaps
+around 8 or 16.
 
 A place is a parallel task that is effectively a separate instance of
-the Racket virtual machine. Places communicate through place channels,
+the Racket virtual machine, although all places run within a single
+operating-system process. Places communicate through place channels,
 which are endpoints for a two-way buffered communication.
 
 To a first approximation, place channels support only immutable,
@@ -84,6 +91,9 @@ current values of the following parameters are used:
 current-library-collection-paths, current-library-collection-links, and
 current-compiled-file-roots.
 
+A newly created place is registered with the current custodian, so that
+the place is terminated when the custodian is shut down.
+
 1. Using Places
 
                                         *place-enabled?*
@@ -95,26 +105,26 @@ are simulated using thread.
 
                                         *place?*
 (place? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a place descriptor value, #f otherwise. Every place
 descriptor is also a place channel.
 
                                         *place-channel?*
 (place-channel? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is place channel, #f otherwise.
 
                                         *dynamic-place*
 (dynamic-place  module-path          ~
                 start-name          
-               [#:at location        ~
-                #:named named]) -> place? ~
-  module-path : (or/c module-path? path?) ~
-  start-name : symbol? ~
-  location : (or/c #f place-location?) = #f ~
-  named : any/c = #f ~
+               [#:at location        ~ ~
+                #:named named]) -> place? ~ ~
+  module-path : (or/c module-path? path?) ~ ~
+  start-name : symbol? ~ ~
+  location : (or/c #f place-location?) = #f ~ ~
+  named : any/c = #f ~ ~
 
 Creates a place to run the procedure that is identified by  module-path
 and start-name. The result is a  place descriptor value that represents
@@ -123,7 +133,7 @@ The place descriptor  value is also a place channel that permits
 communication with  the place.
 
 The module indicated by module-path must export a function  with the
-name start-proc. The function must accept a single  argument, which is a
+name start-name. The function must accept a single  argument, which is a
 place channel that corresponds to the  other end of communication for
 the place descriptor returned  by place.
 
@@ -136,7 +146,7 @@ value. Use (exit v) to  immediately terminate a place with the
 completion value  v. Since a completion value is limited to an exact
 integer  between 0 and 255, any other value for v  is converted to 0.
 
-If the function indicated by module-path and  start-proc returns, then
+If the function indicated by module-path and  start-name returns, then
 the place terminates with the  completion value 0.
 
 In the created place, the current-input-port parameter is  set to an
@@ -158,17 +168,17 @@ inspector (see [missing]).
                                         *dynamic-place**
 (dynamic-place*  module-path      ~
                  start-name      
-                [#:in in          ~
-                 #:out out        ~
-                 #:err err]) -> place? ~
+                [#:in in          ~ ~
+                 #:out out        ~ ~
+                 #:err err]) -> place? ~ ~
                                 (or/c output-port? #f)
                                 (or/c input-port? #f)
                                 (or/c input-port? #f)
-  module-path : (or/c module-path? path?) ~
-  start-name : symbol? ~
-  in : (or/c input-port? #f) = #f ~
-  out : (or/c output-port? #f) = (current-output-port) ~
-  err : (or/c output-port? #f) = (current-error-port) ~
+  module-path : (or/c module-path? path?) ~ ~
+  start-name : symbol? ~ ~
+  in : (or/c input-port? #f) = #f ~ ~
+  out : (or/c output-port? #f) = (current-output-port) ~ ~
+  err : (or/c output-port? #f) = (current-error-port) ~ ~
 
 Like dynamic-place, but accepts specific ports to the new  place’s
 ports, and returns a created port when #f is  supplied for a port. The
@@ -206,8 +216,13 @@ dynamic-place.
 Creates a place that evaluates body   expressions with id bound to a
 place channel.  The   bodys close only over id plus the top-level
 bindings of the enclosing module, because the   bodys are lifted to a
-function that is exported by   the module. The result of place is a
-place descriptor,   like the result of dynamic-place.
+submodule.   The result of place is a place descriptor,   like the
+result of dynamic-place.
+
+The generated submodule has the name place-body-n for an integer n, and
+the submodule exports a main function that takes a place channel for the
+new place. The submodule is not intended for use, however, except by the
+expansion of the place form.
 
 The place binding is protected in the same way as  dynamic-place.
 
@@ -217,9 +232,9 @@ The place binding is protected in the same way as  dynamic-place.
         body ...+)
  
 maybe-port = 
-           | #:in in-expr ~
-           | #:out out-expr ~
-           | #:err err-expr ~
+           | #:in in-expr ~ ~
+           | #:out out-expr ~ ~
+           | #:err err-expr ~ ~
 
 Like place, but supports optional #:in, #:out,  and #:err expressions
 (at most one of each) to specify ports in the same way and  with the
@@ -228,9 +243,17 @@ the same as for  dynamic-place*.
 
 The place* binding is protected in the same way as  dynamic-place.
 
+                                        *place/context*
+(place/context id body ...+) ~
+
+Like place, but body ... may have free lexical variables, which are
+automatically sent to the newly-created place. Note that these variables
+must have values accepted by place-message-allowed?, otherwise an
+exn:fail:contract exception is raised.
+
                                         *place-wait*
 (place-wait p) -> exact-integer? ~
-  p : place? ~
+  p : place? ~ ~
 
 Returns the completion value of the place indicated by p, blocking until
 the place has terminated.
@@ -241,7 +264,7 @@ only when the pumping threads have completed.
 
                                         *place-dead-evt*
 (place-dead-evt p) -> evt? ~
-  p : place? ~
+  p : place? ~ ~
 
 Returns a synchronizable event (see [missing]) that is ready for
 synchronization if and only if p has terminated. The synchronization
@@ -254,15 +277,15 @@ running.
 
                                         *place-kill*
 (place-kill p) -> void? ~
-  p : place? ~
+  p : place? ~ ~
 
 Immediately terminates the place, setting the place’s completion value
 to 1 if the place does not have a completion value already.
 
                                         *place-break*
 (place-break p [kind]) -> void? ~
-  p : place? ~
-  kind : (or/c #f 'hang-up 'terminate) = #f ~
+  p : place? ~ ~
+  kind : (or/c #f 'hang-up 'terminate) = #f ~ ~
 
 Sends the main thread of place p a break; see [missing].
 
@@ -279,8 +302,8 @@ destination place (via an existing place channel).
 
                                         *place-channel-put*
 (place-channel-put pch v) -> void ~
-  pch : place-channel? ~
-  v : place-message-allowed? ~
+  pch : place-channel? ~ ~
+  v : place-message-allowed? ~ ~
 
 Sends a message v on channel pch. Since place channels  are
 asynchronous, place-channel-put calls are non-blocking.
@@ -290,22 +313,22 @@ such as converting a mutable string to an immutable string.
 
                                         *place-channel-get*
 (place-channel-get pch) -> place-message-allowed? ~
-  pch : place-channel? ~
+  pch : place-channel? ~ ~
 
 Returns a message received on channel pch, blocking until a message is
 available.
 
                                         *place-channel-put/get*
 (place-channel-put/get pch v) -> any/c ~
-  pch : place-channel? ~
-  v : any/c ~
+  pch : place-channel? ~ ~
+  v : any/c ~ ~
 
 Sends an immutable message v on channel pch and then waits for a message
 (perhaps a reply) on the same channel.
 
                                         *place-message-allowed?*
 (place-message-allowed? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is allowed as a message on a place channel, #f
 otherwise.
@@ -326,10 +349,11 @@ kinds of data are allowed as messages:
 
 * pairs, lists, vectors, and immutable prefab structures containing
   message-allowed values, where a mutable vector is automatically
-  replaced by an immutable vector;
+  replaced by an immutable vector and where impersonators of vectors and
+  prefab structures are copied;
 
 * hash tables where mutable hash tables are automatically replaced by
-  immutable variants;
+  immutable variants, and where a hash table impersonator is copied;
 
 * place channels, where a place descriptor is automatically replaced by
   a plain place channel;
@@ -344,9 +368,9 @@ kinds of data are allowed as messages:
   shared-fxvector, make-shared-fxvector, shared-bytes, and
   make-shared-bytes.
 
-prop:place-location : struct-type-property? ~
+prop:place-location : struct-type-property? ~ ~
 (place-location? v) -> boolean?
-  v : any/c ~
+  v : any/c ~ ~
 
 A structure type property and associated predicate for implementations
 of place locations. The value of prop:place-location must be a procedure
@@ -368,7 +392,7 @@ string message, each event logged for a place has a data value that is
 an instance of a place-event prefab structure:
 
   (struct place-event (place-id action value time)
-    #:prefab) ~
+    #:prefab) ~ ~
 
 The place-id field is an exact integer that identifies a place.
 

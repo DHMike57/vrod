@@ -2,7 +2,7 @@ Exiting
 
                                         *exit*
 (exit [v]) -> any ~
-  v : any/c = #t ~
+  v : any/c = #t ~ ~
 
 Passes v to the current exit handler. If the exit handler does not
 escape or terminate the thread, #<void> is returned.
@@ -10,7 +10,7 @@ escape or terminate the thread, #<void> is returned.
                                         *exit-handler*
 (exit-handler) -> (any/c . -> . any) ~
 (exit-handler proc) -> void?
-  proc : (any/c . -> . any) ~
+  proc : (any/c . -> . any) ~ ~
 
 A parameter that determines the current exit handler. The exit handler
 is called by exit.
@@ -25,7 +25,7 @@ if it is an exact integer between 1 and 255 (which normally means
                                         *executable-yield-handler*
 (executable-yield-handler) -> (byte? . -> . any) ~
 (executable-yield-handler proc) -> void?
-  proc : (byte? . -> . any) ~
+  proc : (byte? . -> . any) ~ ~
 
 A parameter that determines a procedure to be called as the Racket
 process is about to exit normally. The procedure associated with this

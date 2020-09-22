@@ -6,7 +6,7 @@ The match form and related forms support general pattern matching on
 Racket values. See also [missing] for information on regular-expression
 matching on strings, bytes, and streams.
 
- (require racket/match) package: base ~
+ (require racket/match) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/match
 and racket libraries, but not racket/base.
@@ -16,7 +16,7 @@ and racket libraries, but not racket/base.
  
 clause = [pat body ...+]
        | [pat (=> id) body ...+]
-       | [pat #:when cond-expr body ...+] ~
+       | [pat #:when cond-expr body ...+] ~ ~
 
 Finds the first pat that matches the result of val-expr, and evaluates
 the corresponding bodys with bindings introduced by pat (if any).
@@ -34,6 +34,19 @@ being matched before calling the failure procedure, otherwise the
 behavior of matching is unpredictable. See also failure-cont, which is a
 lower-level mechanism achieving the same ends.
 
+Examples:
+
+  > (define (m x)
+      (match x
+        [(list a b c)
+         #:when (= 6 (+ a b c)) ~ ~
+         'sum-is-six]
+        [(list a b c) 'sum-is-not-six]))
+  > (m '(1 2 3))
+  'sum-is-six
+  > (m '(2 3 4))
+  'sum-is-not-six
+
 An optional (=> id) between a pat and the bodys is bound to a failure
 procedure of zero arguments.  If this procedure is invoked, it escapes
 back to the pattern matching expression, and resumes the matching
@@ -41,16 +54,34 @@ process as if the pattern had failed to match.  The bodys must not
 mutate the object being matched before calling the failure procedure,
 otherwise the behavior of matching is unpredictable.
 
+Examples:
+
+  > (define (m x)
+      (match x
+        [(list a b c)
+         (=> exit)
+         (f x exit)]
+        [(list a b c) 'sum-is-not-six]))
+  > (define (f x exit)
+      (if (= 6 (apply + x))
+          'sum-is-six
+          (exit)))
+  > (m '(1 2 3))
+  'sum-is-six
+  > (m '(2 3 4))
+  'sum-is-not-six
+
 The grammar of pat is as follows, where non-italicized identifiers are
 recognized symbolically (i.e., not by binding).
 
-pat     ::= id                              match anything, bind identifier ~
+pat     ::= id                              match anything, bind identifier ~ ~
          |  (var id)                        match anything, bind identifier
          |  _                               match anything
          |  literal                         match literal
          |  (quote datum)                   match equal? value
          |  (list lvp ...)                  match sequence of lvps
          |  (list-rest lvp ... pat)         match lvps consed onto a pat
+         |  (list* lvp ... pat)             match lvps consed onto a pat
          |  (list-no-order pat ...)         match pats in any order
          |  (list-no-order pat ... lvp)     match pats in any order
          |  (vector lvp ...)                match vector of pats
@@ -72,7 +103,7 @@ pat     ::= id                              match anything, bind identifier ~
          |  (? expr pat ...)                match if (expr value) and pats
          |  (quasiquote qp)                 match a quasipattern
          |  derived-pattern                 match using extension
-literal ::= #t                              match true ~
+literal ::= #t                              match true ~ ~
          |  #f                              match false
          |  string                          match equal? string
          |  bytes                           match equal? byte string
@@ -81,35 +112,41 @@ literal ::= #t                              match true ~
          |  keyword                         match equal? keyword
          |  regexp                          match equal? regexp literal
          |  pregexp                         match equal? pregexp literal
-lvp     ::= pat ooo                         greedily match pat instances ~
+lvp     ::= pat ooo                         greedily match pat instances ~ ~
          |  pat                             match pat
-qp      ::= literal                         match literal ~
+qp      ::= literal                         match literal ~ ~
          |  id                              match symbol
          |  (qp ...)                        match sequences of qps
          |  (qp ... . qp)                   match qps ending qp
          |  (qp ooo . qp)                   match qps beginning with repeated qp
          |  #(qp ...)                       match vector of qps
          |  #&qp                            match boxed qp
+         |  #s(prefab-key qp ...)           match prefab struct with qp fields
          |  ,pat                            match pat
          |  ,@(list lvp ...)                match lvps, spliced
          |  ,@(list-rest lvp ... pat)       match lvps plus pat, spliced
          |  ,@'qp                           match list-matching qp, spliced
-ooo     ::= ...                             zero or more; ... is literal ~
+ooo     ::= ...                             zero or more; ... is literal ~ ~
          |  ___                             zero or more
          |  ..k                             k or more
          |  __k                             k or more
 
 In more detail, patterns match as follows:
 
-* id (excluding the reserved names _, ..., .._, ..k, and ..k for
-  non-negative integers k) or (var id) — matches anything, and binds id
-  to the matching values. If an id is used multiple times within a
-  pattern, the corresponding matches must be the same according to
-  (match-equality-test), except that instances of an id in different or
-  and not sub-patterns are independent. The binding for id is not
-  available in other parts of the same pattern.
+* id (excluding the reserved names _, ..., ___, ..k, and __k for
+  non-negative integers k)
+
+  Unlike in cond and case, else is not a keyword in match.
+
+  or (var id) — matches anything, and binds id to the matching values.
+  If an id is used multiple times within a pattern, the corresponding
+  matches must be the same according to (match-equality-test), except
+  that instances of an id in different or and not sub-patterns are
+  independent. The binding for id is not available in other parts of the
+  same pattern.
 
   Examples:
+
     > (match '(1 2 3)
         [(list a b a) (list a b)]
         [(list a b c) (list c b a)])
@@ -118,10 +155,16 @@ In more detail, patterns match as follows:
         [(list a b a) (list a b)]
         [(list a b c) (list c b a)])
     '(1 (x y z))
+    > (match #f
+        [else
+         (cond
+           [#f 'not-evaluated]
+           [else 'also-not-evaluated])])
 
 * _ — matches anything, without binding any identifiers.
 
   Example:
+
     > (match '(1 2 3)
         [(list _ _ a) a])
     3
@@ -130,6 +173,7 @@ In more detail, patterns match as follows:
   equal? constant.
 
   Example:
+
     > (match "yes"
         ["no" #f]
         ["yes" #t])
@@ -146,6 +190,7 @@ In more detail, patterns match as follows:
   lists of matching forms.
 
   Examples:
+
     > (match '(1 2 3)
         [(list a b c) (list c b a)])
     '(3 2 1)
@@ -169,12 +214,13 @@ In more detail, patterns match as follows:
         [_ 'else])
     '(2 2 2)
 
-* (list-rest lvp ... pat) —  similar to a list pattern, but the final
-  pat matches the “rest” of the list after the last  lvp. In fact, the
-  matched value can be a non-list  chain of pairs (i.e., an “improper
-  list”) if pat  matches non-list values.
+* (list-rest lvp ... pat)  or (list* lvp ... pat) —  similar to a list
+  pattern, but the final  pat matches the “rest” of the list after the
+  last  lvp. In fact, the matched value can be a non-list  chain of
+  pairs (i.e., an “improper list”) if pat  matches non-list values.
 
   Examples:
+
     > (match '(1 2 3 . 4)
         [(list-rest a b c d) d])
     4
@@ -186,15 +232,22 @@ In more detail, patterns match as follows:
   to match each pat can appear in the list in any order.
 
   Example:
+
     > (match '(1 2 3)
         [(list-no-order 3 2 x) x])
     1
+
+  Unlike other patterns, list-no-order doesn’t allow duplicate
+  identifiers between subpatterns. For example the patterns
+  (list-no-order x 1 x) and (list-no-order x 1 x ...) both produce
+  syntax errors.
 
 * (list-no-order pat ... lvp) — generalizes list-no-order to allow a
   pattern that matches multiple list elements that are interspersed in
   any order with matches for the other patterns.
 
   Example:
+
     > (match '(1 2 3 4 5 6)
         [(list-no-order 6 2 y ...) y])
     '(1 3 4 5)
@@ -202,6 +255,7 @@ In more detail, patterns match as follows:
 * (vector lvp ...) — like a list pattern, but matching a vector.
 
   Example:
+
     > (match #(1 (2) (2) (2) 5)
         [(vector 1 (list a) ..3 5) a])
     '(2 2 2)
@@ -210,6 +264,7 @@ In more detail, patterns match as follows:
   against hash table’s key–value pairs.
 
   Example:
+
     > (match #hash(("a" . 1) ("b" . 2))
         [(hash-table ("b" b) ("a" a)) (list b a)])
     '(2 1)
@@ -218,13 +273,15 @@ In more detail, patterns match as follows:
   final repeating pattern.
 
   Example:
+
     > (match #hash(("a" . 1) ("b" . 2))
         [(hash-table (key val) ...) key])
-    '("a" "b")
+    '("b" "a")
 
 * (cons pat1 pat2) — matches a pair value.
 
   Example:
+
     > (match (cons 1 2)
         [(cons a b) (+ a b)])
     3
@@ -232,6 +289,7 @@ In more detail, patterns match as follows:
 * (mcons pat1 pat2) — matches a mutable pair value.
 
   Example:
+
     > (match (mcons 1 2)
         [(cons a b) 'immutable]
         [(mcons a b) 'mutable])
@@ -240,6 +298,7 @@ In more detail, patterns match as follows:
 * (box pat) — matches a boxed value.
 
   Example:
+
     > (match #&1
         [(box a) a])
     1
@@ -257,10 +316,10 @@ In more detail, patterns match as follows:
   type information.
 
   Examples:
-    (define-struct tree (val left right))
 
-
-    > (match (make-tree 0 (make-tree 1 #f #f) #f)
+    (struct tree (val left right))
+     
+    > (match (tree 0 (tree 1 #f #f) #f)
         [(tree a (tree b  _ _) _) (list a b)])
     '(0 1)
 
@@ -271,6 +330,7 @@ In more detail, patterns match as follows:
   produced by rx-expr; see [missing] for more information about regexps.
 
   Examples:
+
     > (match "apple"
         [(regexp #rx"p+") 'yes]
         [_ 'no])
@@ -284,6 +344,7 @@ In more detail, patterns match as follows:
   the match where the result of regexp-match is matched against pat.
 
   Examples:
+
     > (match "apple"
         [(regexp #rx"p+(.)" (list _ "l")) 'yes]
         [_ 'no])
@@ -293,7 +354,7 @@ In more detail, patterns match as follows:
         [_ 'no])
     'no
 
-* (pregexp rx-expr) or (regexp rx-expr pat) — like the regexp patterns,
+* (pregexp rx-expr) or (pregexp rx-expr pat) — like the regexp patterns,
   but if rx-expr produces a string, it is converted to a pattern using
   pregexp instead of regexp.
 
@@ -302,17 +363,16 @@ In more detail, patterns match as follows:
   pat. The pats are matched in the order that they appear.
 
   Example:
+
     > (match '(1 (2 3) 4)
        [(list _ (and a (list _ ...)) _) a])
     '(2 3)
 
-* (or pat ...) — matches if any of the pats match. Beware: the result
-  expression can be duplicated once for each pat! Identifiers in pat are
-  bound only in the corresponding copy of the result expression; in a
-  module context, if the result expression refers to a binding, then all
-  pats must include the binding.
+* (or pat ...) — matches if any of the pats match. Each pat must bind
+  the same set of identifiers.
 
   Example:
+
     > (match '(1 2)
        [(or (list a 1) (list a 2)) a])
     1
@@ -321,6 +381,7 @@ In more detail, patterns match as follows:
   identifiers.
 
   Examples:
+
     > (match '(1 2 3)
        [(list (not 4) ...) 'yes]
        [_ 'no])
@@ -330,16 +391,26 @@ In more detail, patterns match as follows:
        [_ 'no])
     'no
 
-* (app expr pats ...) — applies expr to the value to be matched; the
-  result of the application is matched against pats.
+* (app expr pats ...) — applies expr to the value to be matched; each
+  result of the application is matched against one of the pats,
+  respectively.
 
   Examples:
+
     > (match '(1 2)
        [(app length 2) 'yes])
     'yes
+    > (match "3.14"
+       [(app string->number (? number? pi))
+        `(I got ,pi)])
+    '(I got 3.14)
     > (match '(1 2)
        [(app (lambda (v) (split-at v 1)) '(1) '(2)) 'yes])
     'yes
+    > (match '(1 2 3)
+       [(app (λ (ls) (apply values ls)) x y (? odd? z))
+        (list 'yes x y z)])
+    '(yes 1 2 3)
 
 * (? expr pat ...) — applies expr to the value to be matched, and checks
   whether the result is a true value; the additional pats must also
@@ -352,6 +423,7 @@ In more detail, patterns match as follows:
   expr are made should not be relied upon.
 
   Example:
+
     > (match '(1 3 5)
        [(list (? odd?) ...) 'yes])
     'yes
@@ -361,6 +433,7 @@ In more detail, patterns match as follows:
   unquote-splicing escape back to normal patterns.
 
   Example:
+
     > (match '(1 2 3)
         [`(1 ,a ,(? odd? b)) (list a b)])
     '(2 3)
@@ -381,19 +454,20 @@ the original program.
  
 clause* = [(pat ...+) body ...+]
         | [(pat ...+) (=> id) body ...+]
-        | [(pat ...+) #:when cond-expr body ...+] ~
+        | [(pat ...+) #:when cond-expr body ...+] ~ ~
 
 Matches a sequence of values against each clause in order, matching only
 when all patterns in a clause match.  Each clause must have the same
 number of patterns as the number of val-exprs.
 
 Examples:
+
   > (match* (1 2 3)
      [(_ (? number?) x) (add1 x)])
   4
   > (match* (15 17)
      [((? number? a) (? number? b))
-      #:when (= (+ a 2) b) ~
+      #:when (= (+ a 2) b) ~ ~
       'diff-by-two])
   'diff-by-two
 
@@ -422,7 +496,7 @@ expr.
                  
 match*-clause = [(pat ...+) body ...+]
               | [(pat ...+) (=> id) body ...+]
-              | [(pat ...+) #:when cond-expr body ...+] ~
+              | [(pat ...+) #:when cond-expr body ...+] ~ ~
 
 Binds id to a procedure that is defined by pattern matching clauses
 using match*. Each clause takes a sequence of patterns that correspond
@@ -430,10 +504,11 @@ to the arguments in the function header. The arguments are ordered as
 they appear in the function header for matching purposes.
 
 Examples:
-  > (define/match (fact n)
-      [(0) 1]
-      [(n) (* n (fact (sub1 n)))])
 
+  (define/match (fact n)
+    [(0) 1]
+    [(n) (* n (fact (sub1 n)))])
+   
   > (fact 5)
   120
 
@@ -441,19 +516,21 @@ The function header may also contain optional or keyword arguments, may
 have curried arguments, and may also contain a rest argument.
 
 Examples:
-  > (define/match ((f x) #:y [y '(1 2 3)]) ~
-      [((regexp #rx"p+") `(,a 2 3)) a]
-      [(_ _) #f])
 
-  > ((f "ape") #:y '(5 2 3)) ~
+  (define/match ((f x) #:y [y '(1 2 3)]) ~ ~
+    [((regexp #rx"p+") `(,a 2 3)) a]
+    [(_ _) #f])
+   
+  > ((f "ape") #:y '(5 2 3)) ~ ~
   5
   > ((f "dog"))
   #f
-  > (define/match (g x y . rst)
-      [(0 0 '()) #t]
-      [(5 5 '(5 5)) #t]
-      [(_ _ _) #f])
-
+   
+  (define/match (g x y . rst)
+    [(0 0 '()) #t]
+    [(5 5 '(5 5)) #t]
+    [(_ _ _) #f])
+   
   > (g 0 0)
   #t
   > (g 5 5 5 5)
@@ -486,6 +563,7 @@ against its corresponding pat (the match must succeed), and the bindings
 that pat introduces are visible in the bodys.
 
 Example:
+
   > (match-let ([(list a b) '(1 2)]
                 [(vector x ...) #(1 2 3 4)])
       (list b a x))
@@ -498,6 +576,7 @@ Like match-let, but generalizes let*, so that the bindings of each pat
 are available in each subsequent expr.
 
 Example:
+
   > (match-let* ([(list a b) '(#(1 2 3 4) 2)]
                  [(vector x ...) a])
       x)
@@ -532,8 +611,8 @@ Defines the names bound by pat to the values produced by matching
 against the result of expr.
 
 Examples:
-  > (match-define (list a b) '(1 2))
 
+  > (match-define (list a b) '(1 2))
   > b
   2
 
@@ -545,14 +624,14 @@ match/values, it requires at least one pattern to determine the number
 of values to expect.
 
 Examples:
-  > (match-define-values (a b) (values 1 2))
 
+  > (match-define-values (a b) (values 1 2))
   > b
   2
 
                                         *exn:misc:match?*
 (exn:misc:match? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 A predicate for the exception raised in the case of a match failure.
 
@@ -609,17 +688,18 @@ For example, to extend the pattern matcher and destructure syntax lists,
        (list "OOORRR!" b c)]
       [(syntax-list (? and-keyword?) b c)
        (list "AAANND!" b c)])
-  '("OOORRR!" #<syntax:59:0 3> #<syntax:59:0 4>)
+  '("OOORRR!" #<syntax:eval:69:0 3> #<syntax:eval:69:0 4>)
   > (match #'(and 5 6)
       [(syntax-list (? or-keyword?) b c)
        (list "OOORRR!" b c)]
       [(syntax-list (? and-keyword?) b c)
        (list "AAANND!" b c)])
-  '("AAANND!" #<syntax:60:0 5> #<syntax:60:0 6>)
+  '("AAANND!" #<syntax:eval:70:0 5> #<syntax:eval:70:0 6>)
 
 And here is an example showing how define-match-expander-bound
 identifiers are not treated specially unless they appear in the first
-position of pattern sequence.
+position of pattern sequence. Consider this (incorrect) definition of a
+length function:
 
   (define-match-expander nil
     (λ (stx) #''())
@@ -628,7 +708,11 @@ position of pattern sequence.
     (match l
       [nil 0]
       [(cons hd tl) (+ 1 (len tl))]))
-   
+
+Because there are no parenthesis around nil, match treats the first case
+as an identifier (which matches everything) instead of a use of the
+match expander and len always returns 0.
+
   > (len nil)
   0
   > (len (cons 1 nil))
@@ -636,7 +720,29 @@ position of pattern sequence.
   > (len (cons 1 (cons 2 nil)))
   0
 
-prop:match-expander : struct-type-property? ~
+Match expanders accept any syntax pair whose first element is an
+identifier? bound to the expander. The following example shows a match
+expander which can be called with an improper syntax list of the form
+(expander a b . rest).
+
+  (define-match-expander my-vector
+    (λ (stx)
+      (syntax-case stx ()
+        [(_ pat ...)
+         #'(vector pat ...)]
+        [(_ pat ... . rest-pat)
+         #'(app vector->list (list-rest pat ... rest-pat))])))
+   
+  > (match #(1 2 3 4 5)
+     [(my-vector a b . rest)
+       (list->vector (append rest (list a b)))])
+  '#(3 4 5 1 2)
+
+Changed in version 7.7.0.2 of package base: Match expanders now allowed
+any syntax pair whose first element is an identifier? bound to the
+expander. The example above did not work with previous versions.
+
+prop:match-expander : struct-type-property? ~ ~
 
 A structure type property to identify structure types that act as match
 expanders like the ones created by define-match-expander.
@@ -660,7 +766,7 @@ called.
 
 This binding is provided for-syntax.
 
-prop:legacy-match-expander : struct-type-property? ~
+prop:legacy-match-expander : struct-type-property? ~ ~
 
 Like prop:match-expander, but for the legacy match syntax.
 
@@ -668,23 +774,26 @@ This binding is provided for-syntax.
 
                                         *match-expander?*
 (match-expander? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 (legacy-match-expander? v) -> boolean?
-  v : any/c ~
+  v : any/c ~ ~
 
 Predicates for values which implement the appropriate match expander
 properties.
 
                                         *syntax-local-match-introduce*
 (syntax-local-match-introduce stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
-Like syntax-local-introduce, but for match expanders.
+For backward compatibility only; equivalent to syntax-local-introduce.
+
+Changed in version 6.90.0.29 of package base: Made equivalent to
+syntax-local-introduce.
 
                                         *match-equality-test*
 (match-equality-test) -> (any/c any/c . -> . any) ~
 (match-equality-test comp-proc) -> void?
-  comp-proc : (any/c any/c . -> . any) ~
+  comp-proc : (any/c any/c . -> . any) ~ ~
 
 A parameter that determines the comparison procedure used to check
 whether multiple uses of an identifier match the “same” value. The
@@ -701,6 +810,7 @@ form are reported in terms of match-lambda instead of match.
 
 3. Library Extensions
 
+                                        *==*
 (== val comparator)
 (== val)
 
@@ -709,6 +819,7 @@ when compared by comparator.  If comparator is not provided, it defaults
 to equal?.
 
 Examples:
+
   > (match (list 1 2 3)
       [(== (list 1 2 3)) 'yes]
       [_ 'no])
@@ -733,10 +844,10 @@ Any field of struct-id may be omitted, and such fields can occur in any
 order.
 
 Examples:
-  (define-struct tree (val left right))
 
-
-  > (match (make-tree 0 (make-tree 1 #f #f) #f)
+  (struct tree (val left right))
+   
+  > (match (tree 0 (tree 1 #f #f) #f)
       [(struct* tree ([val a]
                       [left (struct* tree ([right #f] [val b]))]))
        (list a b)])

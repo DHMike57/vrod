@@ -2,16 +2,16 @@ Procedures
 
                                         *procedure?*
 (procedure? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a procedure, #f otherwise.
 
                                         *apply*
-(apply proc v ... lst #:<kw> kw-arg ...) -> any ~ ~
-  proc : procedure? ~
-  v : any/c ~
-  lst : list? ~
-  kw-arg : any/c ~
+(apply proc v ... lst #:<kw> kw-arg ...) -> any ~ ~ ~
+  proc : procedure? ~ ~
+  v : any/c ~ ~
+  lst : list? ~ ~
+  kw-arg : any/c ~ ~
 
 +[missing] in [missing] introduces apply.
 
@@ -26,20 +26,21 @@ exn:fail:contract exception is raised. The given proc is called in tail
 position with respect to the apply call.
 
 Examples:
+
   > (apply + '(1 2 3))
   6
   > (apply + 1 2 '(3))
   6
   > (apply + '())
   0
-  > (apply sort (list (list '(2) '(1)) <) #:key car) ~
+  > (apply sort (list (list '(2) '(1)) <) #:key car) ~ ~
   '((1) (2))
 
                                         *compose*
 (compose proc ...) -> procedure? ~
-  proc : procedure? ~
+  proc : procedure? ~ ~
 (compose1 proc ...) -> procedure?
-  proc : procedure? ~
+  proc : procedure? ~ ~
 
 Returns a procedure that composes the given functions, applying the last
 proc first and the first proc last.  The compose function allows the
@@ -55,6 +56,7 @@ When no proc arguments are given, the result is values.  When exactly
 one is given, it is returned.
 
 Examples:
+
   > ((compose1 - sqrt) 10)
   -3.1622776601683795
   > ((compose1 sqrt -) 10)
@@ -70,8 +72,8 @@ create faster compositions.
 
                                         *procedure-rename*
 (procedure-rename proc name) -> procedure? ~
-  proc : procedure? ~
-  name : symbol? ~
+  proc : procedure? ~ ~
+  name : symbol? ~ ~
 
 Returns a procedure that is like proc, except that its name as returned
 by object-name (and as printed for debugging) is name.
@@ -86,7 +88,7 @@ the procedure name is typically hard-wired into an internal check.
 
                                         *procedure->method*
 (procedure->method proc) -> procedure? ~
-  proc : procedure? ~
+  proc : procedure? ~ ~
 
 Returns a procedure that is like proc except that, when applied to the
 wrong number of arguments, the resulting error hides the first argument
@@ -96,8 +98,8 @@ syntax property.
                                         *procedure-closure-contents-eq?*
 (procedure-closure-contents-eq? proc1       ~
                                 proc2) -> boolean?
-  proc1 : procedure? ~
-  proc2 : procedure? ~
+  proc1 : procedure? ~ ~
+  proc2 : procedure? ~ ~
 
 Compares the contents of the closures of proc1 and proc2 for equality by
 comparing closure elements pointwise using eq?
@@ -110,13 +112,13 @@ comparing closure elements pointwise using eq?
                kw-val-lst             
                v ...                  
                lst                    
-               #:<kw> kw-arg ...) -> any ~
-  proc : procedure? ~
-  kw-lst : (listof keyword?) ~
-  kw-val-lst : list? ~
-  v : any/c ~
-  lst : list? ~
-  kw-arg : any/c ~
+               #:<kw> kw-arg ...) -> any ~ ~
+  proc : procedure? ~ ~
+  kw-lst : (listof keyword?) ~ ~
+  kw-val-lst : list? ~ ~
+  v : any/c ~ ~
+  lst : list? ~ ~
+  kw-arg : any/c ~ ~
 
 +[missing] in [missing] introduces keyword-apply.
 
@@ -135,27 +137,28 @@ as many by-position arguments as supplied via the vs and lst; otherwise,
 the exn:fail:contract exception is raised.
 
 Examples:
-  (define (f x #:y y #:z [z 10]) ~
+
+  (define (f x #:y y #:z [z 10]) ~ ~
     (list x y z))
-
-
-  > (keyword-apply f '(#:y) '(2) '(1)) ~
+   
+  > (keyword-apply f '(#:y) '(2) '(1)) ~ ~
   '(1 2 10)
-  > (keyword-apply f '(#:y #:z) '(2 3) '(1)) ~
+  > (keyword-apply f '(#:y #:z) '(2 3) '(1)) ~ ~
   '(1 2 3)
-  > (keyword-apply f #:z 7 '(#:y) '(2) '(1)) ~
+  > (keyword-apply f #:z 7 '(#:y) '(2) '(1)) ~ ~
   '(1 2 7)
 
                                         *procedure-arity*
 (procedure-arity proc) -> normalized-arity? ~
-  proc : procedure? ~
+  proc : procedure? ~ ~
 
 Returns information about the number of by-position arguments accepted
-by proc. See also procedure-arity? and normalized-arity?.
+by proc. See also procedure-arity?, normalized-arity?, and
+procedure-arity-mask.
 
                                         *procedure-arity?*
 (procedure-arity? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 A valid arity a is one of the following:
 
@@ -173,6 +176,7 @@ The result of procedure-arity is always normalized in the sense of
 normalized-arity?.
 
 Examples:
+
   > (procedure-arity cons)
   2
   > (procedure-arity list)
@@ -186,35 +190,52 @@ Examples:
   > (procedure-arity (case-lambda [(x) 0] [(x y) 1]))
   '(1 2)
 
+                                        *procedure-arity-mask*
+(procedure-arity-mask proc) -> exact-integer? ~
+  proc : procedure? ~ ~
+
+Returns the same information as procedure-arity, but encoded
+differently. The arity is encoded as an exact integer mask where
+(bitwise-bit-set? mask n) returns true if proc accepts n arguments.
+
+The mask encoding of an arity is often easier to test and manipulate,
+and procedure-arity-mask is sometimes faster than procedure-arity while
+always being at least as fast.
+
+Added in version 7.0.0.11.
+
                                         *procedure-arity-includes?*
 (procedure-arity-includes? proc k [kws-ok?]) -> boolean? ~
-  proc : procedure? ~
-  k : exact-nonnegative-integer? ~
-  kws-ok? : any/c = #f ~
+  proc : procedure? ~ ~
+  k : exact-nonnegative-integer? ~ ~
+  kws-ok? : any/c = #f ~ ~
 
 Returns #t if the procedure can accept k by-position arguments, #f
 otherwise.  If kws-ok? is #f, the result is #t only if proc has no
 required keyword arguments.
 
 Examples:
+
   > (procedure-arity-includes? cons 2)
   #t
   > (procedure-arity-includes? display 3)
   #f
-  > (procedure-arity-includes? (lambda (x #:y y) x) 1) ~
+  > (procedure-arity-includes? (lambda (x #:y y) x) 1) ~ ~
   #f
-  > (procedure-arity-includes? (lambda (x #:y y) x) 1 #t) ~
+  > (procedure-arity-includes? (lambda (x #:y y) x) 1 #t) ~ ~
   #t
 
                                         *procedure-reduce-arity*
-(procedure-reduce-arity proc arity) -> procedure? ~
-  proc : procedure? ~
-  arity : procedure-arity? ~
+(procedure-reduce-arity proc arity [name]) -> procedure? ~
+  proc : procedure? ~ ~
+  arity : procedure-arity? ~ ~
+  name : (or/c symbol? #f) = #f ~ ~
 
 Returns a procedure that is the same as proc (including the same name
 returned by object-name), but that accepts only arguments consistent
 with arity. In particular, when procedure-arity is applied to the
-generated procedure, it returns a value that is equal? to arity.
+generated procedure, it returns a value that is equal? to the normalized
+form of arity.
 
 If the arity specification allows arguments that are not in
 (procedure-arity proc), the exn:fail:contract exception is raised.  If
@@ -223,26 +244,58 @@ optional (and they are not accepted in by the arity-reduced procedure)
 or arity must be the empty list (which makes a procedure that cannot be
 called); otherwise, the exn:fail:contract exception is raised.
 
-Examples:
-  > (define my+ (procedure-reduce-arity + 2))
+If name is not #f, then object-name of the result procedure produces
+name. Otherwise, object-name of the result procedure produces the same
+result as for proc.
 
+Examples:
+
+  > (define my+ (procedure-reduce-arity + 2))
   > (my+ 1 2)
   3
   > (my+ 1 2 3)
   +: arity mismatch;
    the expected number of arguments does not match the given
   number
-    expected: 2 ~
-    given: 3 ~
-    arguments...: ~
+    expected: 2 ~ ~
+    given: 3 ~ ~
+    arguments...: ~ ~
+     1
+     2
+     3
+  > (define also-my+ (procedure-reduce-arity + 2 'also-my+))
+  > (also-my+ 1 2 3)
+  also-my+: arity mismatch;
+   the expected number of arguments does not match the given
+  number
+    expected: 2 ~ ~
+    given: 3 ~ ~
+    arguments...: ~ ~
      1
      2
      3
 
+Changed in version 7.0.0.11: Added the optional name argument.
+
+                                        *procedure-reduce-arity-mask*
+(procedure-reduce-arity-mask proc mask [name]) -> procedure? ~
+  proc : procedure? ~ ~
+  mask : exact-integer? ~ ~
+  name : (or/c symbol? #f) = #f ~ ~
+
+The same as procedure-reduce-arity, but using the representation of
+arity described with procedure-arity-mask.
+
+The mask encoding of an arity is often easier to test and manipulate,
+and procedure-reduce-arity-mask is sometimes faster than
+procedure-reduce-arity while always being at least as fast.
+
+Added in version 7.0.0.11.
+
                                         *procedure-keywords*
 (procedure-keywords proc) -> (listof keyword?) ~
                              (or/c (listof keyword?) #f)
-  proc : procedure? ~
+  proc : procedure? ~ ~
 
 Returns information about the keyword arguments required and accepted by
 a procedure. The first result is a list of distinct keywords (sorted by
@@ -252,20 +305,48 @@ that any keyword is accepted. When the second result is a list, every
 element in the first list is also in the second list.
 
 Examples:
+
   > (procedure-keywords +)
   '()
   '()
-  > (procedure-keywords (lambda (#:tag t #:mode m) t)) ~
+  > (procedure-keywords (lambda (#:tag t #:mode m) t)) ~ ~
   '(#:mode #:tag)
   '(#:mode #:tag)
-  > (procedure-keywords (lambda (#:tag t #:mode [m #f]) t)) ~
+  > (procedure-keywords (lambda (#:tag t #:mode [m #f]) t)) ~ ~
   '(#:tag)
   '(#:mode #:tag)
 
+                                        *procedure-result-arity*
+(procedure-result-arity proc) -> (or/c #f procedure-arity?) ~
+  proc : procedure? ~ ~
+
+Returns the arity of the result of the procedure proc or #f if the
+number of results are not known, perhaps due to shortcomings in the
+implementation of procedure-result-arity or because proc’s behavior is
+not sufficiently simple.
+
+Examples:
+
+  > (procedure-result-arity car)
+  1
+  > (procedure-result-arity values)
+  (arity-at-least 0)
+  > (procedure-result-arity
+     (λ (x)
+       (apply
+        values
+        (let loop ()
+          (cond
+            [(zero? (random 10)) '()]
+            [else (cons 1 (loop))])))))
+  #f
+
+Added in version 6.4.0.3.
+
                                         *make-keyword-procedure*
 (make-keyword-procedure proc [plain-proc]) -> procedure? ~
-  proc : (((listof keyword?) list?) () #:rest list? . ->* . any) ~
-  plain-proc : procedure? ~
+  proc : (((listof keyword?) list?) () #:rest list? . ->* . any) ~ ~
+  plain-proc : procedure? ~ ~
              = (lambda args (apply proc null null args))
 
 Returns a procedure that accepts all keyword arguments (without
@@ -288,25 +369,25 @@ the same as for plain-proc. See also procedure-reduce-keyword-arity and
 procedure-rename.
 
 Examples:
+
   (define show
     (make-keyword-procedure (lambda (kws kw-args . rest)
                               (list kws kw-args rest))))
-
-
+   
   > (show 1)
   '(() () (1))
-  > (show #:init 0 1 2 3 #:extra 4) ~
+  > (show #:init 0 1 2 3 #:extra 4) ~ ~
   '((#:extra #:init) (4 0) (1 2 3))
+   
   (define show2
     (make-keyword-procedure (lambda (kws kw-args . rest)
                               (list kws kw-args rest))
                             (lambda args
                               (list->vector args))))
-
-
+   
   > (show2 1)
   '#(1)
-  > (show2 #:init 0 1 2 3 #:extra 4) ~
+  > (show2 #:init 0 1 2 3 #:extra 4) ~ ~
   '((#:extra #:init) (4 0) (1 2 3))
 
                                         *procedure-reduce-keyword-arity*
@@ -314,10 +395,10 @@ Examples:
                                 arity            
                                 required-kws     
                                 allowed-kws) -> procedure?
-  proc : procedure? ~
-  arity : procedure-arity? ~
-  required-kws : (listof keyword?) ~
-  allowed-kws : (or/c (listof keyword?) ~
+  proc : procedure? ~ ~
+  arity : procedure-arity? ~ ~
+  required-kws : (listof keyword?) ~ ~
+  allowed-kws : (or/c (listof keyword?) ~ ~
                       #f)
 
 Like procedure-reduce-arity, but constrains the keyword arguments
@@ -330,48 +411,62 @@ it must allow at least the keywords in allowed-kws (or it must allow all
 keywords if allowed-kws is #f).
 
 Examples:
+
   (define orig-show
     (make-keyword-procedure (lambda (kws kw-args . rest)
                               (list kws kw-args rest))))
-
-
   (define show (procedure-reduce-keyword-arity
-                orig-show 3 '(#:init) '(#:extra #:init))) ~
-
-
-  > (show #:init 0 1 2 3 #:extra 4) ~
+                orig-show 3 '(#:init) '(#:extra #:init))) ~ ~
+   
+  > (show #:init 0 1 2 3 #:extra 4) ~ ~
   '((#:extra #:init) (4 0) (1 2 3))
   > (show 1)
-  ...t/private/kw.rkt:211:14: arity mismatch;
+  unknown: arity mismatch;
    the expected number of arguments does not match the given
   number
-    expected: 3 plus an argument with keyword #:init plus an ~
+    expected: 3 plus an argument with keyword #:init plus an ~ ~
   optional argument with keyword #:extra
-    given: 1 ~
-    arguments...: ~
+    given: 1 ~ ~
+    arguments...: ~ ~
      1
-  > (show #:init 0 1 2 3 #:extra 4 #:more 7) ~
+  > (show #:init 0 1 2 3 #:extra 4 #:more 7) ~ ~
   application: procedure does not expect an argument with
   given keyword
-    procedure: ...t/private/kw.rkt:211:14 ~
-    given keyword: #:more ~
-    arguments...: ~
+    procedure: unknown ~ ~
+    given keyword: #:more ~ ~
+    arguments...: ~ ~
      1
      2
      3
-     #:extra 4 ~
-     #:init 0 ~
-     #:more 7 ~
+     #:extra 4 ~ ~
+     #:init 0 ~ ~
+     #:more 7 ~ ~
+
+                                        *procedure-reduce-keyword-arity-mask*
+(procedure-reduce-keyword-arity-mask proc              ~
+                                     mask             
+                                     required-kws     
+                                     allowed-kws) -> procedure?
+  proc : procedure? ~ ~
+  mask : exact-integer? ~ ~
+  required-kws : (listof keyword?) ~ ~
+  allowed-kws : (or/c (listof keyword?) ~ ~
+                       #f)
+
+The same as procedure-reduce-keyword-arity, but using the representation
+of arity described with procedure-arity-mask.
+
+Added in version 7.0.0.11.
 
                                         *struct*
 (struct arity-at-least (value) ~
-    #:extra-constructor-name make-arity-at-least) ~
-  value : exact-nonnegative-integer? ~
+    #:extra-constructor-name make-arity-at-least) ~ ~
+  value : exact-nonnegative-integer? ~ ~
 
 A structure type used for the result of procedure-arity. See also
 procedure-arity?.
 
-prop:procedure : struct-type-property? ~
+prop:procedure : struct-type-property? ~ ~
 
 A structure type property to identify structure types whose instances
 can be applied as procedures. In particular, when procedure? is applied
@@ -407,14 +502,13 @@ designating the field as immutable (so that a property binding or
 immutable designation is redundant and disallowed).
 
 Examples:
-  > (struct annotated-proc (base note)
-      #:property prop:procedure ~
-                 (struct-field-index base))
 
+  > (struct annotated-proc (base note)
+      #:property prop:procedure ~ ~
+                 (struct-field-index base))
   > (define plus1 (annotated-proc
                     (lambda (x) (+ x 1))
                     "adds 1 to its argument"))
-
   > (procedure? plus1)
   #t
   > (annotated-proc? plus1)
@@ -444,16 +538,15 @@ as supplying the value with the prop:procedure property (so that a
 specific property binding is disallowed).
 
 Examples:
+
   > (struct fish (weight color)
-      #:mutable ~
-      #:property ~
-      prop:procedure ~
+      #:mutable ~ ~
+      #:property ~ ~
+      prop:procedure ~ ~
       (lambda (f n)
         (let ([w (fish-weight f)])
           (set-fish-weight! f (+ n w)))))
-
   > (define wanda (fish 12 'red))
-
   > (fish? wanda)
   #t
   > (procedure? wanda)
@@ -461,7 +554,6 @@ Examples:
   > (fish-weight wanda)
   12
   > (for-each wanda '(1 2 3))
-
   > (fish-weight wanda)
   18
 
@@ -471,14 +563,14 @@ raised.
 
                                         *procedure-struct-type?*
 (procedure-struct-type? type) -> boolean? ~
-  type : struct-type? ~
+  type : struct-type? ~ ~
 
 Returns #t if instances of the structure type represented by type are
 procedures (according to procedure?), #f otherwise.
 
                                         *procedure-extract-target*
 (procedure-extract-target proc) -> (or/c #f procedure?) ~
-  proc : procedure? ~
+  proc : procedure? ~ ~
 
 If proc is an instance of a structure type with property prop:procedure,
 and if the property value indicates a field of the structure, and if the
@@ -492,7 +584,7 @@ extra argument, which is always the structure that was applied as a
 procedure. Keeping the procedure private ensures that is it always
 called with a suitable first argument.
 
-prop:arity-string : struct-type-property? ~
+prop:arity-string : struct-type-property? ~ ~
 
 A structure type property that is used for reporting arity-mismatch
 errors when a structure type with the prop:procedure property is applied
@@ -507,12 +599,12 @@ when the prop:arity-string property is not associated with a procedure
 structure type.
 
 Examples:
+
   > (struct evens (proc)
-      #:property prop:procedure (struct-field-index proc) ~
-      #:property prop:arity-string ~
+      #:property prop:procedure (struct-field-index proc) ~ ~
+      #:property prop:arity-string ~ ~
       (lambda (p)
         "an even number of arguments"))
-
   > (define pairs
       (evens
        (case-lambda
@@ -520,19 +612,18 @@ Examples:
         [(a b . more)
          (cons (cons a b)
                (apply pairs more))])))
-
   > (pairs 1 2 3 4)
   '((1 . 2) (3 . 4))
   > (pairs 5)
   #<procedure>: arity mismatch;
    the expected number of arguments does not match the given
   number
-    expected: an even number of arguments ~
-    given: 1 ~
-    arguments...: ~
+    expected: an even number of arguments ~ ~
+    given: 1 ~ ~
+    arguments...: ~ ~
      5
 
-prop:checked-procedure : struct-type-property? ~
+prop:checked-procedure : struct-type-property? ~ ~
 
 A structure type property that is used with
 checked-procedure-check-and-extract, which is a hook to allow the
@@ -546,11 +637,11 @@ least two fields.
                                      proc     
                                      v1       
                                      v2)  -> any/c
-  type : struct-type? ~
-  v : any/c ~
-  proc : (any/c any/c any/c . -> . any/c) ~
-  v1 : any/c ~
-  v2 : any/c ~
+  type : struct-type? ~ ~
+  v : any/c ~ ~
+  proc : (any/c any/c any/c . -> . any/c) ~ ~
+  v1 : any/c ~ ~
+  v2 : any/c ~ ~
 
 Extracts a value from v if it is an instance of type, which must have
 the property prop:checked-procedure. If v is such an instance, then the
@@ -561,6 +652,20 @@ If v is not an instance of type, or if the first field of v applied to
 v1 and v2 produces #f, then proc is applied to v, v1, and v2, and its
 result is returned by checked-procedure-check-and-extract.
 
+                                        *procedure-specialize*
+(procedure-specialize proc) -> procedure? ~
+  proc : procedure? ~ ~
+
+Returns proc or its equivalent, but provides a hint to the run-time
+system that it should spend extra time and memory to specialize the
+implementation of proc.
+
+The hint is currently used when proc is the value of a lambda or
+case-lambda form that references variables bound outside of the lambda
+or case-lambda, and when proc has not been previously applied.
+
+Added in version 6.3.0.10.
+
 2. Reflecting on Primitives
 
 A primitive procedure is a built-in procedure that is implemented in
@@ -569,20 +674,20 @@ but many are. The distinction is mainly useful to other low-level code.
 
                                         *primitive?*
 (primitive? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a primitive procedure, #f otherwise.
 
                                         *primitive-closure?*
 (primitive-closure? v) -> boolean ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is internally implemented as a primitive closure rather
 than a simple primitive procedure, #f otherwise.
 
                                         *primitive-result-arity*
 (primitive-result-arity prim) -> procedure-arity? ~
-  prim : primitive? ~
+  prim : primitive? ~ ~
 
 Returns the arity of the result of the primitive procedure prim (as
 opposed to the procedure’s input arity as returned by procedure-arity).
@@ -591,25 +696,26 @@ return a single value when applied.
 
 3. Additional Higher-Order Functions
 
- (require racket/function) package: base ~
+ (require racket/function) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/function and racket libraries, but not racket/base.
 
                                         *identity*
 (identity v) -> any/c ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns v.
 
                                         *const*
 (const v) -> procedure? ~
-  v : any ~
+  v : any ~ ~
 
 Returns a procedure that accepts any arguments (including keyword
 arguments) and returns v.
 
 Examples:
+
   > ((const 'foo) 1 2 3)
   'foo
   > ((const 'foo))
@@ -624,107 +730,100 @@ The thunk* form is similar, except that the resulting function accepts
 any arguments (including keyword arguments).
 
 Examples:
+
   (define th1 (thunk (define x 1) (printf "~a\n" x)))
-
-
+   
   > (th1)
   1
-
   > (th1 'x)
   th1: arity mismatch;
    the expected number of arguments does not match the given
   number
-    expected: 0 ~
-    given: 1 ~
-    arguments...: ~
+    expected: 0 ~ ~
+    given: 1 ~ ~
+    arguments...: ~ ~
      'x
-  > (th1 #:y 'z) ~
+  > (th1 #:y 'z) ~ ~
   application: procedure does not accept keyword arguments
-    procedure: th1 ~
-    arguments...: ~
-     #:y 'z ~
+    procedure: th1 ~ ~
+    arguments...: ~ ~
+     #:y 'z ~ ~
+   
   (define th2 (thunk* (define x 1) (printf "~a\n" x)))
-
-
+   
   > (th2)
   1
-
   > (th2 'x)
   1
-
-  > (th2 #:y 'z) ~
+  > (th2 #:y 'z) ~ ~
   1
-
 
                                         *negate*
 (negate proc) -> procedure? ~
-  proc : procedure? ~
+  proc : procedure? ~ ~
 
 Returns a procedure that is just like proc, except that it returns the
 not of proc’s result.
 
 Examples:
+
   > (filter (negate symbol?) '(1 a 2 b 3 c))
   '(1 2 3)
   > (map (negate =) '(1 2 3) '(1 1 1))
   '(#f #t #t)
 
-((conjoin f ...) x ...) -> boolean?
-  f : (-> A ... boolean?) ~
-  x : A ~
+((conjoin f ...) x ...) -> any
+  f : procedure? ~ ~
+  x : any/c ~ ~
 
 Combines calls to each function with and.  Equivalent to (and (f x ...)
 ...)
 
 Examples:
+
   (define f (conjoin exact? integer?))
-
-  conjoin: undefined;
-   cannot reference undefined identifier
+   
   > (f 1)
-  f: undefined;
-   cannot reference undefined identifier
+  #t
   > (f 1.0)
-  f: undefined;
-   cannot reference undefined identifier
+  #f
   > (f 1/2)
-  f: undefined;
-   cannot reference undefined identifier
+  #f
   > (f 0.5)
-  f: undefined;
-   cannot reference undefined identifier
+  #f
+  > ((conjoin (λ (x) (values 1 2))) 0)
+  1
+  2
 
-((disjoin f ...) x ...) -> boolean?
-  f : (-> A ... boolean?) ~
-  x : A ~
+((disjoin f ...) x ...) -> any
+  f : procedure? ~ ~
+  x : any/c ~ ~
 
 Combines calls to each function with or.  Equivalent to (or (f x ...)
 ...)
 
 Examples:
-  (define f (disjoin exact? integer?))
 
-  disjoin: undefined;
-   cannot reference undefined identifier
+  (define f (disjoin exact? integer?))
+   
   > (f 1)
-  f: undefined;
-   cannot reference undefined identifier
+  #t
   > (f 1.0)
-  f: undefined;
-   cannot reference undefined identifier
+  #t
   > (f 1/2)
-  f: undefined;
-   cannot reference undefined identifier
+  #t
   > (f 0.5)
-  f: undefined;
-   cannot reference undefined identifier
+  #f
+  > ((disjoin (λ (x) (values 1 2))) 0)
+  1
+  2
 
                                         *curry*
 (curry proc) -> procedure? ~
-  proc : procedure? ~
+  proc : procedure? ~ ~
 (curry proc v ...+) -> any/c
-  proc : procedure? ~
-  v : any/c ~
+  proc : procedure? ~ ~
+  v : any/c ~ ~
 
 Returns a procedure that is a curried version of proc. When the
 resulting procedure is first applied, unless it is given the maximum
@@ -732,10 +831,11 @@ number of arguments that it can accept, the result is a procedure to
 accept additional arguments.
 
 Examples:
+
   > ((curry list) 1 2)
-  #<procedure:curried>
+  #<procedure:curried:list>
   > ((curry cons) 1)
-  #<procedure:curried>
+  #<procedure:curried:cons>
   > ((curry cons) 1 2)
   '(1 . 2)
 
@@ -745,52 +845,69 @@ arguments have been accumulated, at which point the original proc is
 called.
 
 Examples:
+
   > (((curry list) 1 2) 3)
   '(1 2 3)
   > (((curry list) 1) 3)
   '(1 3)
   > ((((curry foldl) +) 0) '(1 2 3))
   6
+  > (define foo (curry (lambda (x y z) (list x y z))))
+  > (foo 1 2 3)
+  '(1 2 3)
+  > (((((foo) 1) 2)) 3)
+  '(1 2 3)
 
 A function call (curry proc v ...) is equivalent to ((curry proc) v
 ...). In other words, curry itself is curried.
 
-The curry function provides limited support for keyworded functions:
-only the curry call itself can receive keyworded arguments to be
-propagated eventually to proc.
-
 Examples:
+
   > (map ((curry +) 10) '(1 2 3))
   '(11 12 13)
   > (map (curry + 10) '(1 2 3))
   '(11 12 13)
   > (map (compose (curry * 2) (curry + 10)) '(1 2 3))
   '(22 24 26)
-  > (define foo (curry (lambda (x y z) (list x y z))))
 
-  > (foo 1 2 3)
+The curry function also supports functions with keyword arguments:
+keyword arguments will be accumulated in the same way as positional
+arguments until all required keyword arguments have been supplied.
+
+Examples:
+
+  (define (f #:a a #:b b #:c c) ~ ~
+    (list a b c))
+   
+  > ((((curry f) #:a 1) #:b 2) #:c 3) ~ ~
   '(1 2 3)
-  > (((((foo) 1) 2)) 3)
-  '(1 2 3)
+  > ((((curry f) #:b 1) #:c 2) #:a 3) ~ ~
+  '(3 1 2)
+  > ((curry f #:a 1 #:c 2) #:b 3) ~ ~
+  '(1 3 2)
+
+Changed in version 7.0.0.7 of package base: Added support for keyword
+arguments.
 
                                         *curryr*
 (curryr proc) -> procedure? ~
-  proc : procedure? ~
+  proc : procedure? ~ ~
 (curryr proc v ...+) -> any/c
-  proc : procedure? ~
-  v : any/c ~
+  proc : procedure? ~ ~
+  v : any/c ~ ~
 
 Like curry, except that the arguments are collected in the opposite
 direction: the first step collects the rightmost group of arguments, and
 following steps add arguments to the left of these.
 
 Example:
+
   > (map (curryr list 'foo) '(1 2 3))
   '((1 foo) (2 foo) (3 foo))
 
                                         *normalized-arity?*
 (normalized-arity? arity) -> boolean? ~
-  arity : any/c ~
+  arity : any/c ~ ~
 
 A normalized arity has one of the following forms:
 
@@ -812,6 +929,7 @@ procedure-arity?.  Any two normalized arity values that are arity=? must
 also be equal?.
 
 Examples:
+
   > (normalized-arity? (arity-at-least 1))
   #t
   > (normalized-arity? (list (arity-at-least 1)))
@@ -826,12 +944,13 @@ Examples:
                                         *normalize-arity*
 (normalize-arity arity) ~
  -> (and/c normalized-arity? (lambda (x) (arity=? x arity)))
-  arity : procedure-arity? ~
+  arity : procedure-arity? ~ ~
 
 Produces a normalized form of arity.  See also normalized-arity? and
 arity=?.
 
 Examples:
+
   > (normalize-arity 1)
   1
   > (normalize-arity (list 1))
@@ -851,10 +970,10 @@ Examples:
   > (normalize-arity (list (arity-at-least 6) 0 2 (arity-at-least 4)))
   (list 0 2 (arity-at-least 4))
 
-                                        *arity*
+                                        *arity=?*
 (arity=? a b) -> boolean? ~
-  a : procedure-arity? ~
-  b : procedure-arity? ~
+  a : procedure-arity? ~ ~
+  b : procedure-arity? ~ ~
 
 Returns #true if procedures with arity a and b accept the same numbers
 of arguments, and #false otherwise. Equivalent to both (and
@@ -862,6 +981,7 @@ of arguments, and #false otherwise. Equivalent to both (and
 (normalize-arity a) (normalize-arity b)).
 
 Examples:
+
   > (arity=? 1 1)
   #t
   > (arity=? (list 1) 1)
@@ -871,8 +991,6 @@ Examples:
   > (arity=? 1 (arity-at-least 1))
   #f
   > (arity=? (arity-at-least 1) 1)
-  #f
-  > (arity=? 1 (arity-at-least 1))
   #f
   > (arity=? (arity-at-least 1) (list 1 (arity-at-least 2)))
   #t
@@ -893,13 +1011,14 @@ Examples:
 
                                         *arity-includes?*
 (arity-includes? a b) -> boolean? ~
-  a : procedure-arity? ~
-  b : procedure-arity? ~
+  a : procedure-arity? ~ ~
+  b : procedure-arity? ~ ~
 
 Returns #true if procedures with arity a accept any number of arguments
 that procedures with arity b accept.
 
 Examples:
+
   > (arity-includes? 1 1)
   #t
   > (arity-includes? (list 1) 1)
@@ -910,8 +1029,6 @@ Examples:
   #f
   > (arity-includes? (arity-at-least 1) 1)
   #t
-  > (arity-includes? 1 (arity-at-least 1))
-  #f
   > (arity-includes? (arity-at-least 1) (list 1 (arity-at-least 2)))
   #t
   > (arity-includes? (list 1 (arity-at-least 2)) (arity-at-least 1))

@@ -4,13 +4,14 @@ See [missing] for basic information on the Racket custodian model.
 
                                         *custodian?*
 (custodian? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a custodian value, #f otherwise.
 
                                         *make-custodian*
 (make-custodian [cust]) -> custodian? ~
-  cust : custodian? = (current-custodian) ~
+  cust : (and/c custodian? (not/c custodian-shut-down?)) ~ ~
+       = (current-custodian)
 
 Creates a new custodian that is subordinate to cust. When cust is
 directed (via custodian-shutdown-all) to shut down all of its managed
@@ -19,7 +20,7 @@ down its managed values as well.
 
                                         *custodian-shutdown-all*
 (custodian-shutdown-all cust) -> void? ~
-  cust : custodian? ~
+  cust : custodian? ~ ~
 
 In racket/gui/base, eventspaces managed by cust are also shut down.
 
@@ -31,10 +32,24 @@ thread has no managers, it is killed (or suspended; see
 thread/suspend-to-kill) If the current thread is to be killed, all other
 shut-down actions take place before killing the thread.
 
+If cust is already shut down, then custodian-shutdown-all has no effect.
+When a custodian is shut down and it has subordinate custodians, the
+subordinates are not only shut down, they no longer count as
+subordinates.
+
+                                        *custodian-shut-down?*
+(custodian-shut-down? cust) -> boolean? ~
+  cust : custodian? ~ ~
+
+Returns #t if cust has been shut down with custodian-shutdown-all or if
+it was a subordinate of a custodian that is shut down, #f otherwise.
+
+Added in version 6.11.0.5.
+
                                         *current-custodian*
 (current-custodian) -> custodian? ~
 (current-custodian cust) -> void?
-  cust : custodian? ~
+  cust : custodian? ~ ~
 
 Custodians also manage eventspaces from racket/gui/base.
 
@@ -44,13 +59,17 @@ sockets, and byte converters.
 
                                         *custodian-managed-list*
 (custodian-managed-list cust super) -> list? ~
-  cust : custodian? ~
-  super : custodian? ~
+  cust : custodian? ~ ~
+  super : custodian? ~ ~
 
 Returns a list of immediately managed objects (not including custodian
 boxes) and subordinate custodians for cust, where cust is itself
 subordinate to super (directly or indirectly). If cust is not strictly
 subordinate to super, the exn:fail:contract exception is raised.
+
+If cust has been shut down, the result is '(). If cust was a subordinate
+of a custodian that was shut down, then it cannot be a subordinate of
+super.
 
                                         *custodian-memory-accounting-available?*
 (custodian-memory-accounting-available?) -> boolean? ~
@@ -65,9 +84,9 @@ accounting, #f otherwise.
 (custodian-require-memory limit-cust      ~
                           need-amt       
                           stop-cust) -> void?
-  limit-cust : custodian? ~
-  need-amt : exact-nonnegative-integer? ~
-  stop-cust : custodian? ~
+  limit-cust : custodian? ~ ~
+  need-amt : exact-nonnegative-integer? ~ ~
+  stop-cust : custodian? ~ ~
 
 Registers a required-memory check if Racket is compiled with support for
 per-custodian memory accounting, otherwise the exn:fail:unsupported
@@ -78,13 +97,15 @@ garbage collection (see [missing]) where allocating need-amt bytes
 charged to limit-cust would fail or trigger some shutdown, then
 stop-cust is shut down.
 
+The stop-cust must be a subordinate custodian of limit-cust.
+
                                         *custodian-limit-memory*
 (custodian-limit-memory  limit-cust       ~
                          limit-amt       
                         [stop-cust]) -> void?
-  limit-cust : custodian? ~
-  limit-amt : exact-nonnegative-integer? ~
-  stop-cust : custodian? = limit-cust ~
+  limit-cust : custodian? ~ ~
+  limit-amt : exact-nonnegative-integer? ~ ~
+  stop-cust : custodian? = limit-cust ~ ~
 
 Registers a limited-memory check if Racket is compiled with support for
 per-custodian memory accounting, otherwise the exn:fail:unsupported
@@ -111,11 +132,12 @@ rejected with an exn:fail:out-of-memory exception.
 
                                         *make-custodian-box*
 (make-custodian-box cust v) -> custodian-box? ~
-  cust : custodian? ~
-  v : any/c ~
+  cust : custodian? ~ ~
+  v : any/c ~ ~
 
 Returns a custodian box that contains v as long as cust has not been
-shut down.
+shut down. If cust is already shut down, the custodian box’s value is
+immediately removed.
 
 A custodian box is a synchronizable event (see [missing]). The custodian
 box becomes ready when its custodian is shut down; the synchronization
@@ -123,14 +145,14 @@ result of a custodian box is the custodian box itself.
 
                                         *custodian-box?*
 (custodian-box? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a custodian box produced by make-custodian-box, #f
 otherwise.
 
                                         *custodian-box-value*
 (custodian-box-value cb) -> any ~
-  cb : custodian-box? ~
+  cb : custodian-box? ~ ~
 
 Returns the value in the given custodian box, or #f if the value has
 been removed.

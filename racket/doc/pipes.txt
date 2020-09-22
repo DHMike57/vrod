@@ -10,9 +10,9 @@ pipes produced by make-pipe.
                                         *make-pipe*
 (make-pipe [limit input-name output-name]) ~
  -> input-port? output-port?
-  limit : exact-positive-integer? = #f ~
-  input-name : any/c = 'pipe ~
-  output-name : any/c = 'pipe ~
+  limit : exact-positive-integer? = #f ~ ~
+  input-name : any/c = 'pipe ~ ~
+  output-name : any/c = 'pipe ~ ~
 
 Returns two port values: the first port is an input port and the second
 is an output port. Data written to the output port is read from the
@@ -32,7 +32,7 @@ returned input and output ports, respectively.
 
                                         *pipe-content-length*
 (pipe-content-length pipe-port) -> exact-nonnegative-integer? ~
-  pipe-port : port? ~
+  pipe-port : port? ~ ~
 
 Returns the number of bytes contained in a pipe, where pipe-port is
 either of the pipe’s ports produced by make-pipe. The pipe’s content

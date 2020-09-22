@@ -1,10 +1,10 @@
 Environment Variables
 
 An environment variable set encapsulates a partial mapping from byte
-strings to bytes strings. A Racket process’s initial environment
-variable set is connected to the operating system’s environment
-variables: accesses or changes to the set read or change
-operating-system environment variables for the Racket process.
+strings to byte strings. A Racket process’s initial environment variable
+set is connected to the operating system’s environment variables:
+accesses or changes to the set read or change operating-system
+environment variables for the Racket process.
 
 Since Windows environment variables are case-insensitive, environment
 variable set’s key byte strings on Windows are case-folded. More
@@ -17,14 +17,14 @@ when the subprocess is created.
 
                                         *environment-variables?*
 (environment-variables? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an environment variable set, #f otherwise.
 
                                         *current-environment-variables*
 (current-environment-variables) -> environment-variables? ~
 (current-environment-variables env) -> void?
-  env : environment-variables? ~
+  env : environment-variables? ~ ~
 
 A parameter that determines the environment variable set that is
 propagated to a subprocess and that is used as the default set for
@@ -32,7 +32,7 @@ getenv and putenv.
 
                                         *bytes-environment-variable-name?*
 (bytes-environment-variable-name? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a byte string and if it is valid for an environment
 variable name. An environment variable name must contain no bytes with
@@ -42,8 +42,8 @@ environment variable name also must have a non-zero length.
                                         *make-environment-variables*
 (make-environment-variables name val ... ...) ~
  -> environment-variables?
-  name : bytes-environment-variable-name? ~
-  val : bytes-no-nuls? ~
+  name : bytes-environment-variable-name? ~ ~
+  val : bytes-no-nuls? ~ ~
 
 Creates a fresh environment variable set that is initialized with the
 given name to val mappings.
@@ -51,8 +51,8 @@ given name to val mappings.
                                         *environment-variables-ref*
 (environment-variables-ref env name) ~
  -> (or/c #f (and/c bytes-no-nuls? immutable?))
-  env : environment-variables? ~
-  name : bytes-environment-variable-name? ~
+  env : environment-variables? ~ ~
+  name : bytes-environment-variable-name? ~ ~
 
 Returns the mapping for name in env, returning #f if name has no
 mapping.
@@ -66,11 +66,11 @@ UTF-8 encoding and case-normalized.
                              name           
                              maybe-bstr     
                             [fail])     -> any
-  env : environment-variables? ~
-  name : bytes-environment-variable-name? ~
-  maybe-bstr : (or/c bytes-no-nuls? #f) ~
-  fail : (-> any) = (lambda () ~
-                      (raise (make-exn:fail ....))) ~
+  env : environment-variables? ~ ~
+  name : bytes-environment-variable-name? ~ ~
+  maybe-bstr : (or/c bytes-no-nuls? #f) ~ ~
+  fail : (-> any) = (lambda () ~ ~
+                      (raise (make-exn:fail ....))) ~ ~
 
 Changes the mapping for name in env to maybe-bstr.  If maybe-bstr is #f
 and env is the initial environment variable set of the Racket process,
@@ -93,23 +93,23 @@ fail raises an exception.
                                         *environment-variables-names*
 (environment-variables-names env) ~
  -> (listof (and/c bytes-environment-variable-name? immutable?))
-  env : environment-variables? ~
+  env : environment-variables? ~ ~
 
 Returns a list of byte strings that corresponds to names mapped by env.
 
                                         *environment-variables-copy*
 (environment-variables-copy env) -> environment-variables? ~
-  env : environment-variables? ~
+  env : environment-variables? ~ ~
 
 Returns an environment variable set that is initialized with the same
 mappings as env.
 
                                         *getenv*
 (getenv name) -> (or/c string-no-nuls? #f) ~
-  name : string-environment-variable-name? ~
+  name : string-environment-variable-name? ~ ~
 (putenv name value) -> boolean?
-  name : string-environment-variable-name? ~
-  value : string-no-nuls? ~
+  name : string-environment-variable-name? ~ ~
+  value : string-no-nuls? ~ ~
 
 Convenience wrappers for environment-variables-ref and
 environment-variables-set! that convert between strings and byte strings
@@ -120,7 +120,7 @@ function returns #t for success and #f for failure.
 
                                         *string-environment-variable-name?*
 (string-environment-variable-name? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a string and if its encoding using the current
 locale’s encoding is valid for an environment variable name according to

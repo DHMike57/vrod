@@ -1,6 +1,6 @@
 Local Binding with Splicing Body
 
- (require racket/splicing) package: base ~
+ (require racket/splicing) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/splicing library, not racket/base or racket.
@@ -15,36 +15,48 @@ splicing-let-syntaxes
 splicing-letrec-syntaxes
 splicing-letrec-syntaxes+values
 splicing-local
+splicing-parameterize
 
 Like let, letrec, let-values, letrec-values, let-syntax, letrec-syntax,
-let-syntaxes, letrec-syntaxes, letrec-syntaxes+values, and local, except
-that in a definition context, the body forms are spliced into the
-enclosing definition context (in the same way as for begin).
+let-syntaxes, letrec-syntaxes, letrec-syntaxes+values, local, and
+parameterize, except that in a definition context, the body forms are
+spliced into the enclosing definition context (in the same way as for
+begin).
 
 Examples:
+
   > (splicing-let-syntax ([one (lambda (stx) #'1)])
       (define o one))
-
   > o
   1
   > one
   one: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
 
 When a splicing binding form occurs in a top-level context or module
 context, its local bindings are treated similarly to definitions. In
-particular, if a reference to one of the splicing form’s bound variables
-is evaluated before the variable is initialized, an unbound variable
-error is raised, instead of the variable evaluating to the undefined
-value.  Also, syntax bindings are evaluated every time the module is
+particular, syntax bindings are evaluated every time the module is
 visited, instead of only once during compilation as in let-syntax, etc.
 
 Example:
+
   > (splicing-letrec ([x bad]
                       [bad 1])
       x)
-  bad.3: undefined;
-   cannot reference undefined identifier
+  bad.1: undefined;
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
+
+If a definition within a splicing form is intended to be local to the
+splicing body, then the identifier should have a true value for the
+'definition-intended-as-local syntax property. For example, splicing-let
+itself adds the property to locally-bound identifiers as it expands to a
+sequence of definitions, so that nesting splicing-let within a splicing
+form works as expected (without any ambiguous bindings).
+
+Changed in version 6.12.0.2 of package base: Added
+splicing-parameterize.
 
 splicing-syntax-parameterize
 
@@ -59,15 +71,22 @@ be spliced into the enclosing context, derived import or export
 specifications will expand as if they had not been inside of the
 splicing-syntax-parameterize.
 
+Additionally, submodules defined with module* that specify #f in place
+of a module path are affected by syntax parameterization, but other
+submodules (those defined with module or module* with a module path) are
+not.
+
 Examples:
+
   > (define-syntax-parameter place (lambda (stx) #'"Kansas"))
-
   > (define-syntax-rule (where) `(at ,(place)))
-
   > (where)
   '(at "Kansas")
   > (splicing-syntax-parameterize ([place (lambda (stx) #'"Oz")])
       (define here (where)))
-
   > here
   '(at "Oz")
+
+Changed in version 6.11.0.1 of package base: Modified to syntax
+parameterize module* submodules that specify #f in place of a module
+path.

@@ -14,14 +14,14 @@ process is terminated forcibly (e.g., through a custodian shutdown).
 
                                         *plumber?*
 (plumber? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a plumber value, #f otherwise.
 
 Added in version 6.0.1.8.
 
                                         *make-plumber*
-(make-plumber) -> pluber? ~
+(make-plumber) -> plumber? ~
 
 Creates a new plumber.
 
@@ -34,7 +34,7 @@ Added in version 6.0.1.8.
                                         *current-plumber*
 (current-plumber) -> plumber? ~
 (current-plumber plumber) -> void?
-  plumber : plumber? ~
+  plumber : plumber? ~ ~
 
 A parameter that determines a current plumber for flush callbacks. For
 example, creating an output file stream port registers a flush callback
@@ -45,7 +45,7 @@ Added in version 6.0.1.8.
 
                                         *plumber-flush-all*
 (plumber-flush-all plumber) -> void? ~
-  plumber : plumber? ~
+  plumber : plumber? ~ ~
 
 Calls all flush callbacks that are registered with plumber.
 
@@ -58,7 +58,7 @@ Added in version 6.0.1.8.
 
                                         *plumber-flush-handle?*
 (plumber-flush-handle? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a flush handle represents the registration of a flush
 callback, #f otherwise.
@@ -67,9 +67,9 @@ Added in version 6.0.1.8.
 
                                         *plumber-add-flush!*
 (plumber-add-flush! plumber proc [weak?]) -> plumber-flush-handle? ~
-  plumber : plumber? ~
-  proc : (plumber-flush-handle? . -> . any) ~
-  weak? : any/c = #f ~
+  plumber : plumber? ~ ~
+  proc : (plumber-flush-handle? . -> . any) ~ ~
+  weak? : any/c = #f ~ ~
 
 Registers proc as a flush callback with plumber, so that proc is called
 when plumber-flush-all is applied to plumber.
@@ -90,7 +90,7 @@ Added in version 6.0.1.8.
 
                                         *plumber-flush-handle-remove!*
 (plumber-flush-handle-remove! handle) -> void? ~
-  handle : plumber-flush-handle? ~
+  handle : plumber-flush-handle? ~ ~
 
 Unregisters the flush callback that was registered by the
 plumber-add-flush! call that produced handle.

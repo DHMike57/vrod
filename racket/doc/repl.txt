@@ -1,0 +1,7 @@
+The racket/repl Library
+
+ (require racket/repl) package: base ~ ~
+
+The racket/repl provides the same read-eval-print-loop binding as
+racket/base, but with even fewer internal dependencies than racket/base.
+It is loaded in some situations on startup, as described in [missing].

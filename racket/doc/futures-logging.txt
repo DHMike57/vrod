@@ -13,7 +13,7 @@ string message, each event logged for a future has a data value that is
 an instance of a future-event prefab structure:
 
   (struct future-event (future-id proc-id action time prim-name user-data)
-    #:prefab) ~
+    #:prefab) ~ ~
 
 The future-id field is an exact integer that identifies a future, or it
 is #f when action is 'missing. The future-id field is particularly
@@ -79,10 +79,10 @@ Assuming no 'missing events, then 'start-work, 'start-0-work,
 'touch-pause is always paired with 'touch-resume.
 
 In process 0, some event pairs can be nested within other event pairs:
-'sync, 'block, or 'touch with 'result or 'abort; and 'touch-pause with
-'touch-resume.
+'sync, 'block, or 'touch with 'result or 'abort; 'touch-pause with
+'touch-resume; and 'start-work with 'end-work.
 
-An 'block in process 0 is generated when an unsafe operation is handled.
+A 'block in process 0 is generated when an unsafe operation is handled.
 This type of event will contain a symbol in the unsafe-op-name field
 that is the name of the operation.  In all other cases, this field
 contains #f.
@@ -99,12 +99,13 @@ on both the action and prim-name fields:
 * 'touch on process 0: contains the integer ID of the future  being
   touched.
 
-* 'sync and prim-name = |allocate memory|:  The size (in bytes) of the
+* 'sync and prim-name is '|allocate memory|:  The size (in bytes) of the
   requested allocation.
 
-* 'sync and prim-name = jit_on_demand:  The runtime thread is performing
-  a JIT compilation on behalf of the  future future-id.  The field
-  contains the name of the function  being JIT compiled (as a symbol).
+* 'sync and prim-name is 'jit_on_demand:  The runtime thread is
+  performing a JIT compilation on behalf of the  future future-id.  The
+  field contains the name of the function  being JIT compiled (as a
+  symbol).
 
 * 'create: A new future was created.  The field contains the integer ID
   of the newly created future.

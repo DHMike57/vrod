@@ -1,6 +1,6 @@
 Constructing Graphs: shared
 
- (require racket/shared) package: base ~
+ (require racket/shared) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/shared and racket libraries, but not racket/base.
@@ -32,7 +32,7 @@ precedence over later variants:
                     | (mcons patchable-expr patchable-expr)
                     | (vector patchable-expr ...)
                     | (box patchable-expr)
-                    | (prefix:make-id patchable-expr ...) ~
+                    | (prefix:make-id patchable-expr ...) ~ ~
                        
   in-immutable-expr = shell-id
                     | shell-expr
@@ -91,6 +91,7 @@ bound, so patchable-exprs can create data cycles (but only with cycles
 that can be created via mutation).
 
 Examples:
+
   > (shared ([a (cons 1 a)])
       a)
   #0='(1 . #0#)

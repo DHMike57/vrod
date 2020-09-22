@@ -1,0 +1,51 @@
+Cryptographic Hashing
+
+                                        *sha1-bytes*
+(sha1-bytes in [start end]) -> bytes? ~
+  in : (or/c bytes? input-port?) ~ ~
+  start : exact-nonnegative-integer? = 0 ~ ~
+  end : (or/c #f exact-nonnegative-integer?) = #f ~ ~
+(sha224-bytes in [start end]) -> bytes?
+  in : (or/c bytes? input-port?) ~ ~
+  start : exact-nonnegative-integer? = 0 ~ ~
+  end : (or/c #f exact-nonnegative-integer?) = #f ~ ~
+(sha256-bytes in [start end]) -> bytes?
+  in : (or/c bytes? input-port?) ~ ~
+  start : exact-nonnegative-integer? = 0 ~ ~
+  end : (or/c #f exact-nonnegative-integer?) = #f ~ ~
+
+Computes the SHA-1, SHA-224, or SHA-256 hash of a byte sequence and
+returns the hash as a byte string with 20 bytes, 28 bytes, or 32 bytes,
+respectively.
+
+The start and end arguments determine the range of bytes of the input
+that are used to compute the hash. An end value of #f corresponds to the
+end of the byte string or an end-of-file position for an input port.
+When in is a byte string, the start and end values (when non #f) must be
+no greater than the length of the byte string, and start must be no
+greater than end. When in is an input port, start must be no greater
+than end; if in supplies less than start or end bytes before an
+end-of-file, then start and/or end is effectively changed to the number
+of supplied bytes (so that an empty or truncated byte sequence is
+hashed). When in is an input port and end is a number, then at most end
+bytes are read from the input port.
+
+For security purposes, favor sha224-bytes and sha256-bytes (which are
+part of the SHA-2 family) over sha1-bytes.
+
+Use bytes->hex-string from file/sha1 to convert a byte string hash to a
+human-readable string.
+
+Examples:
+
+  > (sha1-bytes #"abc")
+  #"\251\231>6G\6\201j\272>%qxP\302l\234\320\330\235"
+  > (require file/sha1)
+  > (bytes->hex-string (sha1-bytes #"abc"))
+  "a9993e364706816aba3e25717850c26c9cd0d89d"
+  > (bytes->hex-string (sha224-bytes #"abc"))
+  "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7"
+  > (bytes->hex-string (sha224-bytes (open-input-string "xabcy") 1 4))
+  "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7"
+
+Added in version 7.0.0.5.

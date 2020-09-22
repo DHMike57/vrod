@@ -19,13 +19,13 @@ synchronization result of a semaphore is the semaphore itself.
 
                                         *semaphore?*
 (semaphore? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a semaphore, #f otherwise.
 
                                         *make-semaphore*
 (make-semaphore [init]) -> semaphore? ~
-  init : exact-nonnegative-integer? = 0 ~
+  init : exact-nonnegative-integer? = 0 ~ ~
 
 Creates and returns a new semaphore with the counter initially set to
 init. If init is larger than a semaphore’s maximum internal counter
@@ -33,7 +33,7 @@ value, the exn:fail exception is raised.
 
                                         *semaphore-post*
 (semaphore-post sema) -> void? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Increments the semaphore’s internal counter and returns #<void>. If the
 semaphore’s internal counter has already reached its maximum value, the
@@ -41,7 +41,7 @@ exn:fail exception is raised.
 
                                         *semaphore-wait*
 (semaphore-wait sema) -> void? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Blocks until the internal counter for semaphore sema is non-zero. When
 the counter is non-zero, it is decremented and semaphore-wait returns
@@ -49,7 +49,7 @@ the counter is non-zero, it is decremented and semaphore-wait returns
 
                                         *semaphore-try-wait?*
 (semaphore-try-wait? sema) -> boolean? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Like semaphore-wait, but semaphore-try-wait? never blocks execution.  If
 sema’s internal counter is zero, semaphore-try-wait? returns #f
@@ -58,7 +58,7 @@ positive, it is decremented and #t is returned.
 
                                         *semaphore-wait/enable-break*
 (semaphore-wait/enable-break sema) -> void? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Like semaphore-wait, but breaking is enabled (see [missing]) while
 waiting on sema. If breaking is disabled when
@@ -68,7 +68,7 @@ both.
 
                                         *semaphore-peek-evt*
 (semaphore-peek-evt sema) -> semaphore-peek-evt? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Creates and returns a new synchronizable event (for use with sync, for
 example) that is ready for synchronization when sema is ready, but
@@ -78,7 +78,7 @@ event itself.
 
                                         *semaphore-peek-evt?*
 (semaphore-peek-evt? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a semaphore wrapper produced by semaphore-peek-evt,
 #f otherwise.
@@ -88,10 +88,10 @@ Returns #t if v is a semaphore wrapper produced by semaphore-peek-evt,
                       proc                
                      [try-fail-thunk]     
                       arg ...)        -> any
-  sema : semaphore? ~
-  proc : procedure? ~
-  try-fail-thunk : (or/c (-> any) #f) = #f ~
-  arg : any/c ~
+  sema : semaphore? ~ ~
+  proc : procedure? ~ ~
+  try-fail-thunk : (or/c (-> any) #f) = #f ~ ~
+  arg : any/c ~ ~
 
 Waits on sema using semaphore-wait, calls proc with all args, and then
 posts to sema. A continuation barrier blocks full continuation jumps
@@ -105,10 +105,10 @@ and try-fail-thunk is called if the wait fails.
                                    proc                
                                   [try-fail-thunk]     
                                    arg ...)        -> any
-  sema : semaphore? ~
-  proc : procedure? ~
-  try-fail-thunk : (or/c (-> any) #f) = #f ~
-  arg : any/c ~
+  sema : semaphore? ~ ~
+  proc : procedure? ~ ~
+  try-fail-thunk : (or/c (-> any) #f) = #f ~ ~
+  arg : any/c ~ ~
 
 Like call-with-semaphore, except that semaphore-wait/enable-break is
 used with sema in non-try mode. When try-fail-thunk is provided and not

@@ -1,0 +1,20 @@
+Additional Operating System Functions
+
+ (require racket/os) package: base ~ ~
+
+The racket/os library additional functions for querying the operating
+system.
+
+Added in version 6.3 of package base.
+
+                                        *gethostname*
+(gethostname) -> string? ~
+
+Returns a string for the current machine’s hostname (including its
+domain).
+
+                                        *getpid*
+(getpid) -> exact-integer? ~
+
+Returns an integer identifying the current process within the operating
+system.

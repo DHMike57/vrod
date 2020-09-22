@@ -2,26 +2,26 @@ Managing Ports
 
                                         *input-port?*
 (input-port? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an input port, #f otherwise.
 
                                         *output-port?*
 (output-port? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an output port, #f otherwise.
 
                                         *port?*
 (port? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if either (input-port? v) or (output-port? v) is #t, #f
 otherwise.
 
                                         *close-input-port*
 (close-input-port in) -> void? ~
-  in : input-port? ~
+  in : input-port? ~ ~
 
 Closes the input port in. For some kinds of ports, closing the port
 releases lower-level resources, such as a file handle. If the port is
@@ -29,7 +29,7 @@ already closed, close-input-port has no effect.
 
                                         *close-output-port*
 (close-output-port out) -> void? ~
-  out : output-port? ~
+  out : output-port? ~ ~
 
 Closes the output port out. For some kinds of ports, closing the port
 releases lower-level resources, such as a file handle. Also, if the port
@@ -39,13 +39,13 @@ close-output-port has no effect.
 
                                         *port-closed?*
 (port-closed? port) -> boolean? ~
-  port : port? ~
+  port : port? ~ ~
 
 Returns #t if the input or output port port is closed, #f otherwise.
 
                                         *port-closed-evt*
 (port-closed-evt port) -> evt? ~
-  port : port? ~
+  port : port? ~ ~
 
 Return a synchronizable event that becomes ready for synchronization
 when port is closed. The synchronization result of a port-closed event
@@ -54,7 +54,7 @@ is the port-closed event itself.
                                         *current-input-port*
 (current-input-port) -> input-port? ~
 (current-input-port in) -> void?
-  in : input-port? ~
+  in : input-port? ~ ~
 
 A parameter that determines a default input port for many operations,
 such as read.
@@ -62,7 +62,7 @@ such as read.
                                         *current-output-port*
 (current-output-port) -> output-port? ~
 (current-output-port out) -> void?
-  out : output-port? ~
+  out : output-port? ~ ~
 
 A parameter that determines a default output port for many operations,
 such as write.
@@ -70,32 +70,53 @@ such as write.
                                         *current-error-port*
 (current-error-port) -> output-port? ~
 (current-error-port out) -> void?
-  out : output-port? ~
+  out : output-port? ~ ~
 
 A parameter that determines an output port that is typically used for
 errors and logging. For example, the default error display handler
 writes to this port.
 
                                         *file-stream-port?*
-(file-stream-port? port) -> boolean? ~
-  port : port? ~
+(file-stream-port? v) -> boolean? ~
+  v : any/c ~ ~
 
-Returns #t if the given port is a file-stream port (see [missing]), #f
-otherwise.
+Returns #t if v is a file-stream port (see [missing]), #f otherwise.
+
+Changed in version 7.2.0.5: Extended file-stream-port? to any value,
+instead of resticting the domain to ports
 
                                         *terminal-port?*
-(terminal-port? port) -> boolean? ~
-  port : port? ~
+(terminal-port? v) -> boolean? ~
+  v : any/c ~ ~
 
-Returns #t if the given port is attached to an interactive terminal, #f
+Returns #t if v is a port that is attached to an interactive terminal,
+#f otherwise.
+
+Changed in version 7.2.0.5: Extended terminal-port? to any value,
+instead of resticting the domain to ports
+
+                                        *port-waiting-peer?*
+(port-waiting-peer? port) -> boolean? ~
+  port : port? ~ ~
+
+Returns #t if port is not ready for reading or writing because it is
+waiting for a peer process to complete a stream construction, #f
 otherwise.
 
-eof : eof-object? ~
+On Unix and Mac OS, opening a fifo for output creates a peer-waiting
+port if no reader for the same fifo is already opened. In that case, the
+output port is not ready for writing until a reader is opened; that is,
+write opertaions will block. Use sync if necessary to wait until writing
+will not block—that is, until the read end of the fifo is opened.
+
+Added in version 7.4.0.5.
+
+eof : eof-object? ~ ~
 
 A value (distinct from all other values) that represents an end-of-file.
 
                                         *eof-object?*
-(eof-object? a) -> boolean? ~
-  a : any/c ~
+(eof-object? v) -> boolean? ~
+  v : any/c ~ ~
 
 Returns #t if v is eof, #f otherwise.

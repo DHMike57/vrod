@@ -6,22 +6,21 @@ Language Model
       1.3 Multiple Return Values
       1.4 Top-Level Variables
       1.5 Objects and Imperative Update
-      1.6 Object Identity and Comparisons
-      1.7 Garbage Collection
-      1.8 Procedure Applications and Local Variables
-      1.9 Variables and Locations
-      1.10 Modules and Module-Level Variables
-        1.10.1 Phases
-        1.10.2 The Separate Compilation Guarantee
-        1.10.3 Cross-Phase Persistent Modules
-        1.10.4 Module Redeclarations
-        1.10.5 Submodules
-      1.11 Continuation Frames and Marks
-      1.12 Prompts, Delimited Continuations, and Barriers
-      1.13 Threads
-      1.14 Parameters
-      1.15 Exceptions
-      1.16 Custodians
+      1.6 Garbage Collection
+      1.7 Procedure Applications and Local Variables
+      1.8 Variables and Locations
+      1.9 Modules and Module-Level Variables
+        1.9.1 Phases
+        1.9.2 The Separate Compilation Guarantee
+        1.9.3 Cross-Phase Persistent Modules
+        1.9.4 Module Redeclarations
+        1.9.5 Submodules
+      1.10 Continuation Frames and Marks
+      1.11 Prompts, Delimited Continuations, and Barriers
+      1.12 Threads
+      1.13 Parameters
+      1.14 Exceptions
+      1.15 Custodians
 
     2 Syntax Model
       2.1 Identifiers, Binding, and Scopes
@@ -32,10 +31,11 @@ Language Model
         2.3.3 Expansion Context
         2.3.4 Introducing Bindings
         2.3.5 Transformer Bindings
-        2.3.6 Partial Expansion
-        2.3.7 Internal Definitions
-        2.3.8 Module Phases and Visits
-        2.3.9 Macro-Introduced Bindings
+        2.3.6 Local Binding Context
+        2.3.7 Partial Expansion
+        2.3.8 Internal Definitions
+        2.3.9 Module Expansion, Phases, and Visits
+        2.3.10 Macro-Introduced Bindings
       2.4 Compilation
       2.5 Namespaces
       2.6 Inferred Value Names
@@ -57,10 +57,10 @@ Racket evaluation simplifies
 
   (+ 1 1) -> 2
 
-The arrow -> above replaces the more traditional = to emphasize that
-evaluation proceeds in a particular direction towards simpler
-expressions. In particular, a value is an expression that evaluation
-simplifies no further, such as the number 2.
+The arrow -> replaces the more traditional = to emphasize that
+evaluation proceeds in a particular direction toward simpler
+expressions. In particular, a value, such as the number 2, is an
+expression that evaluation simplifies no further.
 
 1.1. Sub-expression Evaluation and Continuations
 
@@ -69,21 +69,20 @@ Some simplifications require more than one step. For example:
   (- 4 (+ 1 1)) -> (- 4 2) -> 2
 
 An expression that is not a value can always be partitioned into two
-parts: a redex, which is the part that changed in a single-step
-simplification (highlighted), and the continuation, which is the
-evaluation context surrounding an expression. In (- 4 (+ 1 1)), the
-redex is (+ 1 1), and the continuation is (- 4 []), where [] takes the
-place of the redex. That is, the continuation says how to “continue”
-after the redex is reduced to a value.
+parts: a redex (“reducible expression”), which is the part that can
+change in a single-step simplification (highlighted), and the
+continuation, which is the evaluation context surrounding the redex. In
+(- 4 (+ 1 1)), the redex is (+ 1 1), and the continuation is (- 4 []),
+where [] takes the place of the redex as it is reduced. That is, the
+continuation says how to “continue” after the redex is reduced to a
+value.
 
-Before some things can be evaluated, some sub-expressions must be
-evaluated; for example, in the application (- 4 (+ 1 1)), the
-application of - cannot be reduced until the sub-expression (+ 1 1) is
-reduced.
-
-Thus, the specification of each syntactic form specifies how (some of)
-its sub-expressions are evaluated, and then how the results are combined
-to reduce the form away.
+Before some expressions can be evaluated, some or all of their
+sub-expressions must be evaluated. For example, in the application (- 4
+(+ 1 1)), the application of - cannot be reduced until the
+sub-expression (+ 1 1) is reduced. Thus, the specification of each
+syntactic form specifies how (some of) its sub-expressions are evaluated
+and then how the results are combined to reduce the form away.
 
 The dynamic extent of an expression is the sequence of evaluation steps
 during which the expression contains the redex.
@@ -96,44 +95,48 @@ the same as was the enclosing expr2’s continuation.
 
 For example, the (+ 1 1) expression is not in tail position with respect
 to (- 4 (+ 1 1)). To illustrate, we use the notation C[expr] to mean the
-expression that is produced by substituting expr in place of [] in the
+expression that is produced by substituting expr in place of [] in some
 continuation C:
 
   C[(- 4 (+ 1 1))] -> C[(- 4 2)]
 
 In this case, the continuation for reducing (+ 1 1) is C[(- 4 [])], not
-just C.
+just C. The requirement specified in the first paragraph above is not
+met.
 
 In contrast, (+ 1 1) is in tail position with respect to (if (zero? 0)
-(+ 1 1) 3), because, for any continuation C,
+(+ 1 1) 3) because, for any continuation C,
 
   C[(if (zero? 0) (+ 1 1) 3)] -> C[(if #t (+ 1 1) 3)] -> C[(+ 1 1)]
 
-The steps in this reduction sequence are driven by the definition of if,
-and they do not depend on the continuation C. The “then” branch of an if
-form is always in tail position with respect to the if form. Due to a
-similar reduction rule for if and #f, the “else” branch of an if form is
-also in tail position.
+The requirement specified in the first paragraph is met. The steps in
+this reduction sequence are driven by the definition of if, and they do
+not depend on the continuation C. The “then” branch of an if form is
+always in tail position with respect to the if form. Due to a similar
+reduction rule for if and #f, the “else” branch of an if form is also in
+tail position.
 
 Tail-position specifications provide a guarantee about the asymptotic
 space consumption of a computation. In general, the specification of
-tail positions goes with each syntactic form, like if.
+tail positions accompanies the description of each syntactic form, such
+as if.
 
 1.3. Multiple Return Values
 
-A Racket expression can evaluate to multiple values, in the same way
-that a procedure can accept multiple arguments.
+A Racket expression can evaluate to multiple values, to provide symmetry
+with the fact that a procedure can accept multiple arguments.
 
-Most continuations expect a particular number of result values.  Indeed,
-most continuations, such as (+ [] 1) expect a single value. The
-continuation (let-values ([(x y) []]) expr) expects two result values;
-the first result replaces x in the body expr, and the second replaces y
-in expr. The continuation (begin [] (+ 1 2)) accepts any number of
-result values, because it ignores the result(s).
+Most continuations expect a certain number of result values, although
+some continuations can accept an arbitrary number. Indeed, most
+continuations, such as (+ [] 1), expect a single value. The continuation
+(let-values ([(x y) []]) expr) expects two result values; the first
+result replaces x in the body expr, and the second replaces y in expr.
+The continuation (begin [] (+ 1 2)) accepts any number of result values,
+because it ignores the result(s).
 
 In general, the specification of a syntactic form indicates the number
 of values that it produces and the number that it expects from each of
-its sub-expression. In addition, some procedures (notably values)
+its sub-expressions. In addition, some procedures (notably values)
 produce multiple values, and some procedures (notably call-with-values)
 create continuations internally that accept a certain number of values.
 
@@ -147,9 +150,9 @@ then an algebra student simplifies x + 1 as follows:
 
   x + 1 = 10 + 1 = 11
 
-Racket works much the same way, in that a set of top-level variables are
-available for substitutions on demand during evaluation. For example,
-given
+Racket works much the same way, in that a set of top-level variables
+(see also Variables and Locations) are available for substitutions on
+demand during evaluation. For example, given
 
   (define x 10)
 
@@ -157,15 +160,16 @@ then
 
   (+ x 1) -> (+ 10 1) -> 11
 
-In Racket, the way definitions appear is just as important as the way
-that they are used. Racket evaluation thus keeps track of both
+In Racket, the way definitions are created is just as important as the
+way they are used. Racket evaluation thus keeps track of both
 definitions and the current expression, and it extends the set of
 definitions in response to evaluating forms such as define.
 
-Each evaluation step, then, takes the current set of definitions and
-program to a new set of definitions and program. Before a define can be
-moved into the set of definitions, its right-hand expression must be
-reduced to a value.
+Each evaluation step, then, transforms the current set of definitions
+and program into a new set of definitions and program. Before a define
+can be moved into the set of definitions, its expression (i.e., its
+right-hand side) must be reduced to a value. (The left-hand side is not
+an expression position, and so it is not evaluated.)
 
   defined:
   evaluate:(begin (define x (+ 9 1)) (+ x 1))
@@ -199,16 +203,17 @@ various procedures enable the modification of elements within a compound
 data structure. For example, vector-set! modifies the content of a
 vector.
 
-To allow such modifications to data, we must distinguish between values,
-which are the results of expressions, and objects, which hold the data
-referenced by a value.
+To explain such modifications to data, we must distinguish between
+values, which are the results of expressions, and objects, which hold
+the data referenced by a value.
 
 A few kinds of objects can serve directly as values, including booleans,
 (void), and small exact integers. More generally, however, a value is a
-reference to an object. For example, a value can be a reference to a
-particular vector that currently holds the value 10 in its first slot.
-If an object is modified, then the modification is visible through all
-copies of the value that reference the same object.
+reference to an object stored somewhere else. For example, a value can
+refer to a particular vector that currently holds the value 10 in its
+first slot. If an object is modified via one value, then the
+modification is visible through all the values that reference the
+object.
 
 In the evaluation model, a set of objects must be carried along with
 each step in evaluation, just like the definition set. Operations that
@@ -277,38 +282,18 @@ create objects, such as vector, add to the set of objects:
   evaluate:11
 
 The distinction between a top-level variable and an object reference is
-crucial. A top-level variable is not a value; each time a variable
-expression is evaluated, the value is extracted from the current set of
-definitions. An object reference, in contrast is a value, and therefore
-needs no further evaluation. The model evaluation steps above use
-angle-bracketed <o1> for an object reference to distinguish it from a
-variable name.
+crucial. A top-level variable is not a value, so it must be evaluated.
+Each time a variable expression is evaluated, the value of the variable
+is extracted from the current set of definitions. An object reference,
+in contrast, is a value and therefore needs no further evaluation. The
+evaluation steps above use angle-bracketed <o1> for an object reference
+to distinguish it from a variable name.
 
-A direct object reference can never appear in a text-based source
+An object reference can never appear directly in a text-based source
 program. A program representation created with datum->syntax, however,
 can embed direct references to existing objects.
 
-1.6. Object Identity and Comparisons
-
-The eq? operator compares two values, returning #t when the values refer
-to the same object. This form of equality is suitable for comparing
-objects that support imperative update (e.g., to determine that the
-effect of modifying an object through one reference is visible through
-another reference). Also, an eq?  test evaluates quickly, and eq?-based
-hashing is more lightweight than equal?-based hashing in hash tables.
-
-In some cases, however, eq? is unsuitable as a comparison operator,
-because the generation of objects is not clearly defined. In particular,
-two applications of + to the same two exact integers may or may not
-produce results that are eq?, although the results are always equal?.
-Similarly, evaluation of a lambda form typically generates a new
-procedure object, but it may re-use a procedure object previously
-generated by the same source lambda form.
-
-The behavior of a datatype with respect to eq? is generally specified
-with the datatype and its associated procedures.
-
-1.7. Garbage Collection
+1.6. Garbage Collection
 
 +See [missing] for functions related to garbage collection.
 
@@ -321,8 +306,9 @@ evaluate:(+ 1 x)
 
 evaluation cannot depend on <o2>, because it is not part of the program
 to evaluate, and it is not referenced by any definition that is
-accessible in the program. The object <o2> may therefore be removed from
-the evaluation by garbage collection.
+accessible by the program. The object is said to not be reachable. The
+object <o2> may therefore be removed from the program state by garbage
+collection.
 
 A few special compound datatypes hold weak references to objects. Such
 weak references are treated specially by the garbage collector in
@@ -336,22 +322,22 @@ garbage collector. Many other values are always reachable due to the way
 they are implemented and used: A character in the Latin-1 range is
 always reachable, because equal? Latin-1 characters are always eq?, and
 all of the Latin-1 characters are referenced by an internal module.
-Similarly, null, #t, #f, eof, and #<void> and are always reachable.
-Values produced by quote remain reachable when the quote expression
-itself is reachable.
+Similarly, null, #t, #f, eof, and #<void> are always reachable. Values
+produced by quote remain reachable when the quote expression itself is
+reachable.
 
-1.8. Procedure Applications and Local Variables
+1.7. Procedure Applications and Local Variables
 
 Given
 
   f(x) = x + 10
 
-then an algebra student simplifies f(7) as follows:
+an algebra student simplifies f(7) as follows:
 
   f(7) = 7 + 10 = 17
 
-The key step in this simplification is take the body of the defined
-function f, and then replace each x with the actual value 7.
+The key step in this simplification is to take the body of the defined
+function f and replace each x with the actual value 7.
 
 Racket procedure application works much the same way. A procedure is an
 object, so evaluating (f 7) starts with a variable lookup:
@@ -363,11 +349,15 @@ object, so evaluating (f 7) starts with a variable lookup:
   defined: (define f <p1>)
   evaluate:(<p1> 7)
 
-Unlike in algebra, however, the value associated with an argument can be
-changed in the body of a procedure by using set!, as in the example
-(lambda (x) (begin (set! x 3) x)). Since the value associated with x can
-be changed, an actual value cannot be substituted for x when the
-procedure is applied.
+Unlike in algebra, however, the value associated with a procedure
+argument variable can be changed in the body of a procedure by using
+set!, as in the example (lambda (x) (begin (set! x 3) x)). Since the
+value associated with argument variable x can be changed, the value
+cannot be substituted for x when the procedure is first applied.
+
+We do not use the term “parameter variable” to refer to the argument
+variable names declared with a function. This choice avoids confusion
+with parameters.
 
 Instead, a new location is created for each variable on each
 application. The argument value is placed in the location, and each
@@ -395,9 +385,9 @@ generated, it (conceptually) uses a name that has not been used before
 and that cannot be generated again or accessed directly.
 
 Generating a location in this way means that set! evaluates for local
-variables in the same way as for top-level variables, because the local
-variable is always replaced with a location by the time the set! form is
-evaluated:
+variables, including argument variables, in the same way as for
+top-level variables, because the local variable is always replaced with
+a location by the time the set! form is evaluated:
 
   objects: (define <p1> (lambda (x) (begin (set! x 3) x)))
   defined: (define f <p1>)
@@ -422,7 +412,7 @@ evaluated:
            (define xloc 3)
   evaluate:3
 
-The substitution and location-generation step of procedure application
+The location-generation and substitution step of procedure application
 requires that the argument is a value. Therefore, in ((lambda (x) (+ x
 10)) (+ 1 2)), the (+ 1 2) sub-expression must be simplified to the
 value 3, and then 3 can be placed into a location for x. In other words,
@@ -432,15 +422,15 @@ Evaluation of a local-variable form, such as (let ([x (+ 1 2)]) expr),
 is the same as for a procedure call. After (+ 1 2) produces a value, it
 is stored in a fresh location that replaces every instance of x in expr.
 
-1.9. Variables and Locations
+1.8. Variables and Locations
 
 A variable is a placeholder for a value, and expressions in an initial
 program refer to variables. A top-level variable is both a variable and
 a location. Any other variable is always replaced by a location at
-run-time, so that evaluation of expressions involves only locations. A
+run-time; thus, evaluation of expressions involves only locations. A
 single local variable (i.e., a non-top-level, non-module-level
-variable), such as a procedure argument, can correspond to different
-locations through different instantiations.
+variable), such as an argument variable, can correspond to different
+locations during different applications.
 
 For example, in the program
 
@@ -452,25 +442,25 @@ created for x to hold the value 5, and a location is also created for y
 to hold the value 11.
 
 The replacement of a variable with a location during evaluation
-implements Racket’s lexical scoping. For example, when a
-procedure-argument variable x is replaced by the location xloc, then it
-is replaced throughout the body of the procedure, including any nested
-lambda forms. As a result, future references of the variable always
-access the same location.
+implements Racket’s lexical scoping. For example, when an argument
+variable x is replaced by the location xloc, it is replaced throughout
+the body of the procedure, including any nested lambda forms. As a
+result, future references to the variable always access the same
+location.
 
-1.10. Modules and Module-Level Variables
+1.9. Modules and Module-Level Variables
 
 +See [missing] for the syntax of modules.
 
 Most definitions in Racket are in modules. In terms of evaluation, a
 module is essentially a prefix on a defined name, so that different
-modules can define the name. That is, a module-level variable is like a
-top-level variable from the perspective of evaluation.
+modules can define the same name. That is, a module-level variable is
+like a top-level variable from the perspective of evaluation.
 
 One difference between a module and a top-level definition is that a
 module can be declared without instantiating its module-level
 definitions. Evaluation of a require instantiates (i.e., triggers the
-instantiation of) a declared module, which creates variables that
+instantiation of) the declared module, which creates variables that
 correspond to its module-level definitions.
 
 For example, given the module declaration
@@ -479,102 +469,111 @@ For example, given the module declaration
     (define x 10))
 
 the evaluation of (require 'm) creates the variable x and installs 10 as
-its value. This x is unrelated to any top-level definition of x.
+its value. This x is unrelated to any top-level definition of x (as if
+it were given a unique, module-specific prefix).
 
-1.10.1. Phases
+1.9.1. Phases
+
++See also [missing] in [missing].
+
+The purpose of phases is to address the necessary separation of names
+defined at execution time versus names defined at expansion time.
 
 A module can be instantiated in multiple phases. A phase is an integer
-that, again, is effectively a prefix on the names of module-level
-definitions. A top-level require instantiates a module at phase 0, if
-the module is not already instantiated at phase 0.  A top-level (require
-(for-syntax ....)) instantiates a module at phase 1 (if it is not
-already instantiated at that level); for-syntax also has a different
-binding effect on further program parsing, as described in Introducing
-Bindings.
+that, like a module name, is effectively a prefix on the names of
+module-level definitions. Phase 0 is the execution-time phase.
 
-Within a module, some definitions are shifted by a phase already; the
+A top-level require instantiates a module at phase 0, if the module is
+not already instantiated at phase 0.  A top-level (require (for-syntax
+....)) instantiates a module at phase 1 (if it is not already
+instantiated at that phase); for-syntax also has a different binding
+effect on further program parsing, as described in Introducing Bindings.
+
+Within a module, some definitions are already shifted by a phase: the
 begin-for-syntax form is similar to begin, but it shifts expressions and
-definitions by a relative phase 1. Thus, if the module is instantiated
-at phase 1, the variables defined with begin-for-syntax are created at
-phase 2, and so on. Moreover, this relative phase acts as another layer
-of prefixing, so that a define of x and a begin-for-syntax-wrapped
-define of x can co-exist in a module without colliding. A
-begin-for-syntax form can be nested within a begin-for-syntax form, in
-which case definitions and expressions are in relative phase 2, and so
-on. Higher phases are mainly related to program parsing, instead of
-normal evaluation.
+definitions by a relative phase +1. Likewise, the define-for-syntax form
+is similar to define, but shifts the definition by +1. Thus, if the
+module is instantiated at phase 1, the variables defined with
+begin-for-syntax are created at phase 2, and so on. Moreover, this
+relative phase acts as another layer of prefixing, so that x defined
+with define and x defined with define-for-syntax can co-exist in a
+module without colliding. A begin-for-syntax form can be nested within a
+begin-for-syntax form, in which case the inner definitions and
+expressions are in relative phase +2, and so on. Higher phases are
+mainly related to program parsing instead of normal evaluation.
 
 If a module instantiated at phase n requires another module, then the
 required module is first instantiated at phase n, and so on
 transitively. (Module requires cannot form cycles.) If a module
-instantiated at phase n requires for-syntax another module, the other
-module becomes available at phase n+1, and it may later be instantiated
-at phase n+1.  If a module that is available at phase n for n>0 requires
-for-template another module, the other module becomes available at phase
-n-1, and so on. Instantiations of available modules above phase 0 are
-triggered on demand as described in Module Phases and Visits.
+instantiated at phase n requires another module M for-syntax, then M
+becomes available at phase n+1, and it later may be instantiated at
+phase n+1.  If a module that is available at phase n (for n>0) requires
+another module M for-template, then M becomes available at phase n-1,
+and so on. Instantiations of available modules above phase 0 are
+triggered on demand as described in Module Expansion, Phases, and
+Visits.
 
 A final distinction among module instantiations is that multiple
 instantiations may exist at phase 1 and higher. These instantiations are
-created by the parsing of module forms (see Module Phases and Visits),
-and are, again, conceptually distinguished by prefixes.
+created by the parsing of module forms (see Module Expansion, Phases,
+and Visits), and are, again, conceptually distinguished by prefixes.
 
 Top-level variables can exist in multiple phases in the same way as
 within modules. For example, define within begin-for-syntax creates a
 phase 1 variable. Furthermore, reflective operations like
 make-base-namespace and eval provide access to top-level variables in
 higher phases, while module instantiations (triggered by require)
-relative to such top-levels are in corresponding higher phases.
+relative to such top-levels are in correspondingly higher phases.
 
-1.10.2. The Separate Compilation Guarantee
+1.9.2. The Separate Compilation Guarantee
 
 When a module is compiled, its phase 1 is instantiated. This can, in
 turn, trigger the transitive instantiation of many other modules at
 other phases, including phase 1. Racket provides a very strong guarantee
-about this instantiation called "The Separate Compilation Guarantee":
+about this instantiation called “The Separate Compilation Guarantee”:
 
-"Any effects of the instantiation of the module’s phase 1 due to
-compilation on the Racket runtime system are discarded."
+  Any effects of the instantiation of the module’s phase 1 due to
+  compilation on the Racket runtime system are discarded.
 
 The guarantee concerns effects. There are two different kinds of
 effects: internal and external.
 
 Internal effects are exemplified by mutation.  Mutation is the action of
 a function such as set-box!, which changes the value contained in the
-box. The modified box is not observable outside of Racket, so the effect
-is said to be "internal". By definition, internal effects is not
-detectable outside of the Racket program.
+box. The modified box is not observable outside Racket, so the effect is
+said to be “internal.” By definition, internal effects are not
+detectable outside the Racket program.
 
-External effects are exemplified by input/output (or I/O). I/O is the
+External effects are exemplified by input/output (I/O). I/O is the
 action of a function such as tcp-connect, which communicates with the
-operating system to send network packets outside of the machine running
-Racket. The transmission of these packets is observable outside of
-Racket, in particular by the receiver computer or any routers in
-between. External effects exist to be detectable outside of the Racket
-program and are often detectable using physical processes.
+operating system to send network packets outside the machine running
+Racket. The transmission of these packets is observable outside Racket,
+in particular by the receiving computer or any routers in between.
+External effects exist to be detectable outside the Racket program and
+are often detectable using physical processes.
 
-An effect is discarded when it is no longer detectable. For instance, a
-mutation of a box from 3 to 4 would be discarded if it ceases to be
-detectable that it was ever changed, and thus would still contain 3.
-Because external effects are intrinsically observable outside of Racket,
+An effect is discarded when it is no longer detectable. For instance,
+the mutation of a box from 3 to 4 is discarded when it ceases to be
+detectable that it was ever changed and thus would still contain 3.
+Because external effects are intrinsically observable outside Racket,
 they are irreversible and cannot be discarded.
 
 Thus, The Separate Compilation Guarantee only concerns effects like
-mutation, because they are exclusively effects "on the Racket runtime
-system" and not "on the physical universe".
+mutation, because they are exclusively effects “on the Racket runtime
+system” and not “on the physical universe.”
 
 There are many things a Racket program can do that appear to be internal
-effects, but are actually external effects. For instance, bytes-set! is
-typically an internal effect, except when the bytes were created by
-make-shared-bytes which is allocated in space observable by other
-processes. Thus, effects which modify them are not discardable, so
-bytes-set!, in this case, is an external effect.
+effects but are actually external effects. For instance, bytes-set! is
+typically an internal effect, except when the bytes are created by
+make-shared-bytes, which allocates in space observable by other
+processes. Thus, effects which modify those bytes are not discardable,
+so bytes-set!, in this case, has an external effect.
 
 The opposite is also true: some things which appear to be external are
 actually internal. For instance, if a Racket program starts multiple
 threads and uses mutation to communicate between them, that mutation is
 purely internal, because Racket’s threads are defined entirely
-internally.
+internally (they are not related to operating system threads).
 
 Furthermore, whenever a Racket program calls an unsafe function, the
 Racket runtime system makes no promises about its effects. For instance,
@@ -593,7 +592,8 @@ module to have already compiled a different module. In particular, if
 module A is shared by the phase 1 portion of modules X and Y, then any
 internal effects while X is compiled are not visible during the
 compilation of Y, regardless of whether X and Y are compiled during the
-same execution of Racket’s runtime system.
+same execution of Racket’s runtime system and regardless of the order of
+compilation.
 
 The following set of modules demonstrate this guarantee. First, we
 define a module with the ability to observe effects via a box:
@@ -606,8 +606,7 @@ Next, we define two syntax transformers that use and mutate this box:
 
   (module transformers racket/base
     (provide (all-defined-out))
-    (require (for-syntax racket/base
-                         'box))
+    (require (for-syntax racket/base 'box))
     (define-syntax (sett stx)
       (set-box! b 2)
       #'(void))
@@ -622,7 +621,8 @@ Next, we define a module that uses these transformers:
     (sett)
     (define gott (gett)))
 
-Finally, we define a second module that uses these transformers:
+Finally, we define a second module that uses these transformers and the
+user module:
 
   (module test racket/base
     (require 'box 'transformers 'user)
@@ -636,14 +636,15 @@ Finally, we define a second module that uses these transformers:
 
 This module displays:
 
-* 2, because the module 'user expanded to 2.
+* 2, because the (gett) in module user expanded to 2.
 
-* 0, because the effects of compiling 'user were discarded.
+* 0, because the effects of compiling user were discarded.
 
-* 2, because the effect of (sett) inside 'test is not discarded.
+* 2, because the effect of (sett) inside test has not yet been
+  discarded.
 
-* 0, because the effects at phase 1 are irrelevant to the phase 0 use of
-  b.
+* 0, because the effects of sett at phase 1 are irrelevant to the phase
+  0 use of b in (unbox b).
 
 Furthermore, this display will never change, regardless of which order
 these modules are compiled in or whether they are compiled at the same
@@ -652,25 +653,55 @@ time or separately.
 In contrast, if these modules were changed to store the value of b in a
 file on the filesystem, then the program would only display 2.
 
-The Separate Compilation Guarantee is described in more detail in
-"Composable and Compilable Macros" [Flatt02], including informative
-examples. The paper "Advanced Macrology and the implementation of Typed
-Scheme" [Culpepper07] also contains an extended example of why it is
-important and how to design effectful syntactic extensions in its
-presence.
+The Separate Compilation Guarantee is described in more detail in the
+paper “Composable and Compilable Macros” [Flatt02], including
+informative examples. The paper “Advanced Macrology and the
+implementation of Typed Scheme” [Culpepper07] also contains an extended
+example of why it is important and how to design effectful syntactic
+extensions in its presence.
 
-1.10.3. Cross-Phase Persistent Modules
+1.9.3. Cross-Phase Persistent Modules
 
 Module declarations that fit a highly constrained form—including a
 (#%declare #:cross-phase-persistent) form in the module body—create
 cross-phase persistent modules. A cross-phase persistent module’s
-instantiations across all phases and module registries share the
-variables produced by the first instantiation of the module.
+instantiations across all phases share the variables produced by the
+first instantiation of the module. Additionally, cross-phase persistent
+module instantiations persist across module registries when they share a
+common module declaration.
+
+Examples:
+
+  > (module cross '#%kernel
+      (#%declare #:cross-phase-persistent) ~ ~
+      (#%provide x)
+      (define-values (x) (gensym)))
+  > (module noncross '#%kernel
+      (#%provide x)
+      (define-values (x) (gensym)))
+  > (define ns (current-namespace))
+  > (define (same-instence? mod)
+      (namespace-require mod)
+      (define a
+        (parameterize ([current-namespace (make-base-namespace)])
+          (namespace-attach-module-declaration ns mod)
+          (namespace-require mod)
+          (namespace-variable-value 'x)))
+      (define b
+        (parameterize ([current-namespace (make-base-namespace)])
+          (namespace-attach-module-declaration ns mod)
+          (namespace-require mod)
+          (namespace-variable-value 'x)))
+      (eq? a b))
+  > (same-instence? ''noncross)
+  #f
+  > (same-instence? ''cross)
+  #t
 
 The intent of a cross-phase persistent module is to support values that
 are recognizable after phase crossings. For example, when a macro
-transformer running in phase 1 raises a syntax error as represented by a
-exn:fail:syntax instance, the instance is recognizable by a phase-0
+transformer running in phase 1 raises a syntax error as represented by
+an exn:fail:syntax instance, the instance is recognizable by a phase-0
 exception handler wrapping a call to eval or expand that triggered the
 syntax error, because the exn:fail:syntax structure type is defined by a
 cross-phase persistent module.
@@ -684,12 +715,12 @@ includes syntax literals (via quote-syntax) or variable references (via
 for the syntactic specification of a cross-phase persistent module
 declaration.
 
-A documented module should be assumed non-cross-phase persistent unless
+A documented module should be assumed non–cross-phase persistent unless
 it is specified as cross-phase persistent (such as racket/kernel).
 
-1.10.4. Module Redeclarations
+1.9.4. Module Redeclarations
 
-When a module is declared using a name for which a module is already
+When a module is declared using a name with which a module is already
 declared, the new declaration’s definitions replace and extend the old
 declarations. If a variable in the old declaration has no counterpart in
 the new declaration, the old variable continues to exist, but its
@@ -697,19 +728,19 @@ binding is not included in the lexical information for the module body.
 If a new variable definition has a counterpart in the old declaration,
 it effectively assigns to the old variable.
 
-If a module is instantiated in any phases before it is redeclared, each
-redeclaration of the module is immediately instantiated in the same
-phases.
+If a module is instantiated in the current namespace’s base phase before
+the module is redeclared, the redeclaration of the module is immediately
+instantiated in that phase.
 
 If the current inspector does not manage a module’s declaration
 inspector (see [missing]), then the module cannot be redeclared.
 Similarly, a cross-phase persistent module cannot be redeclared. Even if
-redeclrection succeeds, instantiation of a module that is previously
+redeclaration succeeds, instantiation of a module that is previously
 instantiated may fail if instantiation for the redeclaration attempts to
 modify variables that are constant (see
 compile-enforce-module-constants).
 
-1.10.5. Submodules
+1.9.5. Submodules
 
 A module or module* form within a top-level module form declares a
 submodule. A submodule is accessed relative to its enclosing module,
@@ -722,9 +753,10 @@ enclosing module, but the enclosing module can require the submodule. In
 contrast, a submodule declared with module* conceptually follows its
 enclosing module, so can require from its enclosing module, but the
 enclosing module cannot require the submodule. Unless a submodule
-imports from its enclosing module or vice-versa, then visits or
-instantiations of the two modules are independent, and thier
-implementations may even be loaded from bytecode at different times.
+imports from its enclosing module or vice versa, then visits or
+instantiations of the two modules are independent, and their
+implementations may even be loaded from bytecode sources at different
+times.
 
 A submodule declared with module can import any preceding submodule
 declared with module. A submodule declared with module* can import any
@@ -737,24 +769,25 @@ submodule’s body, and the submodule implicitly imports the enclosing
 module. The submodule can provide any bindings that it inherits from its
 enclosing module.
 
-1.11. Continuation Frames and Marks
+1.10. Continuation Frames and Marks
 
 +See [missing] for continuation-mark forms and functions.
 
 Every continuation C can be partitioned into continuation frames C1, C2,
 ..., Cn such that C = C1[C2[...[Cn]]], and no frame Ci can be itself
-partitioned into smaller continuations. Evaluation steps add and remove
-frames to the current continuation, typically one at a time.
+partitioned into smaller continuations. Evaluation steps add frames to
+and remove frames from the current continuation, typically one at a
+time.
 
 Each frame is conceptually annotated with a set of continuation marks. A
-mark consists of a key and its value; the key is an arbitrary value, and
-each frame includes at most one mark for any key. Various operations set
-and extract marks from continuations, so that marks can be used to
-attach information to a dynamic extent. For example, marks can be used
-to record information for a “stack trace” to be used when an exception
-is raised, or to implement dynamic scope.
+mark consists of a key and its value. The key is an arbitrary value, and
+each frame includes at most one mark for any given key. Various
+operations set and extract marks from continuations, so that marks can
+be used to attach information to a dynamic extent. For example, marks
+can be used to record information for a “stack trace” to be presented
+when an exception is raised, or to implement dynamic scope.
 
-1.12. Prompts, Delimited Continuations, and Barriers
+1.11. Prompts, Delimited Continuations, and Barriers
 
 +See [missing] for continuation and prompt functions.
 
@@ -774,59 +807,92 @@ are also captured.
 A continuation barrier is another kind of continuation frame that
 prohibits certain replacements of the current continuation with another.
 Specifically, a continuation can be replaced by another only when the
-replacement does not introduce any continuation barriers. It may remove
-continuation barriers only through jumps to continuations that are a
-tail of the current continuation.  A continuation barrier thus prevents
-“downward jumps” into a continuation that is protected by a barrier.
-Certain operations install barriers automatically; in particular, when
-an exception handler is called, a continuation barrier prohibits the
-continuation of the handler from capturing the continuation past the
-exception point.
+replacement does not introduce any continuation barriers. A continuation
+barrier thus prevents “downward jumps” into a continuation that is
+protected by a barrier. Certain operations install barriers
+automatically; in particular, when an exception handler is called, a
+continuation barrier prohibits the continuation of the handler from
+capturing the continuation past the exception point.
 
-A escape continuation is essentially a derived concept. It combines a
+An escape continuation is essentially a derived concept. It combines a
 prompt for escape purposes with a continuation for mark-gathering
 purposes. As the name implies, escape continuations are used only to
 abort to the point of capture.
 
-1.13. Threads
+1.12. Threads
 
 +See [missing] for thread and synchronization functions.
 
 Racket supports multiple threads of evaluation.  Threads run
 concurrently, in the sense that one thread can preempt another without
 its cooperation, but threads currently all run on the same processor
-(i.e., the same underlying OS process and thread). See also [missing].
+(i.e., the same underlying operating system process and thread).
 
 Threads are created explicitly by functions such as thread. In terms of
-the evaluation model, each step in evaluation actually consists of
+the evaluation model, each step in evaluation actually deals with
 multiple concurrent expressions, up to one per thread, rather than a
 single expression. The expressions all share the same objects and
 top-level variables, so that they can communicate through shared state,
-and sequential consistency is guaranteed (i.e., the result is consistent
-with some global sequence imposed on all evaluation steps across
-threads). Most evaluation steps involve a single step in a single
-expression, but certain synchronization primitives require multiple
-threads to progress together in one step.
+and sequential consistency [Lamport79] is guaranteed (i.e., the result
+is consistent with some global sequence imposed on all evaluation steps
+across threads). Most evaluation steps involve a single step in a single
+thread, but certain synchronization primitives require multiple threads
+to progress together in one step; for example, an exchange of a value
+through a channel progresses in two threads simultaneously.
+
+Unless otherwise noted, all constant-time procedures and operations
+provided by Racket are thread-safe in the sense that they are atomic:
+they happen as a single evaluation step. For example, set! assigns to a
+variable as an atomic action with respect to all threads, so that no
+thread can see a “half-assigned” variable. Similarly, vector-set!
+assigns to a vector atomically. Note that the evaluation of a set!
+expression with its subexpression is not necessarily atomic, because
+evaluating the subexpression involves a separate step of evaluation.
+Only the assignment action itself (which takes after the subexpression
+is evaluated to obtain a value) is atomic. Similarly, a procedure
+application can involve multiple steps that are not atomic, even if the
+procedure itself performs an atomic action.
+
+The hash-set! procedure is not atomic, but the table is protected by a
+lock; see [missing] for more information. Port operations are generally
+not atomic, but they are thread-safe in the sense that a byte consumed
+by one thread from an input port will not be returned also to another
+thread, and procedures like port-commit-peeked and write-bytes-avail
+offer specific concurrency guarantees.
 
 In addition to the state that is shared among all threads, each thread
 has its own private state that is accessed through thread cells. A
 thread cell is similar to a normal mutable object, but a change to the
-value inside a thread cell is seen only when extracting a value from the
-cell from the same thread. A thread cell can be preserved; when a new
+value inside a thread cell is seen only when extracting a value from
+that cell in the same thread. A thread cell can be preserved; when a new
 thread is created, the creating thread’s value for a preserved thread
 cell serves as the initial value for the cell in the created thread. For
 a non-preserved thread cell, a new thread sees the same initial value
 (specified when the thread cell is created) as all other threads.
 
-1.14. Parameters
+Futures and places offer different kinds of concurrency and parallelism,
+and they have weaker guarantees about shared state. (Places can share
+state through functions like make-shared-bytes.) Each thread of
+evaluation in a future or place is constrained to behave consistent with
+the possibility of some other thread that might inspect any shared data
+starting at any point that a future or place starts. In the case that
+two futures or two places share state, each read or write operation to
+shared state corresponds to a read or write operation at the
+virtual-memory level, and the operations are constrained to the order
+they could be observed or affected by a thread. However, Racket does not
+enforce additional guarantees about reordering that might be performed
+at the virtual-memory level or below, except in the case of operations
+that specify such guarantees explicitly (e.g., box-cas!).
+
+1.13. Parameters
 
 +See [missing] for parameter forms and functions.
 
 Parameters are essentially a derived concept in Racket; they are defined
 in terms of continuation marks and thread cells. However, parameters are
-also built in, in the sense that some primitive procedures consult
+also “built in,” due to the fact that some primitive procedures consult
 parameter values. For example, the default output stream for primitive
-output operations is determined by a parameter.
+output operations is specified by a parameter.
 
 A parameter is a setting that is both thread-specific and
 continuation-specific. In the empty continuation, each parameter
@@ -836,22 +902,22 @@ thread.
 
 In a non-empty continuation, a parameter’s value is determined through a
 parameterization that is associated with the nearest enclosing
-continuation frame though a continuation mark (whose key is not directly
+continuation frame via a continuation mark (whose key is not directly
 accessible). A parameterization maps each parameter to a preserved
-thread cell, and the combination of thread cell and current thread
-yields the parameter’s value. A parameter procedure sets or accesses the
-relevant thread cell for its parameter.
+thread cell, and the combination of the thread cell and the current
+thread yields the parameter’s value. A parameter procedure sets or
+accesses the relevant thread cell for its parameter.
 
 Various operations, such as parameterize or call-with-parameterization,
 install a parameterization into the current continuation’s frame.
 
-1.15. Exceptions
+1.14. Exceptions
 
 +See [missing] for exception forms, functions, and types.
 
 Exceptions are essentially a derived concept in Racket; they are defined
 in terms of continuations, prompts, and continuation marks.  However,
-exceptions are also built in, in the sense that primitive forms and
+exceptions are also “built in,” due to the fact that primitive forms and
 procedures may raise exceptions.
 
 An exception handler to catch exceptions can be associated with a
@@ -868,14 +934,15 @@ particular tag for which a prompt is always present, because the prompt
 is installed in the outermost frame of the continuation for any new
 thread.
 
-1.16. Custodians
+1.15. Custodians
 
 +See [missing] for custodian functions.
 
 A custodian manages a collection of threads, file-stream ports, TCP
-ports, TCP listeners, UDP sockets, and byte converters.  Whenever a
-thread, etc., is created, it is placed under the management of the
-current custodian as determined by the current-custodian parameter.
+ports, TCP listeners, UDP sockets, byte converters, and places.
+Whenever a thread, etc., is created, it is placed under the management
+of the current custodian as determined by the current-custodian
+parameter.
 
 Custodians also manage eventspaces from racket/gui/base.
 
@@ -895,23 +962,25 @@ A thread can have multiple managing custodians, and a suspended thread
 created with thread/suspend-to-kill can have zero custodians. Extra
 custodians become associated with a thread through thread-resume (see
 [missing]). When a thread has multiple custodians, it is not necessarily
-killed by a custodian-shutdown-all, but shut-down custodians are removed
-from the thread’s managing set, and the thread is killed when its
-managing set becomes empty.
+killed by a custodian-shutdown-all. Instead, shut-down custodians are
+removed from the thread’s managing custodian set, and the thread is
+killed when its managing set becomes empty.
 
-The values managed by a custodian are only weakly held by the custodian.
-As a result, a will can be executed for a value that is managed by a
-custodian. In addition, a custodian only weakly references its
+The values managed by a custodian are semi-weakly held by the custodian:
+a will can be executed for a value that is managed by a custodian; in
+addition, weak references via weak hash tables, ephemerons, or weak
+boxes can be dropped on the 3m or CGC variants of Racket, but not on the
+CS variant. For all variants, a custodian only weakly references its
 subordinate custodians; if a subordinate custodian is unreferenced but
-has its own subordinates, then the custodian may be collected, at which
-point its subordinates become immediately subordinate to the collected
-custodian’s superordinate custodian.
+has its own subordinates, then the custodian may be garbage collected,
+at which point its subordinates become immediately subordinate to the
+collected custodian’s superordinate (owner) custodian.
 
 In addition to the other entities managed by a custodian, a custodian
 box created with make-custodian-box strongly holds onto a value placed
-in the box until the box’s custodian is shut down. The custodian only
-weakly retains the box itself, however (so the box and its content can
-be collected if there are no other references to them).
+in the box until the box’s custodian is shut down. However, the
+custodian only weakly retains the box itself, so the box and its content
+can be collected if there are no other references to them.
 
 When Racket is compiled with support for per-custodian memory accounting
 (see custodian-memory-accounting-available?), the current-memory-use
@@ -986,16 +1055,16 @@ corresponds to the let form.
 
 When a form parses as the binding of a particular identifier, parsing
 updates a global table that maps a combination of an identifier’s symbol
-and scope set to it’s meaning: a variable, a syntactic form, or a
+and scope set to its meaning: a variable, a syntactic form, or a
 transformer. An identifier refers to a particular binding when the
 reference’s symbol and the identifier’s symbol are the same, and when
-the reference’s scope set is a subset of the binding’s scope set. For a
-given identifier, multiple bindings may have scope sets that are subsets
-of the identifier’s; in that case, the identifier refers to the binding
-whose set is a superset of all others; if no such binding exists, the
-reference is ambiguous (and triggers a syntax error if it is parsed as
-an expression). A binding shadows any binding (i.e., it is shadowing any
-binding) that the same symbol but a subset of scopes.
+the reference’s scope set is a superset of the binding’s scope set. For
+a given identifier, multiple bindings may have scope sets that are
+subsets of the identifier’s; in that case, the identifier refers to the
+binding whose set is a superset of all others; if no such binding
+exists, the reference is ambiguous (and triggers a syntax error if it is
+parsed as an expression). A binding shadows any binding (i.e., it is
+shadowing any binding) with the same symbol but a subset of scopes.
 
 For example, in
 
@@ -1054,12 +1123,12 @@ level, like top-level and module bindings.
 2.2. Syntax Objects
 
 A syntax object combines a simpler Racket value, such as a symbol or
-pair, with a scope set at each phase level, source-location information,
-syntax properties, and tamper status. In particular, an identifier is
-represented as a syntax object that combines a symbol with scope sets
-and other information. The lexical information of a syntax object is its
-scope set combined with the portion of the global table of bindings that
-is relevant to the syntax object’s set of scopes.
+pair, with lexical information, source-location information, syntax
+properties, and tamper status. The lexical information of a syntax
+object comprises a set of scope sets, one for each phase level. In
+particular, an identifier is represented as a syntax object containing a
+symbol, and its lexical information can be combined with the global
+table of bindings to determine its binding (if any) at each phase level.
 
 For example, a car identifier might have lexical information that
 designates it as the car from the racket/base language (i.e., the
@@ -1169,7 +1238,7 @@ binding (according to free-identifier=?) matters.
                          | (set! id expr)
                          | (quote datum)
                          | (quote-syntax datum)
-                         | (quote-syntax datum #:local) ~
+                         | (quote-syntax datum #:local) ~ ~
                          | (with-continuation-mark expr expr expr)
                          | (#%plain-app expr ...+)
                          | (#%top . id)
@@ -1198,7 +1267,7 @@ In a fully expanded program for a namespace whose base phase is 0, the
 relevant phase level for a binding in the program is N if the bindings
 has N surrounding begin-for-syntax and define-syntaxes forms—not
 counting any begin-for-syntax forms that wrap a module or module* form
-for the body of the module or module*, unless a module* form as #f in
+for the body of the module or module*, unless a module* form has #f in
 place of a module-path after the id. The datum in a quote-syntax form
 preserves its information for all phase levels.
 
@@ -1394,15 +1463,16 @@ object and return a syntax object. A use of the binding (at phase level
 Expansion Steps.
 
 Before the expander passes a syntax object to a transformer, the syntax
-object is extended with a fresh scope (that applies to all sub-syntax
-objects) to distinguish syntax objects at the macro’s use site from
-syntax objects that are introduced by the macro; in the result of the
-transformer the presence of the scope is flipped, so that introduced
-syntax objects retain the scope, and use-site syntax objects do not have
-it. In addition, if the use of a transformer is in the same definition
-context as its binding, the use-site syntax object is extended with an
-additional fresh use-site scope that is not flipped in the transformer’s
-result, so that only use-site syntax objects have the use-site scope.
+object is extended with a fresh macro-introduction scope (that applies
+to all sub-syntax objects) to distinguish syntax objects at the macro’s
+use site from syntax objects that are introduced by the macro; in the
+result of the transformer the presence of the scope is flipped, so that
+introduced syntax objects retain the scope, and use-site syntax objects
+do not have it. In addition, if the use of a transformer is in the same
+definition context as its binding, the use-site syntax object is
+extended with an additional fresh use-site scope that is not flipped in
+the transformer’s result, so that only use-site syntax objects have the
+use-site scope.
 
 The scope-introduction process for macro expansion helps keep binding in
 an expanded program consistent with the lexical structure of the source
@@ -1418,7 +1488,7 @@ is
 
   (define x 12)
   (define-syntax m ....)
-  (let-values ([(x) 10]) x)
+  (let ([x 10]) x)
 
 However, the result of the last expression is 12, not 10. The reason is
 that the transformer bound to m introduces the binding x, but the
@@ -1506,7 +1576,87 @@ the same way as for define-syntaxes. However, any introduced bindings
 from definition within begin-for-syntax are at phase level 1 (not a
 transformer binding at phase level 0).
 
-2.3.6. Partial Expansion
+2.3.6. Local Binding Context
+
+Although the binding of an identifier can be uniquely determined from
+the combination of its lexical information and the global binding table,
+the expander also maintains a local binding context that records
+additional information about local bindings to ensure they are not used
+outside of the lexical region in which they are bound.
+
+Due to the way local binding forms like let add a fresh scope to both
+bound identifiers and body forms, it isn’t ordinarily possible for an
+identifier to reference a local binding without appearing in the body of
+the let. However, if macros use compile-time state to stash bound
+identifiers, or use local-expand to extract identifiers from an expanded
+binding form, they can violate this constraint. For example, the
+following stash-id and unstash-id macros cooperate to move a reference
+to a locally-bound x identifier outside of the lexical region in which
+it is bound:
+
+  > (begin-for-syntax
+      (define stashed-id #f))
+  > (define-syntax (stash-id stx)
+      (syntax-case stx ()
+        [(_ id)
+         (begin
+           (set! stashed-id #'id)
+           #'(void))]))
+  > (define-syntax (unstash-id stx)
+      stashed-id)
+  > (let ([x 42])
+      (stash-id x)
+      (unstash-id))
+  42
+  > (unstash-id)
+  identifier used out of context: #<syntax:eval:5:0 x>
+
+In general, an identifier’s lexical information is not sufficient to
+know whether or not its binding is available in the enclosing context,
+since the scope set for the identifier stored in stashed-id
+unambiguously refers to a binding in the global binding table. This can
+be observed by the fact that identifier-binding produces 'lexical, not
+#f:
+
+  > (define-syntax (stashed-id-binding stx)
+      #`'#,(identifier-binding stashed-id))
+  > (stashed-id-binding)
+  'lexical
+
+However, the reference produced by (unstash-id) in the above program is
+still illegal, even if it isn’t technically unbound. To record the fact
+that x’s binding is in scope only within the body of its corresponding
+let form, the expander adds x’s binding to the local binding context
+while expanding the let body. More generally, the expander adds all
+local variable bindings to the local binding context while expanding
+expressions in which a reference to the variable would be legal. When
+the expander encounters an identifier bound to a local variable, and the
+associated binding is not in the current local binding context, it
+raises a syntax error.
+
+The local binding context also tracks local transformer bindings (i.e.
+bindings bound by forms like let-syntax) in a similar way, except that
+the context also stores the compile-time value associated with the
+transformer. When an identifier that is locally bound as a transformer
+is used in application position as a syntax transformer, or its
+compile-time value is looked up using syntax-local-value, the local
+binding context is consulted to retrieve the value. If the binding is in
+scope, its associated compile-time value is used; otherwise, the
+expander raises a syntax error.
+
+Examples:
+
+  > (define-syntax (stashed-id-local-value stx)
+      #`'#,(syntax-local-value stashed-id))
+  > (let-syntax ([y 42])
+      (stash-id y)
+      (stashed-id-local-value))
+  42
+  > (stashed-id-local-value)
+  syntax-local-value: identifier is not bound to syntax:
+  #<syntax:eval:11:0 y>
+
+2.3.7. Partial Expansion
 
 In certain contexts, such as an internal-definition context or module
 context, partial expansion is used to determine whether forms represent
@@ -1519,7 +1669,7 @@ or #%top identifier to an expression, and when the binding turns out to
 be the primitive #%app, #%datum, or #%top form, then expansion stops
 without adding the identifier.
 
-2.3.7. Internal Definitions
+2.3.8. Internal Definitions
 
 An internal-definition context supports local definitions mixed with
 expressions. Forms that allow internal definitions document such
@@ -1528,11 +1678,9 @@ internal-definition context are equivalent to local binding via
 letrec-syntaxes+values; macro expansion converts internal definitions to
 a letrec-syntaxes+values form.
 
-Expansion of an internal-definition context begins with the introduction
-of a fresh scope for the context. Thereafter, expansion relies on
-partial expansion of each body in an internal-definition sequence.
-Partial expansion of each body produces a form matching one of the
-following cases:
+Expansion relies on partial expansion of each body in an
+internal-definition sequence. Partial expansion of each body produces a
+form matching one of the following cases:
 
 * A define-values form: The binding table is immediately enriched with
   bindings for the define-values form.  Further expansion of the
@@ -1562,7 +1710,23 @@ expr (values))); the definitions are then converted to bindings in a
 letrec-syntaxes+values form, and all expressions after the last
 definition become the body of the letrec-syntaxes+values form.
 
-2.3.8. Module Phases and Visits
+Before partial expansion begins, expansion of an internal-definition
+context begins with the introduction of a fresh outside-edge scope on
+the content of the internal-definition context. This outside-edge scope
+effectively identifies syntax objects that are present in the original
+form. An inside-edge scope is also created and added to the original
+content; furthermore, the inside-edge scope is added to the result of
+any partial expansion. This inside-edge scope ensures that all bindings
+introduced by the internal-definition context have a particular scope in
+common.
+
+2.3.9. Module Expansion, Phases, and Visits
+
+Expansion of a module form proceeds in a similar way to expansion of an
+internal-definition context: an outside-edge scope is created for the
+original module content, and an inside-edge scope is added to both the
+original module and any form that appears during a partial expansion of
+the module’s top-level forms to uncover definitions and imports.
 
 A require form not only introduces bindings at expansion time, but also
 visits the referenced module when it is encountered by the expander.
@@ -1601,7 +1765,7 @@ module is attached to a namespace through namespace-attach-module,
 modules that it requires are transitively attached, but instances are
 attached only at phases at or below the namespace’s base phase.
 
-2.3.9. Macro-Introduced Bindings
+2.3.10. Macro-Introduced Bindings
 
 When a top-level definition binds an identifier that originates from a
 macro expansion, the definition captures only uses of the identifier
@@ -1609,14 +1773,13 @@ that are generated by the same expansion due to the fresh scope  that is
 generated for the expansion.
 
 Examples:
+
   > (define-syntax def-and-use-of-x
       (syntax-rules ()
         [(def-and-use-of-x val)
-         ; x below originates from this macro: ~
+         ; x below originates from this macro: ~ ~
          (begin (define x val) x)]))
-
   > (define x 1)
-
   > x
   1
   > (def-and-use-of-x 2)
@@ -1626,9 +1789,8 @@ Examples:
   > (define-syntax def-and-use
       (syntax-rules ()
         [(def-and-use x val)
-         ; "x" below was provided by the macro use: ~
+         ; "x" below was provided by the macro use: ~ ~
          (begin (define x val) x)]))
-
   > (def-and-use x 3)
   3
   > x
@@ -1645,19 +1807,15 @@ use,  the define-syntaxes form avoids binding an identifier if the  body
 of the define-syntaxes declaration produces zero  results.
 
 Examples:
+
   > (define bucket-1 0)
-
   > (define bucket-2 0)
-
   > (define-syntax def-and-set!-use-of-x
       (syntax-rules ()
         [(def-and-set!-use-of-x val)
          (begin (set! bucket-1 x) (define x val) (set! bucket-2 x))]))
-
   > (define x 1)
-
   > (def-and-set!-use-of-x 2)
-
   > x
   1
   > bucket-1
@@ -1668,24 +1826,23 @@ Examples:
       (syntax-rules ()
         [(def-and-use)
          (begin
-           ; Initial reference to even precedes definition: ~
+           ; Initial reference to even precedes definition: ~ ~
            (define (odd x) (if (zero? x) #f (even (sub1 x))))
            (define (even x) (if (zero? x) #t (odd (sub1 x))))
            (odd 17))]))
-
   > (defs-and-uses/fail)
   even: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
   > (define-syntax defs-and-uses
       (syntax-rules ()
         [(def-and-use)
          (begin
-           ; Declare before definition via no-values define-syntaxes: ~
+           ; Declare before definition via no-values define-syntaxes: ~ ~
            (define-syntaxes (odd even) (values))
            (define (odd x) (if (zero? x) #f (even (sub1 x))))
            (define (even x) (if (zero? x) #t (odd (sub1 x))))
            (odd 17))]))
-
   > (defs-and-uses)
   #t
 
@@ -1778,8 +1935,8 @@ behavior of reflective operations to expand code and to start evaluating
 expanded/compiled code.
 
 Examples:
-  > (define x 'orig) ; define in the original namespace
 
+  > (define x 'orig) ; define in the original namespace
   ; The following let expression is compiled in the original
   ; namespace, so direct references to x see 'orig.
   > (let ([n (make-base-namespace)]) ; make new namespace
@@ -1789,7 +1946,6 @@ Examples:
         (display (eval 'x)))) ; displays 'new
   orignew
 
-
 If an identifier is bound to syntax or to an import, then defining the
 identifier as a variable shadows the syntax or import in future uses of
 the environment. Similarly, if an identifier is bound to a top-level
@@ -1798,30 +1954,25 @@ variable; the variable’s value remains unchanged, however, and may be
 accessible through previously evaluated expressions.
 
 Examples:
+
   > (define x 5)
-
   > (define (f) x)
-
   > x
   5
   > (f)
   5
   > (define-syntax x (syntax-id-rules () [_ 10]))
-
   > x
   10
   > (f)
   5
   > (define x 7)
-
   > x
   7
   > (f)
   7
   > (module m racket (define x 8) (provide x))
-
   > (require 'm)
-
   > x
   8
   > (f)
@@ -1868,6 +2019,12 @@ expression’s context. Normally, the property value should be a symbol. A
 otherwise be inferred from context (perhaps because a binding
 identifier’s was automatically generated and should not be exposed).
 
+To support the propagation and merging of consistent properties during
+expansions, the value of the 'inferred-name property can be a tree
+formed with cons where all of the leaves are the same. For example,
+(cons 'name 'name) is equivalent to 'name, and (cons (void) (void)) is
+equivalent to #<void>.
+
 When an inferred name is not available, but a source location is
 available, a name is constructed using the source location information.
 Inferred and property-assigned names are also available to syntax
@@ -1885,7 +2042,7 @@ module-level binding is set!ed.
                    (#%plain-module-begin
                      cross-form ...))
                   
-    cross-form = (#%declare #:cross-phase-persistent) ~
+    cross-form = (#%declare #:cross-phase-persistent) ~ ~
                | (begin cross-form ...)
                | (#%provide raw-provide-spec ...)
                | submodule-form
@@ -1904,18 +2061,24 @@ module-level binding is set!ed.
                | (#%plain-app gensym)
                | (#%plain-app gensym string)
                | (#%plain-app string->uninterned-symbol string)
+               | (#%plain-app variable-reference-from-unsafe?
+                              (#%variable-reference))
                   
    cross-datum = number
                | boolean
                | identifier
                | string
                | bytes
+               | ()
 
 This grammar applies after expansion, but because a cross-phase
 persistent module imports only from other cross-phase persistent
 modules, the only relevant expansion steps are the implicit introduction
 of #%plain-module-begin, implicit introduction of #%plain-app, and
 implicit introduction and/or expansion of #%datum.
+
+Changed in version 7.5.0.12: Allow (#%plain-app
+variable-reference-from-unsafe? (#%variable-reference)).
 
 3. The Reader
 
@@ -1977,9 +2140,9 @@ on the next character or characters in the input stream as follows:
                       ( starts a pair or list; see Reading Pairs and Lists
                       [ starts a pair or list; see Reading Pairs and Lists
                       { starts a pair or list; see Reading Pairs and Lists
-                      ) matches ( or raises exn:fail:read ~
-                      ] matches [ or raises exn:fail:read ~
-                      } matches { or raises exn:fail:read ~
+                      ) matches ( or raises exn:fail:read ~ ~
+                      ] matches [ or raises exn:fail:read ~ ~
+                      } matches { or raises exn:fail:read ~ ~
                       " starts a string; see Reading Strings
                       ' starts a quote; see Reading Quotes
                       ` starts a quasiquote; see Reading Quotes
@@ -1990,19 +2153,19 @@ on the next character or characters in the input stream as follows:
                      #( starts a vector; see Reading Vectors
                      #[ starts a vector; see Reading Vectors
                      #{ starts a vector; see Reading Vectors
-                   #fl( starts a flvector; see Reading Vectors
-                   #fl[ starts a flvector; see Reading Vectors
-                   #fl{ starts a flvector; see Reading Vectors
-                   #fx( starts a fxvector; see Reading Vectors
-                   #fx[ starts a fxvector; see Reading Vectors
-                   #fx{ starts a fxvector; see Reading Vectors
+           #fl( or #Fl( starts a flvector; see Reading Vectors
+           #fl[ or #Fl[ starts a flvector; see Reading Vectors
+           #fl{ or #Fl{ starts a flvector; see Reading Vectors
+           #fx( or #Fx( starts a fxvector; see Reading Vectors
+           #fx[ or #Fx[ starts a fxvector; see Reading Vectors
+           #fx{ or #Fx{ starts a fxvector; see Reading Vectors
                     #s( starts a structure literal; see Reading Structures
                     #s[ starts a structure literal; see Reading Structures
                     #s{ starts a structure literal; see Reading Structures
                      #\ starts a character; see Reading Characters
                      #" starts a byte string; see Reading Strings
                      #% starts a symbol; see Reading Symbols
-                     #: starts a keyword; see Reading Keywords ~
+                     #: starts a keyword; see Reading Keywords ~ ~
                      #& starts a box; see Reading Boxes
                      #| starts a block comment; see Reading Comments
                      #; starts an S-expression comment; see Reading Comments
@@ -2033,9 +2196,15 @@ on the next character or characters in the input stream as follows:
          #fl>digit10<+( starts a flvector; see Reading Vectors
          #fl>digit10<+[ starts a flvector; see Reading Vectors
          #fl>digit10<+{ starts a flvector; see Reading Vectors
+         #Fl>digit10<+( starts a flvector; see Reading Vectors
+         #Fl>digit10<+[ starts a flvector; see Reading Vectors
+         #Fl>digit10<+{ starts a flvector; see Reading Vectors
          #fx>digit10<+( starts a fxvector; see Reading Vectors
          #fx>digit10<+[ starts a fxvector; see Reading Vectors
          #fx>digit10<+{ starts a fxvector; see Reading Vectors
+         #Fx>digit10<+( starts a fxvector; see Reading Vectors
+         #Fx>digit10<+[ starts a fxvector; see Reading Vectors
+         #Fx>digit10<+{ starts a fxvector; see Reading Vectors
        #>digit10<{1,8}= binds a graph tag; see Reading Graph Structure
        #>digit10<{1,8}# uses a graph tag; see Reading Graph Structure
               otherwise starts a symbol; see Reading Symbols
@@ -2098,56 +2267,66 @@ A #e or #i followed immediately by #b, #o, #d, or #x is treated the same
 as the reverse order: #b, #o, #d, or #x followed by #e or #i.
 
 An >exponent-markn< in an inexact number serves both to specify an
-exponent and to specify a numerical precision. If single-precision IEEE
-floating point is supported (see [missing]), the marks f and s specify
-single-precision. Otherwise, or with any other mark, double-precision
-IEEE floating point is used. In addition, single- and double-precision
-specials are distinct; specials with the .0 suffix, like +nan.0 are
-double-precision, whereas specials with the .f suffix are
-single-precision.
+exponent and to specify a numerical precision. If single-flonums are
+supported (see [missing]) and the read-single-flonum parameter is set to
+#t, the marks f and s specify single-flonums. If read-single-flonum is
+set to #f, or with any other mark, a double-precision flonum is
+produced. If single-flonums are not supported and read-single-flonum is
+set to #t, then the exn:fail:unsupported exception is raised when a
+single-flonum would otherwise be produced. Special infinity and
+not-a-number flonums and single-flonums are distinct; specials with the
+.0 suffix, like +nan.0, are double-precision flonums, while specials
+with the .f suffix, like +nan.0, are single-flonums if enabled though
+read-single-flonum.
 
 A # in an >inexactn< number is the same as 0, but # can be used to
 suggest that the digit’s actual value is unknown.
 
- >numbern<            ::= >exactn<  |  >inexactn< ~
- >exactn<             ::= >exact-rationaln<  |  >exact-complexn< ~
- >exact-rationaln<    ::= [>sign<] >unsigned-rationaln< ~
- >unsigned-rationaln< ::= >unsigned-integern< ~
+All letters in a number representation are parsed case-insensitively,
+independent of the read-case-sensitive parameter. For example,
+#I#D+InF.F+3I is parsed the same as #i#d+inf.f+3i. In the grammar below,
+each literal lowercase letter stands for both itself and its uppercase
+form.
+
+ >numbern<            ::= >exactn<  |  >inexactn< ~ ~
+ >exactn<             ::= >exact-rationaln<  |  >exact-complexn< ~ ~
+ >exact-rationaln<    ::= [>sign<] >unsigned-rationaln< ~ ~
+ >unsigned-rationaln< ::= >unsigned-integern< ~ ~
                        |  >unsigned-integern< / >unsigned-integern<
- >exact-integern<     ::= [>sign<] >unsigned-integern< ~
- >unsigned-integern<  ::= >digitn<+ ~
- >exact-complexn<     ::= >exact-rationaln< >sign< >unsigned-rationaln< i ~
- >inexactn<           ::= >inexact-realn<  |  >inexact-complexn< ~
- >inexact-realn<      ::= [>sign<] >inexact-normaln< ~
+ >exact-integern<     ::= [>sign<] >unsigned-integern< ~ ~
+ >unsigned-integern<  ::= >digitn<+ ~ ~
+ >exact-complexn<     ::= >exact-rationaln< >sign< >unsigned-rationaln< i ~ ~
+ >inexactn<           ::= >inexact-realn<  |  >inexact-complexn< ~ ~
+ >inexact-realn<      ::= [>sign<] >inexact-normaln< ~ ~
                        |  >sign< >inexact-specialn<
- >inexact-unsignedn<  ::= >inexact-normaln<  |  >inexact-specialn< ~
- >inexact-normaln<    ::= >inexact-simplen< [>exp-markn< >exact-integern<] ~
- >inexact-simplen<    ::= >digits#n< [.] #* ~
+ >inexact-unsignedn<  ::= >inexact-normaln<  |  >inexact-specialn< ~ ~
+ >inexact-normaln<    ::= >inexact-simplen< [>exp-markn< >exact-integern<] ~ ~
+ >inexact-simplen<    ::= >digits#n< [.] #* ~ ~
                        |  [>unsigned-integern<] . >digits#n<
                        |  >digits#n< / >digits#n<
- >inexact-specialn<   ::= inf.0  |  nan.0  |  inf.f  |  nan.f ~
- >digits#n<           ::= >digitn<+ #* ~
- >inexact-complexn<   ::= [>inexact-realn<] >sign< >inexact-unsignedn< i ~
+ >inexact-specialn<   ::= inf.0  |  nan.0  |  inf.f  |  nan.f ~ ~
+ >digits#n<           ::= >digitn<+ #* ~ ~
+ >inexact-complexn<   ::= [>inexact-realn<] >sign< >inexact-unsignedn< i ~ ~
                        |  >inexact-realn< @ >inexact-realn<
- >sign<               ::= +  |  - ~
- >digit16<            ::= >digit10<  |  a  |  b  |  c  |  d  |  e  |  f ~
- >digit10<            ::= >digit8<  |  8  |  9 ~
- >digit8<             ::= >digit2<  |  2  |  3  |  4  |  5  |  6  |  7 ~
- >digit2<             ::= 0  |  1 ~
- >exp-mark16<         ::= s  |  l ~
- >exp-mark10<         ::= >exp-mark16<  |  d  |  e  |  f ~
- >exp-mark8<          ::= >exp-mark10< ~
- >exp-mark2<          ::= >exp-mark10< ~
- >general-numbern<    ::= [>exactness<] >numbern< ~
- >exactness<          ::= #e  |  #i ~
+ >sign<               ::= +  |  - ~ ~
+ >digit16<            ::= >digit10<  |  a  |  b  |  c  |  d  |  e  |  f ~ ~
+ >digit10<            ::= >digit8<  |  8  |  9 ~ ~
+ >digit8<             ::= >digit2<  |  2  |  3  |  4  |  5  |  6  |  7 ~ ~
+ >digit2<             ::= 0  |  1 ~ ~
+ >exp-mark16<         ::= s  |  l ~ ~
+ >exp-mark10<         ::= >exp-mark16<  |  d  |  e  |  f ~ ~
+ >exp-mark8<          ::= >exp-mark10< ~ ~
+ >exp-mark2<          ::= >exp-mark10< ~ ~
+ >general-numbern<    ::= [>exactness<] >numbern< ~ ~
+ >exactness<          ::= #e  |  #i ~ ~
 
 Examples:
  -1         reads equal to -1
  1/2        reads equal to (/ 1 2)
  1.0        reads equal to (exact->inexact 1)
- 1+2i       reads equal to (make-complex 1 2)
- 1/2+3/4i   reads equal to (make-complex (/ 1 2) (/ 3 4))
- 1.0+3.0e7i reads equal to (exact->inexact (make-complex 1 30000000))
+ 1+2i       reads equal to (make-rectangular 1 2)
+ 1/2+3/4i   reads equal to (make-rectangular (/ 1 2) (/ 3 4))
+ 1.0+3.0e7i reads equal to (exact->inexact (make-rectangular 1 30000000))
  2e5        reads equal to (exact->inexact 200000)
  #i5        reads equal to (exact->inexact 5)
  #e2e5      reads equal to 200000
@@ -2203,10 +2382,19 @@ themselves in read-syntax mode, so that the result is a list or pair of
 syntax objects that is itself wrapped as a syntax object. If the reader
 constructs nested pairs because the input included a single delimited .,
 then only the innermost pair and outermost pair are wrapped as syntax
-objects. Whether wrapping a pair or list, if the pair or list was formed
-with [ and ], then a 'paren-shape property is attached to the result
-with the value #\[; if the list or pair was formed with { and }, then a
-'paren-shape property is attached to the result with the value #\{.
+objects.
+
+Whether wrapping a pair or list, if the pair or list was formed with [
+and ], then a 'paren-shape property is attached to the result with the
+value #\[. If the read-square-bracket-with-tag parameter is set to #t,
+then the resulting pair or list is wrapped by the equivalent of (cons
+'#%brackets pair-or-list).
+
+Similarly, if the list or pair was formed with { and }, then a
+'paren-shape property is attached to the result with the value #\{.  If
+the read-curly-brace-with-tag parameter is set to #t, then the resulting
+pair or list is wrapped by the equivalent of (cons '#%braces
+pair-or-list).
 
 If a delimited . appears in any other configuration, then the
 exn:fail:read exception is raised. Similarly, if the reader encounters a
@@ -2223,11 +2411,12 @@ Examples:
  (1 . (3))   reads equal to (list 1 3)
  (1 . 2 . 3) reads equal to (list 2 1 3)
 
-If the read-square-bracket-as-paren parameter is set to #f, then when
-the reader encounters [ and ], the "exn:fail:read" exception is raised.
-Similarly, if the read-curly-brace-as-paren parameter is set to #f, then
-when the reader encounters { and }, the "exn:fail:read" exception is
-raised.
+If the read-square-bracket-as-paren and read-square-bracket-with-tag
+parameters are set to #f, then when the reader encounters [ and ], the
+exn:fail:read exception is raised. Similarly, if the
+read-curly-brace-as-paren and read-curly-brace-with-tag parameters are
+set to #f, then when the reader encounters { and }, the exn:fail:read
+exception is raised.
 
 If the read-accept-dot parameter is set to #f, then a delimited .
 triggers an exn:fail:read exception. If the read-accept-infix-dot
@@ -2403,7 +2592,7 @@ The elements of the vector are recursively read until a matching ), ],
 or } is found, just as for lists (see Reading Pairs and Lists). A
 delimited . is not allowed among the vector elements. In the case of
 flvectors, the recursive read for element is implicitly prefixed with #i
-and must produce a flonum. In the case of flvectors, the recursive read
+and must produce a flonum. In the case of fxvectors, the recursive read
 for element is implicitly prefixed with #e and must produce a fixnum.
 
 An optional vector length can be specified between #, #fl, #fx  and (,
@@ -2471,7 +2660,7 @@ Examples, where make-... stands for make-immutable-hash:
  #hash()                  reads equal to (make-... '())
  #hasheq()                reads equal to (make-...eq '())
  #hash(("a" . 5))         reads equal to (make-... '(("a" . 5)))
- #hasheq((a . 5) (b . 7)) reads equal to (make-...eq '((b . 7) (a . 5)))
+ #hasheq((a . 5) (b . 7)) reads equal to (make-...eq '((a . 5) (b . 7)))
  #hasheq((a . 5) (a . 7)) reads equal to (make-...eq '((a . 7)))
 
 3.13. Reading Boxes
@@ -2529,7 +2718,7 @@ A #\ starts a character constant, which has one of the following forms:
 
 * #\>c<: the character >c<, as long as #\>c< and the characters
   following it do not match any of the previous cases, and as long as
-  the character after >c< is not alphabetic.
+  >c< or the character after >c< is not alphabetic.
 
 Examples:
  #\newline reads equal to (integer->char 10)
@@ -2545,8 +2734,8 @@ that the part after #: is never parsed as a number. The resulting
 keyword is interned.
 
 Examples:
- #:Apple reads equal to (string->keyword "Apple") ~
- #:1     reads equal to (string->keyword "1") ~
+ #:Apple reads equal to (string->keyword "Apple") ~ ~
+ #:1     reads equal to (string->keyword "1") ~ ~
 
 3.16. Reading Regular Expressions
 
@@ -2567,7 +2756,7 @@ Examples:
 
 A #>digit10<{1,8}= tags the following datum for reference via
 #>digit10<{1,8}#, which allows the reader to produce a datum that has
-graph structure.
+graph structure. Neither form is allowed in read-syntax mode.
 
 For a specific >digit10<{1,8} in a single read result, each
 #>digit10<{1,8}# reference is replaced by the datum read for the
@@ -2605,7 +2794,8 @@ The reader recursively reads the next datum after #reader, and passes it
 to the procedure that is the value of the current-reader-guard
 parameter; the result is used as a module path. The module path is
 passed to dynamic-require with either 'read or 'read-syntax (depending
-on whether the reader is in read or read-syntax mode).
+on whether the reader is in read or read-syntax mode). The module is
+loaded in a root namespace of the current namespace.
 
 The arity of the resulting procedure determines whether it accepts extra
 source-location information: a read procedure accepts either one
@@ -2658,9 +2848,36 @@ If the read-accept-reader or read-accept-lang parameter is set to #f,
 then if the reader encounters #lang or equivalent #!, the exn:fail:read
 exception is raised.
 
-3.18.1. S-Expression Reader Language
+3.19. Reading with C-style Infix-Dot Notation
 
- #lang s-exp package: base ~
+When the read-cdot parameter is set to #t, then a variety of changes
+occur in the reader.
+
+First, symbols can no longer include the character ., unless the . is
+quoted with | or \.
+
+Second, numbers can no longer include the character ., unless the number
+is prefixed with #e, #i, #b, #o, #d, #x, or an equivalent prefix as
+discussed in Reading Numbers. If these numbers are followed by a .
+intended to be read as a C-style infix dot, then a delimiter must
+precede the ..
+
+Finally, after reading any datum x, the reader will seek through
+whitespace and comments and look for zero or more sequences of a .
+followed by another datum y. It will then group x and y together in a
+#%dot form so that x.y reads equal to (#%dot x y).
+
+If x.y has another . after it, the reader will accumulate more
+.-separated datums, grouping them from left-to-right. For example, x.y.z
+reads equal to (#%dot (#%dot x y) z).
+
+In read-syntax mode, the #%dot symbol has the source location
+information of the . character and the entire list has the source
+location information spanning from the start of x to the end of y.
+
+3.19.1. S-Expression Reader Language
+
+ #lang s-exp package: base ~ ~
 
 +[missing] in [missing] introduces the s-exp meta-language.
 
@@ -2683,9 +2900,9 @@ where name-id is derived from the source input port’s name: if the port
 name is a filename path, the filename without its directory path and
 extension is used for name-id, otherwise name-id is anonymous-module.
 
-3.18.2. Chaining Reader Language
+3.19.2. Chaining Reader Language
 
- #lang reader package: base ~
+ #lang reader package: base ~ ~
 
 +[missing] in [missing] introduces the reader meta-language.
 
@@ -2723,13 +2940,13 @@ prefix, and the list’s elements are printed at quoting depth 1.
 When the print-graph parameter is set to #t, then the printer first
 scans an object to detect cycles. The scan traverses the components of
 pairs, mutable pairs, vectors, boxes (when print-box is #t), hash tables
-(when print-hash-table is #t), fields of structures exposed by
-struct->vector (when print-struct is #t), and fields of structures
-exposed by printing when the structure’s type has the prop:custom-write
-property. If print-graph is #t, then this information is used to print
-sharing through graph definitions and references (see Reading Graph
-Structure). If a cycle is detected in the initial scan, then print-graph
-is effectively set to #t automatically.
+(when print-hash-table is #t and when key are held strongly), fields of
+structures exposed by struct->vector (when print-struct is #t), and
+fields of structures exposed by printing when the structure’s type has
+the prop:custom-write property. If print-graph is #t, then this
+information is used to print sharing through graph definitions and
+references (see Reading Graph Structure). If a cycle is detected in the
+initial scan, then print-graph is effectively set to #t automatically.
 
 With the exception of displaying byte strings, printing is defined in
 terms of Unicode characters; see [missing] for information on how a
@@ -2752,7 +2969,7 @@ instead of quoting them with |s.
 When read-accept-bar-quote is #f, then | is not treated as a special
 character. The following are always special characters:
 
-   ( ) [ ] } } " , ' ` ; \
+   ( ) [ ] { } " , ' ` ; \
 
 In addition, # is a special character when it appears at the beginning
 of the symbol, and when it is not followed by %.
@@ -2771,37 +2988,49 @@ printing enclosing datatypes, a symbol is quotable.
 A number prints the same way in write, display, and print modes. For the
 purposes of printing enclosing datatypes, a number is quotable.
 
-A complex number that is not a real number always prints as >m<+>n<i,
-where >m< and >n< are the printed forms of its real and imaginary parts,
-respectively.
+A complex number that is not a real number always prints as >m<+>n<i or
+>m<->n<i, where >m< and >n< (for a non-negative imaginary part) or ->n<
+(for a negative imaginary part) are the printed forms of its real and
+imaginary parts, respectively.
 
-An inexact real number prints with either a . decimal point, an e
-exponent marker, or both.  The form is selected so that the output is as
-short as possible, with the constraint that reading the printed form
-back in produces an equal? number.
+An exact 0 prints as 0. A positive, exact integer prints as a sequence
+of digits that does not start with 0. A positive, exact, real,
+non-integer number prints as >m</>n<, where >m< and >n< are the printed
+forms of the number’s numerator and denominator (as determined by
+numerator and denominator). A negative exact number prints with a -
+prefix on the printed form of the number’s exact negation. When printing
+a number as hexadecimal (e.g., via number->string), digits a though f
+are printed in lowercase. A #e or radix marker such as #d does not
+prefix the number.
 
-An exact 0 prints as 0.
+A double-precision inexact number (i.e., a flonum) that is a rational
+number prints with either a . decimal point, an e exponent marker and
+non-zero exponent, or both. The form is selected to keep the output
+short, with the constraint that reading the printed form back in
+produces an equal? number. A #i does not prefix the number, and # is
+never used in place of a digit. A + does not prefix a positive number,
+but a + or - is printed before the exponent if e is present. Positive
+infinity prints as +inf.0, negative infinity prints as -inf.0, and
+not-a-number prints as +nan.0.
 
-A positive, exact integer prints as a sequence of decimal digits that
-does not start with 0.
-
-A positive, exact, real, non-integer number prints as >m</>n<, where >m<
-and >n< are the printed forms of the number’s numerator and denominator
-(as determined by numerator and denominator).
-
-A negative exact number prints with a - prefix on the printed form of
-the number’s exact negation.
+A single-precision inexact number that is a rational number prints like
+a double-precision number, but always with an exponent, using f in place
+of e to indicate the number’s precision; if the number would otherwise
+print without an exponent, 0 (with no +) is printed as the exponent
+part. Single-precision positive infinity prints as +inf.f, negative
+infinity prints as -inf.f, and not-a-number prints as +nan.f.
 
 4.3. Printing Extflonums
 
 An extflonum prints the same way in write, display, and print modes. For
 the purposes of printing enclosing datatypes, an extflonum is quotable.
 
-An extflonum prints in the same way an inexact number, but always with a
-t or T exponent marker. When extflonum operations are supported,
-printing always uses t; when extflonum operations are not supported, an
-extflonum prints the same as its reader (see The Reader) source, since
-reading is the only way to produce an extflonum.
+An extflonum prints in the same way a single-precision inexact number
+(see Printing Numbers), but always with a t or T exponent marker or as a
+suffix for +inf.t, -inf.t, or +nan.t. When extflonum operations are
+supported, printing always uses lowercase t; when extflonum operations
+are not supported, an extflonum prints the same as its reader (see The
+Reader) source, since reading is the only way to produce an extflonum.
 
 4.4. Printing Booleans
 
@@ -2832,7 +3061,9 @@ the pair is printed with the corresponding reader syntax: ', `, ,, ,@,
 element of the list is printed. When the list is a tail of an enclosing
 list, the tail is printed after a . in the enclosing list (after which
 the reader abbreviations work), instead of including the tail as two
-elements of the enclosing list.
+elements of the enclosing list. If the reader syntax , or #, is followed
+by a symbol that prints with a leading @, then the printer adds an extra
+space before the @.
 
 The printed form of a pair is the same in both write and display modes,
 except as the printed form of the pair’s car and cdr vary with the mode.
@@ -2868,6 +3099,9 @@ set to #f, then mutable pairs print using ( and ) in that mode.
 For the purposes of printing enclosing datatypes, an empty list is
 always quotable, a pair is quotable when its car and cdr are quotable,
 and a mutable list is never quotable.
+
+Changed in version 6.9.0.6: Added a space when printing , or #, followed
+by a symbol that prints with a leading @.
 
 4.6. Printing Strings
 
@@ -2914,7 +3148,7 @@ elements are not all quotable, then the vector prints as (vector , the
 elements at quoting depth 0, and a closing ). A vector is quotable when
 all of its elements are quotable.
 
-In write or display mode, an flvector prints like a vector, but with a
+In write or display mode, a flvector prints like a vector, but with a
 #fl prefix instead of #. A fxvector similarly prints with a #fx prefix
 instead of #. The print-vector-length parameter affects flvector and
 fxvector printing the same as vector printing. In print mode, flvectors
@@ -2994,12 +3228,12 @@ Unreadable Values) and count as quotable.
 
 When the print-hash-table parameter is set to #t, in write and display
 modes, a hash table prints starting with #hash(, #hasheqv(, or #hasheq(
-for a table using equal?, eqv?, or eq? key comparisons, respectively.
-After the prefix, each key–value mapping is shown as (, the printed form
-of a key, a space, ., a space, the printed form the corresponding value,
-and ), with an additional space if the key–value pair is not the last to
-be printed.  After all key–value pairs, the printed form completes with
-).
+for a table using equal?, eqv?, or eq? key comparisons, respectively, as
+long as the hash table retains keys strongly. After the prefix, each
+key–value mapping is shown as (, the printed form of a key, a space, .,
+a space, the printed form the corresponding value, and ), with an
+additional space if the key–value pair is not the last to be printed.
+After all key–value pairs, the printed form completes with ).
 
 In print mode when print-as-expression is #f or the quoting depth is 1,
 the printed form is the same as for write. Otherwise, if the hash
@@ -3010,8 +3244,9 @@ If some key or value is not quotable, the hash table prints as (hash ,
 at quoting depth 1 and separated by spaces, and finally a closing ). A
 hash table is quotable when all of its keys and values are quotable.
 
-When the print-hash-table parameter is set to #f, a hash table prints as
-#<hash> and counts as quotable.
+When the print-hash-table parameter is set to #f or when a hash table
+retains its keys weakly, a hash table prints as #<hash> and counts as
+quotable.
 
 4.10. Printing Boxes
 
@@ -3099,15 +3334,15 @@ printed with #~ is essentially assembly code for Racket, and reading
 such a form produces a compiled form when the read-accept-compiled
 parameter is set to #t.
 
-When a compiled form contains syntax object constants, they must not be
-tainted or armed; the #~-marshaled form drops source-location
-information and properties (see [missing]) for the syntax objects.
-
-Compiled code parsed from #~ may contain references to unexported or
-protected bindings from a module. At read time, such references are
-associated with the current code inspector (see current-code-inspector),
-and the code will only execute if that inspector controls the relevant
-module invocation (see [missing]).
+Compiled code parsed from #~ is marked as non-runnable if the current
+code inspector (see current-code-inspector) is not the original code
+inspector; on attempting to evaluate or reoptimize non-runnable
+bytecode, exn:fail exception is raised. Otherwise, compiled code parsed
+from #~ may contain references to unexported or protected bindings from
+a module. Conceptually, the references in bytecode are associated with
+the current code inspector, where the code will only execute if that
+inspector controls the relevant module invocation (see [missing])—but
+the original code inspector controls all other inspectors, anyway.
 
 A compiled-form object may contain uninterned symbols (see [missing])
 that were created by gensym or string->uninterned-symbol. When the
@@ -3129,20 +3364,42 @@ identifier; those functions lead to top-level and module variables with
 unreadable symbolic names, and the names are deterministic as long as
 expansion is otherwise deterministic.
 
-Despite the problems inherent with uninterned symbols as variable names,
-they are partially supported even across multiple #~s: When compiled
-code contains a reference to a module-defined variable whose name is an
-uninterned symbol, the relative position of the variable among the
-module’s definitions is recorded, and the reference can be linked back
-to the definition based on its position and the characters in its name.
-This accommodation works only for variable references in compiled code;
-it does not work for syntax-quoted identifiers, for example.
-
-Finally, a compiled form may contain path literals. Although paths are
-not normally printed in a way that can be read back in, path literals
-can be written and read as part of compiled code. The
+A compiled form may contain path literals. Although paths are not
+normally printed in a way that can be read back in, path literals can be
+written and read as part of compiled code. The
 current-write-relative-directory parameter is used to convert the path
 to a relative path as is it written, and then
 current-load-relative-directory parameter is used to convert any
 relative path back as it is read. The relative-path conversion applies
 on reading whether the path was originally relative or not.
+
+For a path in a syntax object’s source, if the
+current-load-relative-directory parameter is not set of the path is not
+relative to the value of the current-load-relative-directory parameter,
+then the path is coerced to a string that preserves only part of the
+path (an in effort to make it less tied to the build-time filesystem,
+which can be different than the run-time filesystem).
+
+Finally, a compiled form may contain srcloc structures if the source
+field of the structure is a path for some system, a string, a byte
+string, a symbol, or #f. For a path value (matching the current
+platform’s convention), if the path cannot be recorded as a relative
+path based on current-write-relative-directory, then it is converted to
+a string with at most two path elements; if the path contains more than
+two elements, then the string contains .../, the next-to-last element, /
+and the last element. The intent of the constraints on srcloc values and
+the conversion of the source field is to preserve some source
+information but not expose or record a path that makes no sense on a
+different filesystem or platform.
+
+For internal testing purposes, when the PLT_VALIDATE_LOAD environment
+variable is set, the reader runs a validator on bytecode parsed from #~.
+The validator may catch miscompilations or bytecode-file corruption. The
+validator may run lazily, such as checking a procedure only when the
+procedure is called.
+
+Changed in version 6.90.0.21: Adjusted the effect of changing the code
+inspector on parsed bytecode, causing the reader to mark the loaded code
+as generally unrunnable instead of rejecting at read time references to
+unsafe operations. Changed in version 7.0: Allowed some srcloc values
+embedded in compiled code.

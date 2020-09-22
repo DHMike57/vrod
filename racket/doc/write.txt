@@ -2,8 +2,8 @@ Writing
 
                                         *write*
 (write datum [out]) -> void? ~
-  datum : any/c ~
-  out : output-port? = (current-output-port) ~
+  datum : any/c ~ ~
+  out : output-port? = (current-output-port) ~ ~
 
 Writes datum to out, normally in such a way that instances of core
 datatypes can be read back in. If out has a handler associated to it via
@@ -15,23 +15,20 @@ particular, note that write may require memory proportional to the depth
 of the value being printed, due to the initial cycle check.
 
 Examples:
+
   > (write 'hi)
   hi
-
   > (write (lambda (n) n))
   #<procedure>
-
   > (define o (open-output-string))
-
   > (write "hello" o)
-
   > (get-output-string o)
   "\"hello\""
 
                                         *display*
 (display datum [out]) -> void? ~
-  datum : any/c ~
-  out : output-port? = (current-output-port) ~
+  datum : any/c ~ ~
+  out : output-port? = (current-output-port) ~ ~
 
 Displays datum to out, similar to write, but usually in such a way that
 byte- and character-based datatypes are written as raw bytes or
@@ -45,9 +42,9 @@ depth of the value being printed, due to the initial cycle check.
 
                                         *print*
 (print datum [out quote-depth]) -> void? ~
-  datum : any/c ~
-  out : output-port? = (current-output-port) ~
-  quote-depth : (or/c 0 1) = 0 ~
+  datum : any/c ~ ~
+  out : output-port? = (current-output-port) ~ ~
+  quote-depth : (or/c 0 1) = 0 ~ ~
 
 Prints datum to out. If out has a handler associated to it via
 port-print-handler, then the handler is called. Otherwise, the handler
@@ -67,8 +64,8 @@ any way.
 
                                         *writeln*
 (writeln datum [out]) -> void? ~
-  datum : any/c ~
-  out : output-port? = (current-output-port) ~
+  datum : any/c ~ ~
+  out : output-port? = (current-output-port) ~ ~
 
 The same as (write datum out) followed by (newline out).
 
@@ -76,17 +73,17 @@ Added in version 6.1.1.8.
 
                                         *displayln*
 (displayln datum [out]) -> void? ~
-  datum : any/c ~
-  out : output-port? = (current-output-port) ~
+  datum : any/c ~ ~
+  out : output-port? = (current-output-port) ~ ~
 
 The same as (display datum out) followed by (newline out), which is
 similar to println in Pascal or Java.
 
                                         *println*
 (println datum [out quote-depth]) -> void? ~
-  datum : any/c ~
-  out : output-port? = (current-output-port) ~
-  quote-depth : (or/c 0 1) = 0 ~
+  datum : any/c ~ ~
+  out : output-port? = (current-output-port) ~ ~
+  quote-depth : (or/c 0 1) = 0 ~ ~
 
 The same as (print datum out quote-depth) followed by (newline out).
 
@@ -99,9 +96,9 @@ Added in version 6.1.1.8.
 
                                         *fprintf*
 (fprintf out form v ...) -> void? ~
-  out : output-port? ~
-  form : string? ~
-  v : any/c ~
+  out : output-port? ~ ~
+  form : string? ~ ~
+  v : any/c ~ ~
 
 Prints formatted output to out, where form is a string that is printed
 directly, except for special formatting escapes:
@@ -115,9 +112,10 @@ directly, except for special formatting escapes:
 
 * ~v or ~V prints the next argument among the vs
 
-* ~.>c< where >c< is a, A, s, S, v, or V: truncates display, write, or
-  print output to (error-print-width) characters, using ... as the last
-  three characters if the untruncated output would be longer
+* ~.>c< where >c< is a, A, s, S, v, or V: truncates default-handler
+  display, write, or print output to (error-print-width) characters,
+  using ... as the last three characters if the untruncated output would
+  be longer
 
 * ~e or ~E outputs the next argument among the vs using the current
   error value conversion handler (see error-value->string-handler) and
@@ -153,31 +151,31 @@ exception is raised. Similarly, when more vs are supplied than are used
 by the format string, the exn:fail:contract exception is raised.
 
 Example:
+
   > (fprintf (current-output-port)
              "~a as a string is ~s.\n"
              '(3 4)
              "(3 4)")
   (3 4) as a string is "(3 4)".
 
-
                                         *printf*
 (printf form v ...) -> void? ~
-  form : string? ~
-  v : any/c ~
+  form : string? ~ ~
+  v : any/c ~ ~
 
 The same as (fprintf (current-output-port) form v ...).
 
                                         *eprintf*
 (eprintf form v ...) -> void? ~
-  form : string? ~
-  v : any/c ~
+  form : string? ~ ~
+  v : any/c ~ ~
 
 The same as (fprintf (current-error-port) form v ...).
 
                                         *format*
 (format form v ...) -> string? ~
-  form : string? ~
-  v : any/c ~
+  form : string? ~ ~
+  v : any/c ~ ~
 
 Formats to a string. The result is the same as
 
@@ -186,13 +184,14 @@ Formats to a string. The result is the same as
     (get-output-string o))
 
 Example:
+
   > (format "~a as a string is ~s.\n" '(3 4) "(3 4)")
   "(3 4) as a string is \"(3 4)\".\n"
 
                                         *print-pair-curly-braces*
 (print-pair-curly-braces) -> boolean? ~
 (print-pair-curly-braces on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls pair printing. If the value is true, then
 pairs print using { and } instead of ( and ). The default is #f.
@@ -200,7 +199,7 @@ pairs print using { and } instead of ( and ). The default is #f.
                                         *print-mpair-curly-braces*
 (print-mpair-curly-braces) -> boolean? ~
 (print-mpair-curly-braces on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls pair printing. If the value is true, then
 mutable pairs print using { and } instead of ( and ). The default is #t.
@@ -208,7 +207,7 @@ mutable pairs print using { and } instead of ( and ). The default is #t.
                                         *print-unreadable*
 (print-unreadable) -> boolean? ~
 (print-unreadable on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that enables or disables printing of values that have no
 readable form (using the default reader), including structures that have
@@ -221,7 +220,7 @@ See [missing] for more information.
                                         *print-graph*
 (print-graph) -> boolean? ~
 (print-graph on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls printing data with sharing; defaults to #f.
 See [missing] for more information.
@@ -229,7 +228,7 @@ See [missing] for more information.
                                         *print-struct*
 (print-struct) -> boolean? ~
 (print-struct on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls printing structure values in vector or prefab
 form; defaults to #t. See [missing] for more information. This parameter
@@ -239,7 +238,7 @@ procedure (see prop:custom-write).
                                         *print-box*
 (print-box) -> boolean? ~
 (print-box on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls printing box values; defaults to #t. See
 [missing] for more information.
@@ -247,7 +246,7 @@ A parameter that controls printing box values; defaults to #t. See
                                         *print-vector-length*
 (print-vector-length) -> boolean? ~
 (print-vector-length on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls printing vectors; defaults to #f. See
 [missing] for more information.
@@ -255,15 +254,15 @@ A parameter that controls printing vectors; defaults to #f. See
                                         *print-hash-table*
 (print-hash-table) -> boolean? ~
 (print-hash-table on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
-A parameter that controls printing hash tables; defaults to #f. See
+A parameter that controls printing hash tables; defaults to #t. See
 [missing] for more information.
 
                                         *print-boolean-long-form*
 (print-boolean-long-form) -> boolean? ~
 (print-boolean-long-form on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls printing of booleans. When the parameter’s
 value is true, #t and #f print as #true and #false, otherwise they print
@@ -272,7 +271,7 @@ as #t and #f. The default is #f.
                                         *print-reader-abbreviations*
 (print-reader-abbreviations) -> boolean? ~
 (print-reader-abbreviations on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls printing of two-element lists that start with
 quote, 'quasiquote, 'unquote, 'unquote-splicing, 'syntax, 'quasisyntax,
@@ -282,7 +281,7 @@ information.
                                         *print-as-expression*
 (print-as-expression) -> boolean? ~
 (print-as-expression on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls printing in print mode (as opposed to write or
 display); defaults to #t. See [missing] for more information.
@@ -291,7 +290,7 @@ display); defaults to #t. See [missing] for more information.
 (print-syntax-width) ~
  -> (or/c +inf.0 0 (and/c exact-integer? (>/c 3)))
 (print-syntax-width width) -> void?
-  width : (or/c +inf.0 0 (and/c exact-integer? (>/c 3))) ~
+  width : (or/c +inf.0 0 (and/c exact-integer? (>/c 3))) ~ ~
 
 A parameter that controls printing of syntax objects. Up to width
 characters are used to show the datum form of a syntax object within
@@ -304,7 +303,7 @@ characters are used to show the datum form of a syntax object within
                   (and/c path? complete-path?))
           #f)
 (current-write-relative-directory path) -> void?
-  path : (or/c (and/c path-string? complete-path?) ~
+  path : (or/c (and/c path-string? complete-path?) ~ ~
                (cons/c (and/c path-string? complete-path?)
                        (and/c path-string? complete-path?))
                #f)
@@ -324,21 +323,21 @@ rel-to-path.
 
                                         *port-write-handler*
 (port-write-handler out) -> (any/c output-port? . -> . any) ~
-  out : output-port? ~
+  out : output-port? ~ ~
 (port-write-handler out proc) -> void?
-  out : output-port? ~
-  proc : (any/c output-port? . -> . any) ~
+  out : output-port? ~ ~
+  proc : (any/c output-port? . -> . any) ~ ~
 (port-display-handler out) -> (any/c output-port? . -> . any)
-  out : output-port? ~
+  out : output-port? ~ ~
 (port-display-handler out proc) -> void?
-  out : output-port? ~
-  proc : (any/c output-port? . -> . any) ~
+  out : output-port? ~ ~
+  proc : (any/c output-port? . -> . any) ~ ~
 (port-print-handler out)
  -> ((any/c output-port?) ((or/c 0 1)) . ->* . any)
-  out : output-port? ~
+  out : output-port? ~ ~
 (port-print-handler out proc) -> void?
-  out : output-port? ~
-  proc : (any/c output-port? . -> . any) ~
+  out : output-port? ~ ~
+  proc : (any/c output-port? . -> . any) ~ ~
 
 Gets or sets the port write handler, port display handler, or port print
 handler for out. This handler is called to output to the port when
@@ -361,7 +360,7 @@ handler is the same as the default write handler.
 (global-port-print-handler) ~
  -> (->* (any/c output-port?) ((or/c 0 1)) any)
 (global-port-print-handler proc) -> void?
-  proc : (or/c (->* (any/c output-port?) ((or/c 0 1)) any) ~
+  proc : (or/c (->* (any/c output-port?) ((or/c 0 1)) any) ~ ~
                (any/c output-port? . -> . any))
 
 A parameter that determines global port print handler, which is called

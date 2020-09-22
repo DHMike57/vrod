@@ -7,11 +7,12 @@ others) create continuations that receive multiple values.
 
                                         *values*
 (values v ...) -> any ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns the given vs. That is, values returns its provided arguments.
 
 Examples:
+
   > (values 1)
   1
   > (values 1 2 3)
@@ -20,11 +21,10 @@ Examples:
   3
   > (values)
 
-
                                         *call-with-values*
 (call-with-values generator receiver) -> any ~
-  generator : (-> any) ~
-  receiver : procedure? ~
+  generator : (-> any) ~ ~
+  receiver : procedure? ~ ~
 
 Calls generator, and passes the values that generator produces as
 arguments to receiver. Thus, call-with-values creates a continuation
@@ -33,13 +33,14 @@ procedure is called in tail position with respect to the
 call-with-values call.
 
 Examples:
+
   > (call-with-values (lambda () (values 1 2)) +)
   3
   > (call-with-values (lambda () 1) (lambda (x y) (+ x y)))
-  #<procedure>: arity mismatch;
-   the expected number of arguments does not match the given
-  number
-    expected: 2 ~
-    given: 1 ~
-    arguments...: ~
+  result arity mismatch;
+   expected number of values not received
+    expected: 2 ~ ~
+    received: 1 ~ ~
+    in: local-binding form ~ ~
+    values...: ~ ~
      1

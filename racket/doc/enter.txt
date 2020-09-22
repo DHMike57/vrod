@@ -1,6 +1,6 @@
 Entering Modules
 
- (require racket/enter) package: base ~
+ (require racket/enter) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/enter
 and racket/init libraries, which means that they are available when  the
@@ -12,10 +12,10 @@ not provided by racket/base or racket.
 (enter! #f)
 (enter! module-path flag ...+)
  
-flag = #:quiet ~
-     | #:verbose-reload ~
-     | #:verbose ~
-     | #:dont-re-require-enter ~
+flag = #:quiet ~ ~
+     | #:verbose-reload ~ ~
+     | #:verbose ~ ~
+     | #:dont-re-require-enter ~ ~
 
 Intended for use in a REPL, such as when racket is started in
 interactive mode. When a module-path is provided (in the same sense as
@@ -39,11 +39,11 @@ Additional flags can customize aspects of enter!:
 
                                         *dynamic-enter!*
 (dynamic-enter!  mod                                          ~
-                [#:verbosity verbosity                        ~
-                 #:re-require-enter? re-require-enter?]) -> void? ~
-  mod : (or/c module-path? #f) ~
-  verbosity : (or/c 'all 'reload 'none) = 'reload ~
-  re-require-enter? : any/c = #t ~
+                [#:verbosity verbosity                        ~ ~
+                 #:re-require-enter? re-require-enter?]) -> void? ~ ~
+  mod : (or/c module-path? #f) ~ ~
+  verbosity : (or/c 'all 'reload 'none) = 'reload ~ ~
+  re-require-enter? : any/c = #t ~ ~
 
 Procedure variant of enter!, where verbosity is passed along to
 dynamic-rerequire and re-require-enter?  determines whether

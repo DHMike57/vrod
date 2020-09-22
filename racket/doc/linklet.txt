@@ -1,0 +1,551 @@
+Linklets and the Core Compiler
+
+ (require racket/linklet) package: base ~ ~
+
+A linklet is a primitive element of compilation, bytecode marshaling,
+and evaluation. Racket’s implementations of modules, macros, and
+top-level evaluation are all built on linklets. Racket programmers
+generally do not encounter linklets directly, but the racket/linklet
+library provides access to linklet facilities.
+
+A single Racket module (or collection of top-level forms) is typically
+implemented by multiple linklets. For example, each phase of evaluation
+that exists in a module is implemented in a separate linklet. A linklet
+is also used for metadata such as the module path indexes for a module’s
+requires. These linklets, plus some other metadata, are combined to form
+a linklet bundle. Information in a linklet bundle is keyed by either a
+symbol or a fixnum. A linklet bundle containing linklets can be
+marshaled to and from a byte stream by write and (with
+read-accept-compiled is enabled) read.
+
+When a Racket module has submodules, the linklet bundles for the module
+and the submodules are grouped together in a linklet directory. A
+linklet directory can have nested linklet directories. Information in a
+linklet directory is keyed by #f or a symbol, where #f must be mapped to
+a linklet bundle (if anything) and each symbol must be mapped to a
+linklet directory. A linklet directory can be equivalently viewed as a
+mapping from a lists of symbols to a linklet bundle. Like linklet
+bundles, a linklet directory can be marshaled to and from a byte stream
+by write and read; the marshaled form allows individual linklet bundles
+to be loaded independently.
+
+A linklet consists of a set of variable definitions and expressions, an
+exported subset of the defined variable names, a set of variables to
+export from the linklet despite having no corresponding definition, and
+a set of imports that provide other variables for the linklet to use. To
+run a linklet, it is instantiated as as linklet instance (or just
+instance, for short). When a linklet is instantiated, it receives other
+linklet instances for its imports, and it extracts a specified set of
+variables that are exported from each of the given instances. The newly
+created linklet instance provides its exported variables for use by
+other linklets or for direct access via instance-variable-value. A
+linklet instance can be synthesized directly with make-instance.
+
+A linklet is created by compiling an enriched S-expression
+representation of its source. Since linklets exist below the layer of
+macros and syntax objects, linklet compilation does not use syntax
+objects. Instead, linklet compilation uses correlated objects, which are
+like syntax objects without lexical-context information and without the
+constraint that content is coerced to correlated objects. Using an
+S-expression or correlated object, the grammar of a linklet as
+recognized by compile-linklet is
+
+                                        *linklet*
+(linklet [[imported-id/renamed ...] ...] ~
+         [exported-id/renamed ...]
+  defn-or-expr ...)
+ 
+imported-id/renamed = imported-id
+                    | (external-imported-id internal-imported-id)
+                       
+exported-id/renamed = exported-id
+                    | (internal-exported-id external-exported-id)
+
+Each import set [imported-id/renamed ...] refers to a single imported
+instance, and each import-id/renamed corresponds to a variable from that
+instance. If separate external-imported-id and internal-imported-id are
+specified, then external-imported-id is the name of the variable as
+exported by the instance, and internal-imported-id is the name used to
+refer to the variable in the defn-or-exprs. For exports, separate
+internal-exported-id and external-exported-id names corresponds to the
+variable name as exported as referenced in the defn-or-exprs,
+respectively.
+
+The grammar of an defn-or-expr is similar to the expander’s grammar of
+fully expanded expressions (see [missing]) with some exceptions:
+quote-syntax and #%top are not allowed; #%plain-lambda is spelled
+lambda; #%plain-app is omitted (i.e., application is implicit); lambda,
+case-lambda, let-values, and letrec-values can have only a single body
+expression; and numbers, booleans, strings, and byte strings are
+self-quoting. Primitives are accessed directly by name, and shadowing is
+not allowed within a linklet form for primitive names, imported
+variables, defined variables, or local variables.
+
+When an exported-id/renamed has no corresponding definition among the
+defn-or-exprs, then the variable is effectively defined as
+uninitialized; referencing the variable will trigger
+exn:fail:contract:variable, the same as referencing a variable before it
+is defined. When a target instance is provided to instantiate-linklet,
+any existing variable with the same name will be left as-is, instead of
+set to undefined. This treatment of uninitialized variables provides
+core support for top-level evaluation where variables may be referenced
+and then defined in a separate element of compilation.
+
+Added in version 6.90.0.1 of package base.
+
+                                        *linklet?*
+(linklet? v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t if v is a linklet, #f otherwise.
+
+                                        *compile-linklet*
+(compile-linklet  form             ~
+                 [name            
+                  import-keys     
+                  get-import      
+                  options])   -> linklet?
+  form : (or/c correlated? any/c) ~ ~
+  name : any/c = #f ~ ~
+  import-keys : #f = #f ~ ~
+  get-import : #f = #f ~ ~
+  options : (listof (or/c 'serializable 'unsafe 'static 'quick ~ ~
+                           'use-prompt 'uninterned-literal))
+          = '(serializable)
+(compile-linklet  form            
+                  name            
+                  import-keys     
+                 [get-import      
+                  options])   -> linklet? vector?
+  form : (or/c correlated? any/c) ~ ~
+  name : any/c ~ ~
+  import-keys : vector? ~ ~
+  get-import : (or/c #f (any/c . -> . (values (or/c linklet? instance? #f) ~ ~
+                                              (or/c vector? #f))))
+             = #f
+  options : (listof (or/c 'serializable 'unsafe 'static 'quick ~ ~
+                          'use-prompt 'uninterned-literal))
+          = '(serializable)
+
+Takes an S-expression or correlated object for a linklet form and
+produces a linklet. As long as 'serializable included in options, the
+resulting linklet can be marshaled to and from a byte stream when it is
+part of a linklet bundle (possibly in a linklet directory).
+
+The optional name is associated to the linklet for debugging purposes
+and as the default name of the linklet’s instance.
+
+The optional import-keys and get-import arguments support cross-linklet
+optimization. If import-keys is a vector, it must have as many elements
+as sets of imports in form. If the compiler becomes interested in
+optimizing a reference to an imported variable, it passes back to
+get-import (if non-#f) the element of import-keys that corresponds to
+the variable’s import set. The get-import function can then return a
+linklet or instance that represents an instance to be provided to the
+compiled linklet when it is eventually instantiated; ensuring
+consistency between reported linklet or instance and the eventual
+instance is up to the caller of compile-linklet. If get-import returns
+#f as its first value, the compiler will be prevented from making any
+assumptions about the imported instance. The second result from
+get-import is an optional vector of keys to provide transitive
+information on a returned linklet’s imports (and is not allowed for a
+returned instance); the returned vector must have the same number of
+elements as the linklet has imports. When vector elements are eq? and
+non-#f, the compiler can assume that they correspond to the same
+run-time instance. A #f value for get-import is equivalent to a function
+that always returns two #f results.
+
+When import-keys is not #f, then the compiler is allowed to grow or
+shrink the set of imported instances for the linklet. The result vector
+specifies the keys of the imports for the returned linklet. Any key that
+is #f or a linklet instance must be preserved intact, however.
+
+If 'unsafe is included in options, then the linklet is compiled in
+unsafe mode: uses of safe operations within the linklet can be converted
+to unsafe operations on the assumption that the relevant contracts are
+satisfied. For example, car is converted to unsafe-car. Some substituted
+unsafe operations may not have directly accessible names, such as the
+unsafe variant of in-list that can be substituted in unsafe mode. An
+unsafe operation is substituted only if its (unchecked) contract is
+subsumed by the safe operation’s contract. The fact that the linklet is
+compiled in unsafe mode can be exposed through
+variable-reference-from-unsafe? using a variable reference produced by a
+#%variable-reference form within the module body.
+
+If 'static is included in options, then the linklet must be instantiated
+only once; if the linklet is serialized, then any individual instance
+read from the serialized form must be instantiated at most once.
+Compilation with 'static is intended to improve the performance of
+references within the linklet to defined and imported variables.
+
+If 'quick is included in options, then linklet compilation may trade
+run-time performance for compile-time performance—that is, spend less
+time compiling the linklet, but the resulting linklet may run more
+slowly.
+
+If 'use-prompt is included in options, then instantiating resulting
+linklet always wraps a prompt around each definition and immediate
+expression in the linklet. Otherwise, supplying #t as the use-prompt?
+argument to instantiate-linklet may only wrap a prompt around the entire
+instantiation.
+
+If 'uninterned-literal is included in options, then literals in form
+will not necessarily be interned via datum-intern-literal when compiling
+or loading the linklet. Disabling the use of datum-intern-literal can be
+especially useful of the linklet includes a large string or byte string
+constant that is not meant to be shared.
+
+The symbols in options must be distinct, otherwise exn:fail:contract
+exception is raised.
+
+Changed in version 7.1.0.8 of package base: Added the 'use-prompt
+option. Changed in version 7.1.0.10: Added the 'uninterned-literal
+option. Changed in version 7.5.0.14: Added the 'quick option.
+
+                                        *recompile-linklet*
+(recompile-linklet  linklet          ~
+                   [name            
+                    import-keys     
+                    get-import      
+                    options])   -> linklet?
+  linklet : linklet? ~ ~
+  name : any/c = #f ~ ~
+  import-keys : #f = #f ~ ~
+  get-import : #f = #f ~ ~
+  options : (listof (or/c 'serializable 'unsafe 'static 'quick ~ ~
+                          'use-prompt 'uninterned-literal))
+          = '(serializable)
+(recompile-linklet  linklet         
+                    name            
+                    import-keys     
+                   [get-import      
+                    options])   -> linklet? vector?
+  linklet : linklet? ~ ~
+  name : any/c ~ ~
+  import-keys : vector? ~ ~
+  get-import : (or/c (any/c . -> . (values (or/c linklet? #f) ~ ~
+                                           (or/c vector? #f)))
+                     #f)
+             = (lambda (import-key) (values #f #f))
+  options : (listof (or/c 'serializable 'unsafe 'static 'quick ~ ~
+                          'use-prompt 'uninterned-literal))
+          = '(serializable)
+
+Like compile-linklet, but takes an already-compiled linklet and
+potentially optimizes it further.
+
+Changed in version 7.1.0.6 of package base: Added the options argument.
+Changed in version 7.1.0.8: Added the 'use-prompt option. Changed in
+version 7.1.0.10: Added the 'uninterned-literal option. Changed in
+version 7.5.0.14: Added the 'quick option.
+
+                                        *eval-linklet*
+(eval-linklet linklet) -> linklet? ~
+  linklet : linklet? ~ ~
+
+Returns a variant of a linklet that is prepared for JIT compilation such
+that every later use of the result linklet with instantiate-linklet
+shares the JIT-generated code. However, the result of eval-linklet
+cannot be marshaled to a byte stream as part of a linklet bundle, and it
+cannot be used with recompile-linklet.
+
+                                        *instantiate-linklet*
+(instantiate-linklet  linklet               ~
+                      import-instances     
+                     [target-instance?     
+                      use-prompt?])    -> instance?
+  linklet : linklet? ~ ~
+  import-instances : (listof instance?) ~ ~
+  target-instance? : #f = #f ~ ~
+  use-prompt? : any/c = #t ~ ~
+(instantiate-linklet  linklet              
+                      import-instances     
+                      target-instance      
+                     [use-prompt?])    -> any
+  linklet : linklet? ~ ~
+  import-instances : (listof instance?) ~ ~
+  target-instance : instance? ~ ~
+  use-prompt? : any/c = #t ~ ~
+
+Instantiates linklet by running its definitions and expressions, using
+the given import-instances for its imports. The number of instances in
+import-instances must match the number of import sets in linklet.
+
+If target-instance is #f or not provided, the result is a fresh instance
+for the linklet. If target-instance is an instance, then the instance is
+used and modified for the linklet definitions and expressions, and the
+result is the value of the last expression in the linklet.
+
+The linklet’s exported variables are accessible in the result instance
+or in target-instance using the linklet’s external name for each export.
+If target-instance is provided as non-#f, its existing variables remain
+intact if they are not modified by a linklet definition.
+
+If use-prompt? is true, then a a prompt is wrapped around the linklet
+instantiation in same ways as an expression in a module body. If the
+linklet contains multiple definitions or immediate expressions, then a
+prompt may or may not be wrapped around each definition or expression;
+supply 'use-prompt to compile-linklet to ensure that a prompt is used
+around each definition and expression.
+
+                                        *linklet-import-variables*
+(linklet-import-variables linklet) -> (listof (listof symbol?)) ~
+  linklet : linklet? ~ ~
+
+Returns a description of a linklet’s imports. Each element of the result
+list corresponds to an import set as satisfied by a single instance on
+instantiation, and each member of the set is a variable name that is
+used from the corresponding imported instance.
+
+                                        *linklet-export-variables*
+(linklet-export-variables linklet) -> (listof symbol?) ~
+  linklet : linklet? ~ ~
+
+Returns a description of a linklet’s exports. Each element of the list
+corresponds to a variable that is made available by the linklet in its
+instance.
+
+                                        *linklet-directory?*
+(linklet-directory? v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t if v is a linklet directory, #f otherwise.
+
+                                        *hash->linklet-directory*
+(hash->linklet-directory content) -> linklet-directory? ~
+  content : (and/c hash? hash-eq? immutable? (not/c impersonator?)) ~ ~
+
+Constructs a linklet directory given mappings in the form of a hash
+table. Each key of content must be either a symbol or #f, each symbol
+must be mapped to a linklet directory, and #f must be mapped to a
+linklet bundle or not mapped.
+
+                                        *linklet-directory->hash*
+(linklet-directory->hash linklet-directory) ~
+ -> (and/c hash? hash-eq? immutable? (not/c impersonator?))
+  linklet-directory : linklet-directory? ~ ~
+
+Extracts the content of a linklet directory into a hash table.
+
+                                        *linklet-bundle?*
+(linklet-bundle? v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t if v is a linklet bundle, #f otherwise.
+
+                                        *hash->linklet-bundle*
+(hash->linklet-bundle content) -> linklet-bundle? ~
+  content : (and/c hash? hash-eq? immutable? (not/c impersonator?)) ~ ~
+
+Constructs a linklet bundle given mappings in the form of a hash table.
+Each key of content must be either a symbol or a fixnum. Values in the
+hash table are unconstrained, but the intent is that they are all
+linklets or values that can be recovered from write output by read.
+
+                                        *linklet-bundle->hash*
+(linklet-bundle->hash linklet-bundle) ~
+ -> (and/c hash? hash-eq? immutable? (not/c impersonator?))
+  linklet-bundle : linklet-bundle? ~ ~
+
+Extracts the content of a linklet bundle into a hash table.
+
+                                        *instance?*
+(instance? v) -> boolean? ~
+  v : any/c ~ ~
+
+Returns #t if v is a linklet instance, #f otherwise.
+
+                                        *make-instance*
+(make-instance  name                    ~
+               [data                   
+                mode]                  
+                variable-name          
+                variable-value ...     
+                ...)               -> instance?
+  name : any/c ~ ~
+  data : any/c = #f ~ ~
+  mode : (or/c #f 'constant 'consistent) = #f ~ ~
+  variable-name : symbol? ~ ~
+  variable-value : any/c ~ ~
+
+Constructs a linklet instance directly. Besides associating an arbitrary
+name and data value to the instance, the instance is populated with
+variables as specified by variable-name and variable-value.
+
+The optional data and mode arguments must be provided if any
+variable-name and variable-value arguments are provided. The mode
+argument is used as in instance-set-variable-value! for every
+variable-name.
+
+                                        *instance-name*
+(instance-name instance) -> any/c ~
+  instance : instance? ~ ~
+
+Returns the value associated to instance as its name—either the first
+value provided to make-instance or the name of a linklet that was
+instantiated to create the instance.
+
+                                        *instance-data*
+(instance-data instance) -> any/c ~
+  instance : instance? ~ ~
+
+Returns the value associated to instance as its data—either the second
+value provided to make-instance or the default #f.
+
+                                        *instance-variable-names*
+(instance-variable-names instance) -> (list symbol?) ~
+  instance : instance? ~ ~
+
+Returns a list of all names for all variables accessible from instance.
+
+                                        *instance-variable-value*
+(instance-variable-value  instance      ~
+                          name         
+                         [fail-k]) -> any
+  instance : instance? ~ ~
+  name : symbol? ~ ~
+  fail-k : any/c = (lambda () (error ....)) ~ ~
+
+Returns the value of the variable exported as name from instance. If no
+such variable is exported, then fail-k is used in the same way as by
+hash-ref.
+
+                                        *instance-set-variable-value!*
+(instance-set-variable-value!  instance      ~
+                               name         
+                               v            
+                              [mode])   -> void?
+  instance : instance? ~ ~
+  name : symbol? ~ ~
+  v : any/c ~ ~
+  mode : (or/c #f 'constant 'consistent) = #f ~ ~
+
+Sets or creates the variable exported as name in instance so that its
+value is v, as long as the variable does not exist already as constant.
+If a variable for name exists as constant, the exn:fail:contract
+exception is raised.
+
+If mode is 'constant or 'consistent, then the variable is created or
+changed to be constant. Furthermore, when the instance is reported for a
+linklet’s import though a get-import callback to compile-linklet, the
+compiler can assume that the variable will be constant in all future
+instances that are used to satisfy a linklet’s imports.
+
+If mode is 'consistent, when the instance is reported though a callback
+to compile-linklet, the compiler can further assume that the variable’s
+value will be the same for future instances. For compilation purposes,
+“the same” can mean that a procedure value will have the same arity and
+implementation details, a structure type value will have the same
+configuration, a marshalable constant will be equal? to the current
+value, and so on.
+
+                                        *instance-unset-variable!*
+(instance-unset-variable! instance name) -> void? ~
+  instance : instance? ~ ~
+  name : symbol? ~ ~
+
+Changes instance so that it does not export a variable as name, as long
+as name does not exist as a constant variable. If a variable for name
+exists as constant, the exn:fail:contract exception is raised.
+
+                                        *instance-describe-variable!*
+(instance-describe-variable! instance      ~
+                             name         
+                             desc-v)  -> void?
+  instance : instance? ~ ~
+  name : symbol? ~ ~
+  desc-v : any/c ~ ~
+
+Registers information about name in instance that may be useful for
+compiling linklets where the instance is return via the get-import
+callback to compile-linklet. The desc-v description can be any value;
+the recognized descriptions depend on virtual machine, but may include
+the following:
+
+* `(procedure ,arity-mask) — the value is always a procedure that is not
+  impersonated and not a structure, and its arity in the style of
+  procedure-arity-mask is arity-mask.
+
+* `(procedure/succeeds ,arity-mask) — like `(procedure ,arity-mask), but
+  for a procedure that never raises an exception of otherwise captures
+  or escapes the calling context.
+
+* `(procedure/pure ,arity-mask) — like `(procedure/succeeds
+  ,arity-mask), but with no observable side effects, so a call to the
+  procedure can be reordered.
+
+Added in version 7.1.0.8 of package base.
+
+                                        *variable-reference->instance*
+(variable-reference->instance  varref       ~
+                              [ref-site?]) 
+ -> (if ref-site? (or/c instance? #f symbol?) instance?)
+  varref : variable-reference? ~ ~
+  ref-site? : any/c = #f ~ ~
+
+Extracts the instance where the variable of varref is defined if
+ref-site? is #f, and returns the instance where varref itself resides if
+ref-site? is true. This notion of variable reference is the same as at
+the module level and can reflect the linklet instance that implements a
+particular phase of a module instance.
+
+When ref-site? is #f, the result is #f when varref is from
+(#%variable-reference) with no identifier. The result is a symbol if
+varref refers to a primitive.
+
+                                        *correlated?*
+(correlated? v) -> boolean? ~
+  v : any/c ~ ~
+(correlated-source crlt) -> any
+  crlt : correlated? ~ ~
+(correlated-line crlt) -> (or/c exact-positive-integer? #f)
+  crlt : correlated? ~ ~
+(correlated-column crlt) -> (or/c exact-nonnegative-integer? #f)
+  crlt : correlated? ~ ~
+(correlated-position crlt) -> (or/c exact-positive-integer? #f)
+  crlt : correlated? ~ ~
+(correlated-span crlt) -> (or/c exact-nonnegative-integer? #f)
+  crlt : correlated? ~ ~
+(correlated-e crlt) -> any
+  crlt : correlated? ~ ~
+(correlated->datum crlt) -> any
+  crlt : (or/c correlated? any/c) ~ ~
+(datum->correlated v [srcloc prop]) -> correlated?
+  v : any/c ~ ~
+  srcloc : (or/c correlated? #f ~ ~
+                 (list/c any/c
+                         (or/c exact-positive-integer? #f)
+                         (or/c exact-nonnegative-integer? #f)
+                         (or/c exact-positive-integer? #f)
+                         (or/c exact-nonnegative-integer? #f))
+                 (vector/c any/c
+                          (or/c exact-positive-integer? #f)
+                          (or/c exact-nonnegative-integer? #f)
+                          (or/c exact-positive-integer? #f)
+                          (or/c exact-nonnegative-integer? #f)))
+         = #f
+  prop : (or/c correlated? #f) = #f ~ ~
+(correlated-property crlt key val) -> correlated?
+  crlt : correlated? ~ ~
+  key : any/c ~ ~
+  val : any/c ~ ~
+(correlated-property crlt key) -> any/c
+  crlt : correlated? ~ ~
+  key : any/c ~ ~
+(correlated-property-symbol-keys crlt) -> list?
+  crlt : correlated? ~ ~
+
+Like syntax?, syntax-source, syntax-line, syntax-column,
+syntax-position, syntax-span, syntax-e, syntax->datum, datum->syntax,
+syntax-property, and syntax-property-symbol-keys, but for correlated
+objects.
+
+Unlike datum->syntax, datum->correlated does not recur through the given
+S-expression and convert pieces to correlated objects. Instead, a
+correlated object is simply wrapped around the immediate value. In
+contrast, correlated->datum recurs through its argument (which is not
+necessarily a correlated object) to discover any correlated objects and
+convert them to plain S-expressions.
+
+Changed in version 7.6.0.6 of package base: Added the prop argument to
+datum->correlated.

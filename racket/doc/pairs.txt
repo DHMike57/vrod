@@ -24,11 +24,12 @@ See [missing]     for information on reading     pairs and lists and
 
                                         *pair?*
 (pair? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a pair, #f otherwise.
 
 Examples:
+
   > (pair? 1)
   #f
   > (pair? (cons 1 2))
@@ -42,11 +43,12 @@ Examples:
 
                                         *null?*
 (null? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is the empty list, #f otherwise.
 
 Examples:
+
   > (null? 1)
   #f
   > (null? '(1 2))
@@ -58,13 +60,14 @@ Examples:
 
                                         *cons*
 (cons a d) -> pair? ~
-  a : any/c ~
-  d : any/c ~
+  a : any/c ~ ~
+  d : any/c ~ ~
 
 Returns a newly allocated pair whose first element is a and second
 element is d.
 
 Examples:
+
   > (cons 1 2)
   '(1 . 2)
   > (cons 1 '())
@@ -72,11 +75,12 @@ Examples:
 
                                         *car*
 (car p) -> any/c ~
-  p : pair? ~
+  p : pair? ~ ~
 
 Returns the first element of the pair p.
 
 Examples:
+
   > (car '(1 2))
   1
   > (car (cons 2 3))
@@ -84,21 +88,23 @@ Examples:
 
                                         *cdr*
 (cdr p) -> any/c ~
-  p : pair? ~
+  p : pair? ~ ~
 
 Returns the second element of the pair p.
 
 Examples:
+
   > (cdr '(1 2))
   '(2)
   > (cdr '(1))
   '()
 
-null : null? ~
+null : null? ~ ~
 
 The empty list.
 
 Examples:
+
   > null
   '()
   > '()
@@ -108,7 +114,7 @@ Examples:
 
                                         *list?*
 (list? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a list: either the empty list, or a pair whose second
 element is a list.  This procedure effectively takes constant time due
@@ -116,6 +122,7 @@ to internal caching (so that any necessary traversals of pairs can in
 principle count as an extra cost of allocating the pairs).
 
 Examples:
+
   > (list? '(1 2))
   #t
   > (list? (cons 1 (cons 2 '())))
@@ -125,11 +132,12 @@ Examples:
 
                                         *list*
 (list v ...) -> list? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns a newly allocated list containing the vs as its elements.
 
 Examples:
+
   > (list 1 2 3 4)
   '(1 2 3 4)
   > (list (list 1 2) (list 3 4))
@@ -137,14 +145,15 @@ Examples:
 
                                         *list**
 (list* v ... tail) -> any/c ~
-  v : any/c ~
-  tail : any/c ~
+  v : any/c ~ ~
+  tail : any/c ~ ~
 
 Like list, but the last argument is used as the tail of the result,
 instead of the final element.  The result is a list only if the last
 argument is a list.
 
 Examples:
+
   > (list* 1 2)
   '(1 . 2)
   > (list* 1 2 (list 3 4))
@@ -152,14 +161,15 @@ Examples:
 
                                         *build-list*
 (build-list n proc) -> list? ~
-  n : exact-nonnegative-integer? ~
-  proc : (exact-nonnegative-integer? . -> . any) ~
+  n : exact-nonnegative-integer? ~ ~
+  proc : (exact-nonnegative-integer? . -> . any) ~ ~
 
 Creates a list of n elements by applying proc to the integers from 0 to
 (sub1 n) in order.  If lst is the resulting list, then (list-ref lst i)
 is the value produced by (proc i).
 
 Examples:
+
   > (build-list 10 values)
   '(0 1 2 3 4 5 6 7 8 9)
   > (build-list 5 (lambda (x) (* x x)))
@@ -169,11 +179,12 @@ Examples:
 
                                         *length*
 (length lst) -> exact-nonnegative-integer? ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns the number of elements in lst.
 
 Examples:
+
   > (length (list 1 2 3 4))
   4
   > (length '())
@@ -181,8 +192,8 @@ Examples:
 
                                         *list-ref*
 (list-ref lst pos) -> any/c ~
-  lst : pair? ~
-  pos : exact-nonnegative-integer? ~
+  lst : pair? ~ ~
+  pos : exact-nonnegative-integer? ~ ~
 
 Returns the element of lst at position pos, where the list’s first
 element is position 0.  If the list has pos or fewer elements, then the
@@ -192,6 +203,7 @@ The lst argument need not actually be a list; lst must merely start with
 a chain of at least (add1 pos) pairs.
 
 Examples:
+
   > (list-ref (list 'a 'b 'c) 0)
   'a
   > (list-ref (list 'a 'b 'c) 1)
@@ -200,11 +212,15 @@ Examples:
   'c
   > (list-ref (cons 1 2) 0)
   1
+  > (list-ref (cons 1 2) 1)
+  list-ref: index reaches a non-pair
+    index: 1 ~ ~
+    in: '(1 . 2) ~ ~
 
                                         *list-tail*
 (list-tail lst pos) -> any/c ~
-  lst : any/c ~
-  pos : exact-nonnegative-integer? ~
+  lst : any/c ~ ~
+  pos : exact-nonnegative-integer? ~ ~
 
 Returns the list after the first pos elements of lst. If the list has
 fewer than pos elements, then the exn:fail:contract exception is raised.
@@ -213,26 +229,24 @@ The lst argument need not actually be a list; lst must merely start with
 a chain of at least pos pairs.
 
 Examples:
-  > (list-tail (list 1 2 3 4) 2)
-  '(3 4)
-  > (list-ref (cons 1 2) 1)
-  list-ref: index reaches a non-pair
-    index: 1 ~
-    in: '(1 . 2) ~
-  > (list-ref 'not-a-pair 0)
-  list-ref: contract violation
-    expected: pair? ~
-    given: 'not-a-pair ~
-    argument position: 1st ~
-    other arguments...: ~
-     0
+
+  > (list-tail (list 1 2 3 4 5) 2)
+  '(3 4 5)
+  > (list-tail (cons 1 2) 1)
+  2
+  > (list-tail (cons 1 2) 2)
+  list-tail: index reaches a non-pair
+    index: 2 ~ ~
+    in: '(1 . 2) ~ ~
+  > (list-tail 'not-a-pair 0)
+  'not-a-pair
 
                                         *append*
 (append lst ...) -> list? ~
-  lst : list? ~
+  lst : list? ~ ~
 (append lst ... v) -> any/c
-  lst : list? ~
-  v : any/c ~
+  lst : list? ~ ~
+  v : any/c ~ ~
 
 When given all list arguments, the result is a list that contains all of
 the elements of the given lists in order.  The last argument is used
@@ -242,6 +256,7 @@ The last argument need not be a list, in which case the result is an
 “improper list.”
 
 Examples:
+
   > (append (list 1 2) (list 3 4))
   '(1 2 3 4)
   > (append (list 1 2) (list 3 4) (list 5 6) (list 7 8))
@@ -249,11 +264,12 @@ Examples:
 
                                         *reverse*
 (reverse lst) -> list? ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns a list that has the same elements as lst, but in reverse order.
 
 Example:
+
   > (reverse (list 1 2 3 4))
   '(4 3 2 1)
 
@@ -261,8 +277,8 @@ Example:
 
                                         *map*
 (map proc lst ...+) -> list? ~
-  proc : procedure? ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  lst : list? ~ ~
 
 Applies proc to the elements of the lsts from the first elements to the
 last.  The proc argument must accept the same number of arguments as the
@@ -270,6 +286,7 @@ number of supplied lsts, and all lsts must have the same number of
 elements.  The result is a list containing each result of proc in order.
 
 Examples:
+
   > (map (lambda (number)
            (+ 1 number))
          '(1 2 3 4))
@@ -282,8 +299,8 @@ Examples:
 
                                         *andmap*
 (andmap proc lst ...+) -> any ~
-  proc : procedure? ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  lst : list? ~ ~
 
 Similar to map in the sense that proc is applied to each element of lst,
 but
@@ -303,12 +320,13 @@ equivalent to (list (f x) (f y) (f z)).
 If the lsts are empty, then #t is returned.
 
 Examples:
+
   > (andmap positive? '(1 2 3))
   #t
   > (andmap positive? '(1 2 a))
   positive?: contract violation
-    expected: real? ~
-    given: 'a ~
+    expected: real? ~ ~
+    given: 'a ~ ~
   > (andmap positive? '(1 -2 a))
   #f
   > (andmap + '(1 2 3) '(4 5 6))
@@ -316,8 +334,8 @@ Examples:
 
                                         *ormap*
 (ormap proc lst ...+) -> any ~
-  proc : procedure? ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  lst : list? ~ ~
 
 Similar to map in the sense that proc is applied to each element of lst,
 but
@@ -335,6 +353,7 @@ to (or (f x) (f y) (f z)).
 If the lsts are empty, then #f is returned.
 
 Examples:
+
   > (ormap eq? '(a b c) '(a b c))
   #t
   > (ormap positive? '(1 2 a))
@@ -344,13 +363,14 @@ Examples:
 
                                         *for-each*
 (for-each proc lst ...+) -> void? ~
-  proc : procedure? ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  lst : list? ~ ~
 
 Similar to map, but proc is called only for its effect, and its result
 (which can be any number of values) is ignored.
 
 Example:
+
   > (for-each (lambda (arg)
                 (printf "Got ~a\n" arg)
                 23)
@@ -360,12 +380,11 @@ Example:
   Got 3
   Got 4
 
-
                                         *foldl*
 (foldl proc init lst ...+) -> any/c ~
-  proc : procedure? ~
-  init : any/c ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  init : any/c ~ ~
+  lst : list? ~ ~
 
 Like map, foldl applies a procedure to the elements of one or more
 lists.  Whereas map combines the return values into a list, foldl
@@ -385,6 +404,7 @@ Unlike foldr, foldl processes the lsts in constant space (plus the space
 for each call to proc).
 
 Examples:
+
   > (foldl cons '() '(1 2 3 4))
   '(4 3 2 1)
   > (foldl + 0 '(1 2 3 4))
@@ -398,15 +418,16 @@ Examples:
 
                                         *foldr*
 (foldr proc init lst ...+) -> any/c ~
-  proc : procedure? ~
-  init : any/c ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  init : any/c ~ ~
+  lst : list? ~ ~
 
 Like foldl, but the lists are traversed from right to left. Unlike
 foldl, foldr processes the lsts in space proportional to the length of
 lsts (plus the space for each call to proc).
 
 Examples:
+
   > (foldr cons '() '(1 2 3 4))
   '(1 2 3 4)
   > (foldr (lambda (v l) (cons (add1 v) l)) '() '(1 2 3 4))
@@ -416,28 +437,30 @@ Examples:
 
                                         *filter*
 (filter pred lst) -> list? ~
-  pred : procedure? ~
-  lst : list? ~
+  pred : procedure? ~ ~
+  lst : list? ~ ~
 
 Returns a list with the elements of lst for which pred produces a true
 value.  The pred procedure is applied to each element from first to
 last.
 
 Example:
+
   > (filter positive? '(1 -2 3 4 -5))
   '(1 3 4)
 
                                         *remove*
 (remove v lst [proc]) -> list? ~
-  v : any/c ~
-  lst : list? ~
-  proc : procedure? = equal? ~
+  v : any/c ~ ~
+  lst : list? ~ ~
+  proc : procedure? = equal? ~ ~
 
 Returns a list that is like lst, omitting the first element of lst that
 is equal to v using the comparison procedure proc (which must accept two
 arguments).
 
 Examples:
+
   > (remove 2 (list 1 2 3 2 4))
   '(1 3 2 4)
   > (remove 2 (list 1 2 3 2 4) =)
@@ -451,12 +474,13 @@ Examples:
 
                                         *remq*
 (remq v lst) -> list? ~
-  v : any/c ~
-  lst : list? ~
+  v : any/c ~ ~
+  lst : list? ~ ~
 
 Returns (remove v lst eq?).
 
 Examples:
+
   > (remq 2 (list 1 2 3 4 5))
   '(1 3 4 5)
   > (remq '(2) (list '(1) '(2) '(3)))
@@ -468,12 +492,13 @@ Examples:
 
                                         *remv*
 (remv v lst) -> list? ~
-  v : any/c ~
-  lst : list? ~
+  v : any/c ~ ~
+  lst : list? ~ ~
 
 Returns (remove v lst eqv?).
 
 Examples:
+
   > (remv 2 (list 1 2 3 4 5))
   '(1 3 4 5)
   > (remv '(2) (list '(1) '(2) '(3)))
@@ -485,58 +510,66 @@ Examples:
 
                                         *remove**
 (remove* v-lst lst [proc]) -> list? ~
-  v-lst : list? ~
-  lst : list? ~
-  proc : procedure? = equal? ~
+  v-lst : list? ~ ~
+  lst : list? ~ ~
+  proc : procedure? = equal? ~ ~
 
 Like remove, but removes from lst every instance of every element of
 v-lst.
 
 Example:
+
   > (remove* (list 1 2) (list 1 2 3 2 4 5 2))
   '(3 4 5)
 
                                         *remq**
 (remq* v-lst lst) -> list? ~
-  v-lst : list? ~
-  lst : list? ~
+  v-lst : list? ~ ~
+  lst : list? ~ ~
 
 Returns (remove* v-lst lst eq?).
 
 Example:
+
   > (remq* (list 1 2) (list 1 2 3 2 4 5 2))
   '(3 4 5)
 
                                         *remv**
 (remv* v-lst lst) -> list? ~
-  v-lst : list? ~
-  lst : list? ~
+  v-lst : list? ~ ~
+  lst : list? ~ ~
 
 Returns (remove* v-lst lst eqv?).
 
 Example:
+
   > (remv* (list 1 2) (list 1 2 3 2 4 5 2))
   '(3 4 5)
 
                                         *sort*
 (sort  lst                              ~
        less-than?                      
-      [#:key extract-key                ~
-       #:cache-keys? cache-keys?]) -> list? ~
-  lst : list? ~
-  less-than? : (any/c any/c . -> . any/c) ~
-  extract-key : (any/c . -> . any/c) = (lambda (x) x) ~
-  cache-keys? : boolean? = #f ~
+      [#:key extract-key                ~ ~
+       #:cache-keys? cache-keys?]) -> list? ~ ~
+  lst : list? ~ ~
+  less-than? : (any/c any/c . -> . any/c) ~ ~
+  extract-key : (any/c . -> . any/c) = (lambda (x) x) ~ ~
+  cache-keys? : boolean? = #f ~ ~
 
 Returns a list sorted according to the less-than? procedure, which takes
 two elements of lst and returns a true value if the first is less (i.e.,
 should be sorted earlier) than the second.
 
-The sort is stable; if two elements of lst are “equal” (i.e., proc does
-not return a true value when given the pair in either order), then the
-elements preserve their relative order from lst in the output list.  To
-preserve this guarantee, use sort with a strict comparison functions
+The sort is stable; if two elements of lst are “equal” (i.e., less-than?
+does not return a true value when given the pair in either order), then
+the elements preserve their relative order from lst in the output list.
+To preserve this guarantee, use sort with a strict comparison functions
 (e.g., < or string<?; not <= or string<=?).
+
+Because of the peculiar fact that the IEEE-754 number system specifies
+that +nan.0 is neither greater nor less than nor equal to any other
+number, sorting lists containing this value may produce a surprising
+result.
 
 The #:key argument extract-key is used to extract a key value for
 comparison from each list element.  That is, the full comparison
@@ -556,44 +589,47 @@ be #f.  As another example, providing extract-key as (lambda (x)
 (random)) and #t for cache-keys? effectively shuffles the list.
 
 Examples:
+
   > (sort '(1 3 4 2) <)
   '(1 2 3 4)
   > (sort '("aardvark" "dingo" "cow" "bear") string<?)
   '("aardvark" "bear" "cow" "dingo")
   > (sort '(("aardvark") ("dingo") ("cow") ("bear"))
-          #:key car string<?) ~
+          #:key car string<?) ~ ~
   '(("aardvark") ("bear") ("cow") ("dingo"))
 
 5. List Searching
 
                                         *member*
 (member v lst [is-equal?]) -> (or/c list? #f) ~
-  v : any/c ~
-  lst : list? ~
-  is-equal? : (any/c any/c -> any/c) = equal? ~
+  v : any/c ~ ~
+  lst : list? ~ ~
+  is-equal? : (any/c any/c -> any/c) = equal? ~ ~
 
 Locates the first element of lst that is equal? to v.  If such an
 element exists, the tail of lst starting with that element is returned.
 Otherwise, the result is #f.
 
 Examples:
+
   > (member 2 (list 1 2 3 4))
   '(2 3 4)
   > (member 9 (list 1 2 3 4))
   #f
   > (member #'x (list #'x #'y) free-identifier=?)
-  '(#<syntax:77:0 x> #<syntax:77:0 y>)
+  '(#<syntax:eval:79:0 x> #<syntax:eval:79:0 y>)
   > (member #'a (list #'x #'y) free-identifier=?)
   #f
 
                                         *memv*
 (memv v lst) -> (or/c list? #f) ~
-  v : any/c ~
-  lst : list? ~
+  v : any/c ~ ~
+  lst : list? ~ ~
 
 Like member, but finds an element using eqv?.
 
 Examples:
+
   > (memv 2 (list 1 2 3 4))
   '(2 3 4)
   > (memv 9 (list 1 2 3 4))
@@ -601,12 +637,13 @@ Examples:
 
                                         *memq*
 (memq v lst) -> (or/c list? #f) ~
-  v : any/c ~
-  lst : list? ~
+  v : any/c ~ ~
+  lst : list? ~ ~
 
 Like member, but finds an element using eq?.
 
 Examples:
+
   > (memq 2 (list 1 2 3 4))
   '(2 3 4)
   > (memq 9 (list 1 2 3 4))
@@ -614,13 +651,14 @@ Examples:
 
                                         *memf*
 (memf proc lst) -> (or/c list? #f) ~
-  proc : procedure? ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  lst : list? ~ ~
 
 Like member, but finds an element using the predicate proc; an element
 is found when proc applied to the element returns a true value.
 
 Example:
+
   > (memf (lambda (arg)
             (> arg 9))
           '(7 8 9 10 11))
@@ -628,12 +666,13 @@ Example:
 
                                         *findf*
 (findf proc lst) -> any/c ~
-  proc : procedure? ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  lst : list? ~ ~
 
 Like memf, but returns the element or #f instead of a tail of lst or #f.
 
 Example:
+
   > (findf (lambda (arg)
              (> arg 9))
            '(7 8 9 10 11))
@@ -641,15 +680,16 @@ Example:
 
                                         *assoc*
 (assoc v lst [is-equal?]) -> (or/c pair? #f) ~
-  v : any/c ~
-  lst : (listof pair?) ~
-  is-equal? : (any/c any/c -> any/c) = equal? ~
+  v : any/c ~ ~
+  lst : (listof pair?) ~ ~
+  is-equal? : (any/c any/c -> any/c) = equal? ~ ~
 
 Locates the first element of lst whose car is equal to v according to
 is-equal?.  If such an element exists, the pair (i.e., an element of
 lst) is returned.  Otherwise, the result is #f.
 
 Examples:
+
   > (assoc 3 (list (list 1 2) (list 3 4) (list 5 6)))
   '(3 4)
   > (assoc 9 (list (list 1 2) (list 3 4) (list 5 6)))
@@ -661,36 +701,39 @@ Examples:
 
                                         *assv*
 (assv v lst) -> (or/c pair? #f) ~
-  v : any/c ~
-  lst : (listof pair?) ~
+  v : any/c ~ ~
+  lst : (listof pair?) ~ ~
 
 Like assoc, but finds an element using eqv?.
 
 Example:
+
   > (assv 3 (list (list 1 2) (list 3 4) (list 5 6)))
   '(3 4)
 
                                         *assq*
 (assq v lst) -> (or/c pair? #f) ~
-  v : any/c ~
-  lst : (listof pair?) ~
+  v : any/c ~ ~
+  lst : (listof pair?) ~ ~
 
 Like assoc, but finds an element using eq?.
 
 Example:
-  > (assq 3 (list (list 1 2) (list 3 4) (list 5 6)))
-  '(3 4)
+
+  > (assq 'c (list (list 'a 'b) (list 'c 'd) (list 'e 'f)))
+  '(c d)
 
                                         *assf*
-(assf proc lst) -> (or/c list? #f) ~
-  proc : procedure? ~
-  lst : list? ~
+(assf proc lst) -> (or/c pair? #f) ~
+  proc : procedure? ~ ~
+  lst : (listof pair?) ~ ~
 
 Like assoc, but finds an element using the predicate proc; an element is
 found when proc applied to the car of an lst element returns a true
 value.
 
 Example:
+
   > (assf (lambda (arg)
             (> arg 2))
           (list (list 1 2) (list 3 4) (list 5 6)))
@@ -700,296 +743,325 @@ Example:
 
                                         *caar*
 (caar v) -> any/c ~
-  v : (cons/c pair? any/c) ~
+  v : (cons/c pair? any/c) ~ ~
 
 Returns (car (car v)).
 
 Example:
+
   > (caar '((1 2) 3 4))
   1
 
                                         *cadr*
 (cadr v) -> any/c ~
-  v : (cons/c any/c pair?) ~
+  v : (cons/c any/c pair?) ~ ~
 
 Returns (car (cdr v)).
 
 Example:
+
   > (cadr '((1 2) 3 4))
   3
 
                                         *cdar*
 (cdar v) -> any/c ~
-  v : (cons/c pair? any/c) ~
+  v : (cons/c pair? any/c) ~ ~
 
 Returns (cdr (car v)).
 
 Example:
+
   > (cdar '((7 6 5 4 3 2 1) 8 9))
   '(6 5 4 3 2 1)
 
                                         *cddr*
 (cddr v) -> any/c ~
-  v : (cons/c any/c pair?) ~
+  v : (cons/c any/c pair?) ~ ~
 
 Returns (cdr (cdr v)).
 
 Example:
+
   > (cddr '(2 1))
   '()
 
                                         *caaar*
 (caaar v) -> any/c ~
-  v : (cons/c (cons/c pair? any/c) any/c) ~
+  v : (cons/c (cons/c pair? any/c) any/c) ~ ~
 
 Returns (car (car (car v))).
 
 Example:
+
   > (caaar '(((6 5 4 3 2 1) 7) 8 9))
   6
 
                                         *caadr*
 (caadr v) -> any/c ~
-  v : (cons/c any/c (cons/c pair? any/c)) ~
+  v : (cons/c any/c (cons/c pair? any/c)) ~ ~
 
 Returns (car (car (cdr v))).
 
 Example:
+
   > (caadr '(9 (7 6 5 4 3 2 1) 8))
   7
 
                                         *cadar*
 (cadar v) -> any/c ~
-  v : (cons/c (cons/c any/c pair?) any/c) ~
+  v : (cons/c (cons/c any/c pair?) any/c) ~ ~
 
 Returns (car (cdr (car v))).
 
 Example:
+
   > (cadar '((7 6 5 4 3 2 1) 8 9))
   6
 
                                         *caddr*
 (caddr v) -> any/c ~
-  v : (cons/c any/c (cons/c any/c pair?)) ~
+  v : (cons/c any/c (cons/c any/c pair?)) ~ ~
 
 Returns (car (cdr (cdr v))).
 
 Example:
+
   > (caddr '(3 2 1))
   1
 
                                         *cdaar*
 (cdaar v) -> any/c ~
-  v : (cons/c (cons/c pair? any/c) any/c) ~
+  v : (cons/c (cons/c pair? any/c) any/c) ~ ~
 
 Returns (cdr (car (car v))).
 
 Example:
+
   > (cdaar '(((6 5 4 3 2 1) 7) 8 9))
   '(5 4 3 2 1)
 
                                         *cdadr*
 (cdadr v) -> any/c ~
-  v : (cons/c any/c (cons/c pair? any/c)) ~
+  v : (cons/c any/c (cons/c pair? any/c)) ~ ~
 
 Returns (cdr (car (cdr v))).
 
 Example:
+
   > (cdadr '(9 (7 6 5 4 3 2 1) 8))
   '(6 5 4 3 2 1)
 
                                         *cddar*
 (cddar v) -> any/c ~
-  v : (cons/c (cons/c any/c pair?) any/c) ~
+  v : (cons/c (cons/c any/c pair?) any/c) ~ ~
 
 Returns (cdr (cdr (car v))).
 
 Example:
+
   > (cddar '((7 6 5 4 3 2 1) 8 9))
   '(5 4 3 2 1)
 
                                         *cdddr*
 (cdddr v) -> any/c ~
-  v : (cons/c any/c (cons/c any/c pair?)) ~
+  v : (cons/c any/c (cons/c any/c pair?)) ~ ~
 
 Returns (cdr (cdr (cdr v))).
 
 Example:
+
   > (cdddr '(3 2 1))
   '()
 
                                         *caaaar*
 (caaaar v) -> any/c ~
-  v : (cons/c (cons/c (cons/c pair? any/c) any/c) any/c) ~
+  v : (cons/c (cons/c (cons/c pair? any/c) any/c) any/c) ~ ~
 
 Returns (car (car (car (car v)))).
 
 Example:
+
   > (caaaar '((((5 4 3 2 1) 6) 7) 8 9))
   5
 
                                         *caaadr*
 (caaadr v) -> any/c ~
-  v : (cons/c any/c (cons/c (cons/c pair? any/c) any/c)) ~
+  v : (cons/c any/c (cons/c (cons/c pair? any/c) any/c)) ~ ~
 
 Returns (car (car (car (cdr v)))).
 
 Example:
+
   > (caaadr '(9 ((6 5 4 3 2 1) 7) 8))
   6
 
                                         *caadar*
 (caadar v) -> any/c ~
-  v : (cons/c (cons/c any/c (cons/c pair? any/c)) any/c) ~
+  v : (cons/c (cons/c any/c (cons/c pair? any/c)) any/c) ~ ~
 
 Returns (car (car (cdr (car v)))).
 
 Example:
+
   > (caadar '((7 (5 4 3 2 1) 6) 8 9))
   5
 
                                         *caaddr*
 (caaddr v) -> any/c ~
-  v : (cons/c any/c (cons/c any/c (cons/c pair? any/c))) ~
+  v : (cons/c any/c (cons/c any/c (cons/c pair? any/c))) ~ ~
 
 Returns (car (car (cdr (cdr v)))).
 
 Example:
+
   > (caaddr '(9 8 (6 5 4 3 2 1) 7))
   6
 
                                         *cadaar*
 (cadaar v) -> any/c ~
-  v : (cons/c (cons/c (cons/c any/c pair?) any/c) any/c) ~
+  v : (cons/c (cons/c (cons/c any/c pair?) any/c) any/c) ~ ~
 
 Returns (car (cdr (car (car v)))).
 
 Example:
+
   > (cadaar '(((6 5 4 3 2 1) 7) 8 9))
   5
 
                                         *cadadr*
 (cadadr v) -> any/c ~
-  v : (cons/c any/c (cons/c (cons/c any/c pair?) any/c)) ~
+  v : (cons/c any/c (cons/c (cons/c any/c pair?) any/c)) ~ ~
 
 Returns (car (cdr (car (cdr v)))).
 
 Example:
+
   > (cadadr '(9 (7 6 5 4 3 2 1) 8))
   6
 
                                         *caddar*
 (caddar v) -> any/c ~
-  v : (cons/c (cons/c any/c (cons/c any/c pair?)) any/c) ~
+  v : (cons/c (cons/c any/c (cons/c any/c pair?)) any/c) ~ ~
 
 Returns (car (cdr (cdr (car v)))).
 
 Example:
+
   > (caddar '((7 6 5 4 3 2 1) 8 9))
   5
 
                                         *cadddr*
 (cadddr v) -> any/c ~
-  v : (cons/c any/c (cons/c any/c (cons/c any/c pair?))) ~
+  v : (cons/c any/c (cons/c any/c (cons/c any/c pair?))) ~ ~
 
 Returns (car (cdr (cdr (cdr v)))).
 
 Example:
+
   > (cadddr '(4 3 2 1))
   1
 
                                         *cdaaar*
 (cdaaar v) -> any/c ~
-  v : (cons/c (cons/c (cons/c pair? any/c) any/c) any/c) ~
+  v : (cons/c (cons/c (cons/c pair? any/c) any/c) any/c) ~ ~
 
 Returns (cdr (car (car (car v)))).
 
 Example:
+
   > (cdaaar '((((5 4 3 2 1) 6) 7) 8 9))
   '(4 3 2 1)
 
                                         *cdaadr*
 (cdaadr v) -> any/c ~
-  v : (cons/c any/c (cons/c (cons/c pair? any/c) any/c)) ~
+  v : (cons/c any/c (cons/c (cons/c pair? any/c) any/c)) ~ ~
 
 Returns (cdr (car (car (cdr v)))).
 
 Example:
+
   > (cdaadr '(9 ((6 5 4 3 2 1) 7) 8))
   '(5 4 3 2 1)
 
                                         *cdadar*
 (cdadar v) -> any/c ~
-  v : (cons/c (cons/c any/c (cons/c pair? any/c)) any/c) ~
+  v : (cons/c (cons/c any/c (cons/c pair? any/c)) any/c) ~ ~
 
 Returns (cdr (car (cdr (car v)))).
 
 Example:
+
   > (cdadar '((7 (5 4 3 2 1) 6) 8 9))
   '(4 3 2 1)
 
                                         *cdaddr*
 (cdaddr v) -> any/c ~
-  v : (cons/c any/c (cons/c any/c (cons/c pair? any/c))) ~
+  v : (cons/c any/c (cons/c any/c (cons/c pair? any/c))) ~ ~
 
 Returns (cdr (car (cdr (cdr v)))).
 
 Example:
+
   > (cdaddr '(9 8 (6 5 4 3 2 1) 7))
   '(5 4 3 2 1)
 
                                         *cddaar*
 (cddaar v) -> any/c ~
-  v : (cons/c (cons/c (cons/c any/c pair?) any/c) any/c) ~
+  v : (cons/c (cons/c (cons/c any/c pair?) any/c) any/c) ~ ~
 
 Returns (cdr (cdr (car (car v)))).
 
 Example:
+
   > (cddaar '(((6 5 4 3 2 1) 7) 8 9))
   '(4 3 2 1)
 
                                         *cddadr*
 (cddadr v) -> any/c ~
-  v : (cons/c any/c (cons/c (cons/c any/c pair?) any/c)) ~
+  v : (cons/c any/c (cons/c (cons/c any/c pair?) any/c)) ~ ~
 
 Returns (cdr (cdr (car (cdr v)))).
 
 Example:
+
   > (cddadr '(9 (7 6 5 4 3 2 1) 8))
   '(5 4 3 2 1)
 
                                         *cdddar*
 (cdddar v) -> any/c ~
-  v : (cons/c (cons/c any/c (cons/c any/c pair?)) any/c) ~
+  v : (cons/c (cons/c any/c (cons/c any/c pair?)) any/c) ~ ~
 
 Returns (cdr (cdr (cdr (car v)))).
 
 Example:
+
   > (cdddar '((7 6 5 4 3 2 1) 8 9))
   '(4 3 2 1)
 
                                         *cddddr*
 (cddddr v) -> any/c ~
-  v : (cons/c any/c (cons/c any/c (cons/c any/c pair?))) ~
+  v : (cons/c any/c (cons/c any/c (cons/c any/c pair?))) ~ ~
 
 Returns (cdr (cdr (cdr (cdr v)))).
 
 Example:
+
   > (cddddr '(4 3 2 1))
   '()
 
 7. Additional List Functions and Synonyms
 
- (require racket/list) package: base ~
+ (require racket/list) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/list
 and racket libraries, but not racket/base.
 
-empty : null? ~
+empty : null? ~ ~
 
 The empty list.
 
 Examples:
+
   > empty
   '()
   > (eq? empty null)
@@ -997,21 +1069,23 @@ Examples:
 
                                         *cons?*
 (cons? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 The same as (pair? v).
 
 Example:
+
   > (cons? '(1 2))
   #t
 
                                         *empty?*
 (empty? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 The same as (null? v).
 
 Examples:
+
   > (empty? '(1 2))
   #f
   > (empty? '())
@@ -1019,178 +1093,258 @@ Examples:
 
                                         *first*
 (first lst) -> any/c ~
-  lst : list? ~
+  lst : list? ~ ~
 
 The same as (car lst), but only for lists (that are not empty).
 
 Example:
+
   > (first '(1 2 3 4 5 6 7 8 9 10))
   1
 
                                         *rest*
 (rest lst) -> list? ~
-  lst : list? ~
+  lst : list? ~ ~
 
 The same as (cdr lst), but only for lists (that are not empty).
 
 Example:
+
   > (rest '(1 2 3 4 5 6 7 8 9 10))
   '(2 3 4 5 6 7 8 9 10)
 
                                         *second*
 (second lst) -> any ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns the second element of the list.
 
 Example:
+
   > (second '(1 2 3 4 5 6 7 8 9 10))
   2
 
                                         *third*
 (third lst) -> any ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns the third element of the list.
 
 Example:
+
   > (third '(1 2 3 4 5 6 7 8 9 10))
   3
 
                                         *fourth*
 (fourth lst) -> any ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns the fourth element of the list.
 
 Example:
+
   > (fourth '(1 2 3 4 5 6 7 8 9 10))
   4
 
                                         *fifth*
 (fifth lst) -> any ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns the fifth element of the list.
 
 Example:
+
   > (fifth '(1 2 3 4 5 6 7 8 9 10))
   5
 
                                         *sixth*
 (sixth lst) -> any ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns the sixth element of the list.
 
 Example:
+
   > (sixth '(1 2 3 4 5 6 7 8 9 10))
   6
 
                                         *seventh*
 (seventh lst) -> any ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns the seventh element of the list.
 
 Example:
+
   > (seventh '(1 2 3 4 5 6 7 8 9 10))
   7
 
                                         *eighth*
 (eighth lst) -> any ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns the eighth element of the list.
 
 Example:
+
   > (eighth '(1 2 3 4 5 6 7 8 9 10))
   8
 
                                         *ninth*
 (ninth lst) -> any ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns the ninth element of the list.
 
 Example:
+
   > (ninth '(1 2 3 4 5 6 7 8 9 10))
   9
 
                                         *tenth*
 (tenth lst) -> any ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns the tenth element of the list.
 
 Example:
+
   > (tenth '(1 2 3 4 5 6 7 8 9 10))
   10
 
                                         *last*
 (last lst) -> any ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns the last element of the list.
 
 Example:
+
   > (last '(1 2 3 4 5 6 7 8 9 10))
   10
 
                                         *last-pair*
 (last-pair p) -> pair? ~
-  p : pair? ~
+  p : pair? ~ ~
 
 Returns the last pair of a (possibly improper) list.
 
 Example:
+
   > (last-pair '(1 2 3 4))
   '(4)
 
                                         *make-list*
 (make-list k v) -> list? ~
-  k : exact-nonnegative-integer? ~
-  v : any/c ~
+  k : exact-nonnegative-integer? ~ ~
+  v : any/c ~ ~
 
 Returns a newly constructed list of length k, holding v in all
 positions.
 
 Example:
+
   > (make-list 7 'foo)
   '(foo foo foo foo foo foo foo)
 
                                         *list-update*
 (list-update lst pos updater) -> list? ~
-  lst : list? ~
-  pos : (and/c (>=/c 0) (</c (length lst))) ~
-  updater : (-> any/c any/c) ~
+  lst : list? ~ ~
+  pos : (and/c (>=/c 0) (</c (length lst))) ~ ~
+  updater : (-> any/c any/c) ~ ~
 
 Returns a list that is the same as lst except at the specified index.
 The element at the specified index is (updater (list-ref lst pos)).
 
 Example:
+
   > (list-update '(zero one two) 1 symbol->string)
-  list-update: undefined;
-   cannot reference undefined identifier
+  '(zero "one" two)
+
+Added in version 6.3 of package base.
 
                                         *list-set*
 (list-set lst pos value) -> list? ~
-  lst : list? ~
-  pos : (and/c (>=/c 0) (</c (length lst))) ~
-  value : any/c ~
+  lst : list? ~ ~
+  pos : (and/c (>=/c 0) (</c (length lst))) ~ ~
+  value : any/c ~ ~
 
 Returns a list that is the same as lst except at the specified index.
 The element at the specified index is value.
 
 Example:
+
   > (list-set '(zero one two) 2 "two")
-  list-set: undefined;
-   cannot reference undefined identifier
+  '(zero one "two")
+
+Added in version 6.3 of package base.
+
+                                        *index-of*
+(index-of lst v [is-equal?]) -> (or/c exact-nonnegative-integer? #f) ~
+  lst : list? ~ ~
+  v : any/c ~ ~
+  is-equal? : (any/c any/c . -> . any/c) = equal? ~ ~
+
+Like member, but returns the index of the first element found instead of
+the tail of the list.
+
+Example:
+
+  > (index-of '(1 2 3 4) 3)
+  2
+
+Added in version 6.7.0.3 of package base.
+
+                                        *index-where*
+(index-where lst proc) -> (or/c exact-nonnegative-integer? #f) ~
+  lst : list? ~ ~
+  proc : (any/c . -> . any/c) ~ ~
+
+Like index-of but with the predicate-searching behavior of memf.
+
+Example:
+
+  > (index-where '(1 2 3 4) even?)
+  1
+
+Added in version 6.7.0.3 of package base.
+
+                                        *indexes-of*
+(indexes-of lst v [is-equal?]) ~
+ -> (listof exact-nonnegative-integer?)
+  lst : list? ~ ~
+  v : any/c ~ ~
+  is-equal? : (any/c any/c . -> . any/c) = equal? ~ ~
+
+Like index-of, but returns the a list of all the indexes where the
+element occurs in the list instead of just the first one.
+
+Example:
+
+  > (indexes-of '(1 2 1 2 1) 2)
+  '(1 3)
+
+Added in version 6.7.0.3 of package base.
+
+                                        *indexes-where*
+(indexes-where lst proc) -> (listof exact-nonnegative-integer?) ~
+  lst : list? ~ ~
+  proc : (any/c . -> . any/c) ~ ~
+
+Like indexes-of but with the predicate-searching behavior of
+index-where.
+
+Example:
+
+  > (indexes-where '(1 2 3 4) even?)
+  '(1 3)
+
+Added in version 6.7.0.3 of package base.
 
                                         *take*
 (take lst pos) -> list? ~
-  lst : any/c ~
-  pos : exact-nonnegative-integer? ~
+  lst : any/c ~ ~
+  pos : exact-nonnegative-integer? ~ ~
 
 Returns a fresh list whose elements are the first pos elements of lst.
 If lst has fewer than pos elements, the exn:fail:contract exception is
@@ -1200,22 +1354,23 @@ The lst argument need not actually be a list; lst must merely start with
 a chain of at least pos pairs.
 
 Examples:
-  > (take '(1 2 3 4) 2)
+
+  > (take '(1 2 3 4 5) 2)
   '(1 2)
   > (take 'non-list 0)
   '()
 
                                         *drop*
 (drop lst pos) -> any/c ~
-  lst : any/c ~
-  pos : exact-nonnegative-integer? ~
+  lst : any/c ~ ~
+  pos : exact-nonnegative-integer? ~ ~
 
 Just like list-tail.
 
                                         *split-at*
 (split-at lst pos) -> list? any/c ~
-  lst : any/c ~
-  pos : exact-nonnegative-integer? ~
+  lst : any/c ~ ~
+  pos : exact-nonnegative-integer? ~ ~
 
 Returns the same result as
 
@@ -1225,8 +1380,8 @@ except that it can be faster.
 
                                         *takef*
 (takef lst pred) -> list? ~
-  lst : any/c ~
-  pred : procedure? ~
+  lst : any/c ~ ~
+  pred : procedure? ~ ~
 
 Returns a fresh list whose elements are taken successively from lst as
 long as they satisfy pred.  The returned list includes up to, but not
@@ -1236,6 +1391,7 @@ The lst argument need not actually be a list; the chain of pairs in lst
 will be traversed until a non-pair is encountered.
 
 Examples:
+
   > (takef '(2 4 5 8) even?)
   '(2 4)
   > (takef '(2 4 6 8) odd?)
@@ -1245,12 +1401,13 @@ Examples:
 
                                         *dropf*
 (dropf lst pred) -> any/c ~
-  lst : any/c ~
-  pred : procedure? ~
+  lst : any/c ~ ~
+  pred : procedure? ~ ~
 
 Drops elements from the front of lst as long as they satisfy pred.
 
 Examples:
+
   > (dropf '(2 4 5 8) even?)
   '(5 8)
   > (dropf '(2 4 6 8) odd?)
@@ -1258,8 +1415,8 @@ Examples:
 
                                         *splitf-at*
 (splitf-at lst pred) -> list? any/c ~
-  lst : any/c ~
-  pred : procedure? ~
+  lst : any/c ~ ~
+  pred : procedure? ~ ~
 
 Returns the same result as
 
@@ -1269,8 +1426,8 @@ except that it can be faster.
 
                                         *take-right*
 (take-right lst pos) -> any/c ~
-  lst : any/c ~
-  pos : exact-nonnegative-integer? ~
+  lst : any/c ~ ~
+  pos : exact-nonnegative-integer? ~ ~
 
 Returns the list’s pos-length tail. If lst has fewer than pos elements,
 then the exn:fail:contract exception is raised.
@@ -1279,15 +1436,16 @@ The lst argument need not actually be a list; lst must merely end with a
 chain of at least pos pairs.
 
 Examples:
-  > (take-right '(1 2 3 4) 2)
-  '(3 4)
+
+  > (take-right '(1 2 3 4 5) 2)
+  '(4 5)
   > (take-right 'non-list 0)
   'non-list
 
                                         *drop-right*
 (drop-right lst pos) -> list? ~
-  lst : any/c ~
-  pos : exact-nonnegative-integer? ~
+  lst : any/c ~ ~
+  pos : exact-nonnegative-integer? ~ ~
 
 Returns a fresh list whose elements are the prefix of lst, dropping its
 pos-length tail.  If lst has fewer than pos elements, then the
@@ -1297,15 +1455,16 @@ The lst argument need not actually be a list; lst must merely end with a
 chain of at least pos pairs.
 
 Examples:
-  > (drop-right '(1 2 3 4) 2)
-  '(1 2)
+
+  > (drop-right '(1 2 3 4 5) 2)
+  '(1 2 3)
   > (drop-right 'non-list 0)
   '()
 
                                         *split-at-right*
 (split-at-right lst pos) -> list? any/c ~
-  lst : any/c ~
-  pos : exact-nonnegative-integer? ~
+  lst : any/c ~ ~
+  pos : exact-nonnegative-integer? ~ ~
 
 Returns the same result as
 
@@ -1314,6 +1473,7 @@ Returns the same result as
 except that it can be faster.
 
 Examples:
+
   > (split-at-right '(1 2 3 4 5 6) 3)
   '(1 2 3)
   '(4 5 6)
@@ -1322,85 +1482,96 @@ Examples:
   '(3 4 5 6)
 
                                         *takef-right*
-(takef-right lst pred) -> list? ~
-  lst : any/c ~
-  pred : procedure? ~
-(dropf-right lst pred) -> any/c
-  lst : any/c ~
-  pred : procedure? ~
+(takef-right lst pred) -> any/c ~
+  lst : any/c ~ ~
+  pred : procedure? ~ ~
+(dropf-right lst pred) -> list?
+  lst : any/c ~ ~
+  pred : procedure? ~ ~
 (splitf-at-right lst pred) -> list? any/c
-  lst : any/c ~
-  pred : procedure? ~
+  lst : any/c ~ ~
+  pred : procedure? ~ ~
 
 Like takef, dropf, and splitf-at, but combined with the from-right
 functionality of take-right, drop-right, and split-at-right.
 
                                         *list-prefix?*
 (list-prefix? l r [same?]) -> boolean? ~
-  l : list? ~
-  r : list? ~
-  same? : (any/c any/c . -> . any/c) = equal? ~
+  l : list? ~ ~
+  r : list? ~ ~
+  same? : (any/c any/c . -> . any/c) = equal? ~ ~
 
 True if l is a prefix of r.
 
 Example:
+
   > (list-prefix? '(1 2) '(1 2 3 4 5))
-  list-prefix?: undefined;
-   cannot reference undefined identifier
+  #t
+
+Added in version 6.3 of package base.
 
                                         *take-common-prefix*
 (take-common-prefix l r [same?]) -> list? ~
-  l : list? ~
-  r : list? ~
-  same? : (any/c any/c . -> . any/c) = equal? ~
+  l : list? ~ ~
+  r : list? ~ ~
+  same? : (any/c any/c . -> . any/c) = equal? ~ ~
 
 Returns the longest common prefix of l and r.
 
 Example:
+
   > (take-common-prefix '(a b c d) '(a b x y z))
-  take-common-prefix: undefined;
-   cannot reference undefined identifier
+  '(a b)
+
+Added in version 6.3 of package base.
 
                                         *drop-common-prefix*
 (drop-common-prefix l r [same?]) -> list? list? ~
-  l : list? ~
-  r : list? ~
-  same? : (any/c any/c . -> . any/c) = equal? ~
+  l : list? ~ ~
+  r : list? ~ ~
+  same? : (any/c any/c . -> . any/c) = equal? ~ ~
 
 Returns the tails of l and r with the common   prefix removed.
 
 Example:
+
   > (drop-common-prefix '(a b c d) '(a b x y z))
-  drop-common-prefix: undefined;
-   cannot reference undefined identifier
+  '(c d)
+  '(x y z)
+
+Added in version 6.3 of package base.
 
                                         *split-common-prefix*
 (split-common-prefix l r [same?]) -> list? list? list? ~
-  l : list? ~
-  r : list? ~
-  same? : (any/c any/c . -> . any/c) = equal? ~
+  l : list? ~ ~
+  r : list? ~ ~
+  same? : (any/c any/c . -> . any/c) = equal? ~ ~
 
 Returns the longest common prefix together with the tails of   l and r
 with the common prefix removed.
 
 Example:
+
   > (split-common-prefix '(a b c d) '(a b x y z))
-  split-common-prefix: undefined;
-   cannot reference undefined identifier
+  '(a b)
+  '(c d)
+  '(x y z)
+
+Added in version 6.3 of package base.
 
                                         *add-between*
 (add-between  lst                              ~
               v                               
-             [#:before-first before-first      ~
-              #:before-last before-last        ~
-              #:after-last after-last          ~
-              #:splice? splice?])         -> list? ~
-  lst : list? ~
-  v : any/c ~
-  before-first : list? = '() ~
-  before-last : any/c = v ~
-  after-last : list? = '() ~
-  splice? : any/c = #f ~
+             [#:before-first before-first      ~ ~
+              #:before-last before-last        ~ ~
+              #:after-last after-last          ~ ~
+              #:splice? splice?])         -> list? ~ ~
+  lst : list? ~ ~
+  v : any/c ~ ~
+  before-first : list? = '() ~ ~
+  before-last : any/c = v ~ ~
+  after-last : list? = '() ~ ~
+  splice? : any/c = #f ~ ~
 
 Returns a list with the same elements as lst, but with v between each
 pair of elements in lst; the last pair of elements will have before-last
@@ -1412,24 +1583,25 @@ true, before-first and after-last are inserted before the first element
 and after the last element respectively.
 
 Examples:
+
   > (add-between '(x y z) 'and)
   '(x and y and z)
   > (add-between '(x) 'and)
   '(x)
-  > (add-between '("a" "b" "c" "d") "," #:before-last "and") ~
+  > (add-between '("a" "b" "c" "d") "," #:before-last "and") ~ ~
   '("a" "," "b" "," "c" "and" "d")
-  > (add-between '(x y z) '(-) #:before-last '(- -) ~
-                 #:before-first '(begin) #:after-last '(end LF) ~
-                 #:splice? #t) ~
+  > (add-between '(x y z) '(-) #:before-last '(- -) ~ ~
+                 #:before-first '(begin) #:after-last '(end LF) ~ ~
+                 #:splice? #t) ~ ~
   '(begin x - y - - z end LF)
 
                                         *append**
 (append* lst ... lsts) -> list? ~
-  lst : list? ~
-  lsts : (listof list?) ~
+  lst : list? ~ ~
+  lsts : (listof list?) ~ ~
 (append* lst ... lsts) -> any/c
-  lst : list? ~
-  lsts : list? ~
+  lst : list? ~ ~
+  lsts : list? ~ ~
 
 Like append, but the last argument is used as a list of arguments for
 append, so (append* lst ... lsts) is the same as (apply append lst ...
@@ -1437,6 +1609,7 @@ lsts).  In other words, the relationship between append and append* is
 similar to the one between list and list*.
 
 Examples:
+
   > (append* '(a) '(b) '((c) (d)))
   '(a b c d)
   > (cdr (append* (map (lambda (x) (list ", " x))
@@ -1445,7 +1618,7 @@ Examples:
 
                                         *flatten*
 (flatten v) -> list? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Flattens an arbitrary S-expression structure of pairs into a list. More
 precisely, v is treated as a binary tree where pairs are interior nodes,
@@ -1453,49 +1626,61 @@ and the resulting list contains all of the non-null leaves of the tree
 in the same order as an inorder traversal.
 
 Examples:
+
   > (flatten '((a) b (c (d) . e) ()))
   '(a b c d e)
   > (flatten 'a)
   '(a)
 
                                         *check-duplicates*
-(check-duplicates  lst                      ~
-                  [same?                   
-                   #:key extract-key]) -> (or/c any/c #f) ~
-  lst : list? ~
-  same? : (any/c any/c . -> . any/c) = equal? ~
-  extract-key : (-> any/c any/c) = (lambda (x) x) ~
+(check-duplicates  lst                             ~
+                  [same?                          
+                   #:key extract-key               ~ ~
+                   #:default failure-result]) -> any ~ ~
+  lst : list? ~ ~
+  same? : (any/c any/c . -> . any/c) = equal? ~ ~
+  extract-key : (-> any/c any/c) = (lambda (x) x) ~ ~
+  failure-result : failure-result/c = (lambda () #f) ~ ~
 
 Returns the first duplicate item in lst. More precisely, it returns the
 first x such that there was a previous y where (same? (extract-key x)
 (extract-key y)).
+
+If no duplicate is found, then failure-result determines the result:
+
+* If failure-result is a procedure, it is called (through a tail call)
+  with no arguments to produce the result.
+
+* Otherwise, failure-result is returned as the result.
 
 The same? argument should be an equivalence predicate such as equal? or
 eqv? or a dictionary. The procedures equal?, eqv?, and eq? automatically
 use a dictionary for speed.
 
 Examples:
+
   > (check-duplicates '(1 2 3 4))
-  check-duplicates: undefined;
-   cannot reference undefined identifier
+  #f
   > (check-duplicates '(1 2 3 2 1))
-  check-duplicates: undefined;
-   cannot reference undefined identifier
-  > (check-duplicates '((a 1) (b 2) (a 3)) #:key car) ~
-  check-duplicates: undefined;
-   cannot reference undefined identifier
+  2
+  > (check-duplicates '((a 1) (b 2) (a 3)) #:key car) ~ ~
+  '(a 3)
   > (check-duplicates '(1 2 3 4 5 6)
                       (lambda (x y) (equal? (modulo x 3) (modulo y 3))))
-  check-duplicates: undefined;
-   cannot reference undefined identifier
+  4
+  > (check-duplicates '(1 2 3 4) #:default "no duplicates") ~ ~
+  "no duplicates"
+
+Added in version 6.3 of package base. Changed in version 6.11.0.2: Added
+the #:default optional argument.
 
                                         *remove-duplicates*
 (remove-duplicates  lst                      ~
                    [same?                   
-                    #:key extract-key]) -> list? ~
-  lst : list? ~
-  same? : (any/c any/c . -> . any/c) = equal? ~
-  extract-key : (any/c . -> . any/c) = (lambda (x) x) ~
+                    #:key extract-key]) -> list? ~ ~
+  lst : list? ~ ~
+  same? : (any/c any/c . -> . any/c) = equal? ~ ~
+  extract-key : (any/c . -> . any/c) = (lambda (x) x) ~ ~
 
 Returns a list that has all items in lst, but without duplicate items,
 where same? determines whether two elements of the list are equivalent.
@@ -1507,6 +1692,7 @@ list element, so two items are considered equal if (same? (extract-key
 x) (extract-key y)) is true.
 
 Examples:
+
   > (remove-duplicates '(a b b a))
   '(a b)
   > (remove-duplicates '(1 2 1.0 0))
@@ -1516,32 +1702,36 @@ Examples:
 
                                         *filter-map*
 (filter-map proc lst ...+) -> list? ~
-  proc : procedure? ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  lst : list? ~ ~
 
-Returns (filter (lambda (x) x) (map proc lst ...)), but without building
-the intermediate list.
+Like (map proc lst ...), except that, if proc returns #false, that
+element is omitted from the resulting list. In other words, filter-map
+is equivalent to (filter (lambda (x) x) (map proc lst ...)), but more
+efficient, because filter-map avoids building the intermediate list.
 
 Example:
-  > (filter-map (lambda (x) (and (positive? x) x)) '(1 2 3 -2 8))
-  '(1 2 3 8)
+
+  > (filter-map (lambda (x) (and (negative? x) (abs x))) '(1 2 -3 -4 8))
+  '(3 4)
 
                                         *count*
 (count proc lst ...+) -> exact-nonnegative-integer? ~
-  proc : procedure? ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  lst : list? ~ ~
 
 Returns (length (filter-map proc lst ...)), but without building the
 intermediate list.
 
 Example:
+
   > (count positive? '(1 -1 2 3 -2 5))
   4
 
                                         *partition*
 (partition pred lst) -> list? list? ~
-  pred : procedure? ~
-  lst : list? ~
+  pred : procedure? ~ ~
+  lst : list? ~ ~
 
 Similar to filter, except that two values are returned: the items for
 which pred returns a true value, and the items for which pred returns
@@ -1554,17 +1744,18 @@ The result is the same as
 but pred is applied to each item in lst only once.
 
 Example:
+
   > (partition even? '(1 2 3 4 5 6))
   '(2 4 6)
   '(1 3 5)
 
                                         *range*
 (range end) -> list? ~
-  end : real? ~
+  end : real? ~ ~
 (range start end [step]) -> list?
-  start : real? ~
-  end : real? ~
-  step : real? = 1 ~
+  start : real? ~ ~
+  end : real? ~ ~
+  step : real? = 1 ~ ~
 
 Similar to in-range, but returns lists.
 
@@ -1573,7 +1764,11 @@ elements are computed by adding step to their predecessor until end
 (excluded) is reached.  If no starting point is provided, 0 is used. If
 no step argument is provided, 1 is used.
 
+Like in-range, a range application can provide better performance when
+it appears directly in a for clause.
+
 Examples:
+
   > (range 10)
   '(0 1 2 3 4 5 6 7 8 9)
   > (range 10 20)
@@ -1585,48 +1780,98 @@ Examples:
   > (range 10 15 1.5)
   '(10 11.5 13.0 14.5)
 
+Changed in version 6.7.0.4 of package base: Adjusted to cooperate with
+for in the same way that in-range does.
+
                                         *append-map*
 (append-map proc lst ...+) -> list? ~
-  proc : procedure? ~
-  lst : list? ~
+  proc : procedure? ~ ~
+  lst : list? ~ ~
 
 Returns (append* (map proc lst ...)).
 
 Example:
+
   > (append-map vector->list '(#(1) #(2 3) #(4)))
   '(1 2 3 4)
 
                                         *filter-not*
 (filter-not pred lst) -> list? ~
-  pred : (any/c . -> . any/c) ~
-  lst : list? ~
+  pred : (any/c . -> . any/c) ~ ~
+  lst : list? ~ ~
 
 Like filter, but the meaning of the pred predicate is reversed: the
 result is a list of all items for which pred returns #f.
 
 Example:
+
   > (filter-not even? '(1 2 3 4 5 6))
   '(1 3 5)
 
                                         *shuffle*
 (shuffle lst) -> list? ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns a list with all elements from lst, randomly shuffled.
 
-Example:
+Examples:
+
   > (shuffle '(1 2 3 4 5 6))
-  '(5 4 1 2 3 6)
+  '(3 6 4 1 2 5)
+  > (shuffle '(1 2 3 4 5 6))
+  '(3 4 2 5 6 1)
+  > (shuffle '(1 2 3 4 5 6))
+  '(4 3 6 2 5 1)
+
+                                        *combinations*
+(combinations lst) -> list? ~
+  lst : list? ~ ~
+(combinations lst size) -> list?
+  lst : list? ~ ~
+  size : exact-nonnegative-integer? ~ ~
+
+Wikipedia combinations
+
+Return a list of all combinations of elements in the input list (aka the
+powerset of lst). If size is given, limit results to combinations of
+size elements.
+
+Examples:
+
+  > (combinations '(1 2 3))
+  '(() (1) (2) (1 2) (3) (1 3) (2 3) (1 2 3))
+  > (combinations '(1 2 3) 2)
+  '((1 2) (1 3) (2 3))
+
+                                        *in-combinations*
+(in-combinations lst) -> sequence? ~
+  lst : list? ~ ~
+(in-combinations lst size) -> sequence?
+  lst : list? ~ ~
+  size : exact-nonnegative-integer? ~ ~
+
+Returns a sequence of all combinations of elements in the input list,
+or all combinations of length size if size is given. Builds combinations
+one-by-one instead of all at once.
+
+Examples:
+
+  > (time (begin (combinations (range 15)) (void)))
+  cpu time: 15 real time: 15 gc time: 0
+  > (time (begin (in-combinations (range 15)) (void)))
+  cpu time: 0 real time: 0 gc time: 0
 
                                         *permutations*
 (permutations lst) -> list? ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns a list of all permutations of the input list.  Note that this
 function works without inspecting the elements, and therefore it ignores
-repeated elements (which will result in repeated permutations).
+repeated elements (which will result in repeated permutations). Raises
+an error if the input list contains more than 256 elements.
 
 Examples:
+
   > (permutations '(1 2 3))
   '((1 2 3) (2 1 3) (1 3 2) (3 1 2) (2 3 1) (3 2 1))
   > (permutations '(x x))
@@ -1634,21 +1879,23 @@ Examples:
 
                                         *in-permutations*
 (in-permutations lst) -> sequence? ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Returns a sequence of all permutations of the input list.  It is
 equivalent to (in-list (permutations l)) but much faster since it builds
-the permutations one-by-one on each iteration
+the permutations one-by-one on each iteration Raises an error if the
+input list contains more than 256 elements.
 
                                         *argmin*
 (argmin proc lst) -> any/c ~
-  proc : (-> any/c real?) ~
-  lst : (and/c pair? list?) ~
+  proc : (-> any/c real?) ~ ~
+  lst : (and/c pair? list?) ~ ~
 
 Returns the first element in the list lst that minimizes the result of
-proc.  Signals an error on an empty list.
+proc.  Signals an error on an empty list. See also min.
 
 Examples:
+
   > (argmin car '((3 pears) (1 banana) (2 apples)))
   '(1 banana)
   > (argmin car '((1 banana) (1 orange)))
@@ -1656,13 +1903,14 @@ Examples:
 
                                         *argmax*
 (argmax proc lst) -> any/c ~
-  proc : (-> any/c real?) ~
-  lst : (and/c pair? list?) ~
+  proc : (-> any/c real?) ~ ~
+  lst : (and/c pair? list?) ~ ~
 
 Returns the first element in the list lst that maximizes the result of
-proc.  Signals an error on an empty list.
+proc.  Signals an error on an empty list. See also max.
 
 Examples:
+
   > (argmax car '((3 pears) (1 banana) (2 apples)))
   '(3 pears)
   > (argmax car '((3 pears) (3 oranges)))
@@ -1670,9 +1918,9 @@ Examples:
 
                                         *group-by*
 (group-by key lst [same?]) -> (listof list?) ~
-  key : (-> any/c any/c) ~
-  lst : list? ~
-  same? : (any/c any/c . -> . any/c) = equal? ~
+  key : (-> any/c any/c) ~ ~
+  lst : list? ~ ~
+  same? : (any/c any/c . -> . any/c) = equal? ~ ~
 
 Groups the given list into equivalence classes, with equivalence being
 determined by same?. Within each equivalence class, group-by preserves
@@ -1680,56 +1928,80 @@ the ordering of the original list. Equivalence classes themselves are in
 order of first appearance in the input.
 
 Example:
+
   >
   (group-by (lambda (x) (modulo x 3)) '(1 2 1 2 54 2 5 43 7 2 643 1 2 0))
-  group-by: undefined;
-   cannot reference undefined identifier
+  '((1 1 43 7 643 1) (2 2 2 5 2 2) (54 0))
+
+Added in version 6.3 of package base.
 
                                         *cartesian-product*
 (cartesian-product lst ...) -> (listof list?) ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Computes the n-ary cartesian product of the given lists.
 
 Examples:
+
   > (cartesian-product '(1 2 3) '(a b c))
-  cartesian-product: undefined;
-   cannot reference undefined identifier
+  '((1 a) (1 b) (1 c) (2 a) (2 b) (2 c) (3 a) (3 b) (3 c))
   > (cartesian-product '(4 5 6) '(d e f) '(#t #f))
-  cartesian-product: undefined;
-   cannot reference undefined identifier
+  '((4 d #t)
+    (4 d #f)
+    (4 e #t)
+    (4 e #f)
+    (4 f #t)
+    (4 f #f)
+    (5 d #t)
+    (5 d #f)
+    (5 e #t)
+    (5 e #f)
+    (5 f #t)
+    (5 f #f)
+    (6 d #t)
+    (6 d #f)
+    (6 e #t)
+    (6 e #f)
+    (6 f #t)
+    (6 f #f))
+
+Added in version 6.3 of package base.
 
                                         *remf*
 (remf pred lst) -> list? ~
-  pred : procedure? ~
-  lst : list? ~
+  pred : procedure? ~ ~
+  lst : list? ~ ~
 
 Returns a list that is like lst, omitting the first element of lst for
 which pred produces a true value.
 
 Example:
+
   > (remf negative? '(1 -2 3 4 -5))
-  remf: undefined;
-   cannot reference undefined identifier
+  '(1 3 4 -5)
+
+Added in version 6.3 of package base.
 
                                         *remf**
 (remf* pred lst) -> list? ~
-  pred : procedure? ~
-  lst : list? ~
+  pred : procedure? ~ ~
+  lst : list? ~ ~
 
 Like remf, but removes all the elements for which pred produces a true
 value.
 
 Example:
+
   > (remf* negative? '(1 -2 3 4 -5))
-  remf*: undefined;
-   cannot reference undefined identifier
+  '(1 3 4)
+
+Added in version 6.3 of package base.
 
 8. Immutable Cyclic Data
 
                                         *make-reader-graph*
 (make-reader-graph v) -> any/c ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns a value like v, with placeholders created by make-placeholder
 replaced with the values that they contain, and with placeholders
@@ -1761,6 +2033,7 @@ Due to these restrictions, make-reader-graph creates exactly the same
 sort of cyclic values as read.
 
 Example:
+
   > (let* ([ph (make-placeholder #f)]
            [x (cons 1 ph)])
       (placeholder-set! ph x)
@@ -1769,14 +2042,14 @@ Example:
 
                                         *placeholder?*
 (placeholder? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a placeholder created by make-placeholder, #f
 otherwise.
 
                                         *make-placeholder*
 (make-placeholder v) -> placeholder? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns a placeholder for use with placeholder-set!  and
 make-reader-graph. The v argument supplies the initial value for the
@@ -1784,41 +2057,41 @@ placeholder.
 
                                         *placeholder-set!*
 (placeholder-set! ph datum) -> void? ~
-  ph : placeholder? ~
-  datum : any/c ~
+  ph : placeholder? ~ ~
+  datum : any/c ~ ~
 
 Changes the value of ph to v.
 
                                         *placeholder-get*
 (placeholder-get ph) -> any/c ~
-  ph : placeholder? ~
+  ph : placeholder? ~ ~
 
 Returns the value of ph.
 
                                         *hash-placeholder?*
 (hash-placeholder? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a placeholder created by make-hash-placeholder, #f
 otherwise.
 
                                         *make-hash-placeholder*
 (make-hash-placeholder assocs) -> hash-placeholder? ~
-  assocs : (listof pair?) ~
+  assocs : (listof pair?) ~ ~
 
 Like make-immutable-hash, but produces a table placeholder for use with
 make-reader-graph.
 
                                         *make-hasheq-placeholder*
 (make-hasheq-placeholder assocs) -> hash-placeholder? ~
-  assocs : (listof pair?) ~
+  assocs : (listof pair?) ~ ~
 
 Like make-immutable-hasheq, but produces a table placeholder for use
 with make-reader-graph.
 
                                         *make-hasheqv-placeholder*
 (make-hasheqv-placeholder assocs) -> hash-placeholder? ~
-  assocs : (listof pair?) ~
+  assocs : (listof pair?) ~ ~
 
 Like make-immutable-hasheqv, but produces a table placeholder for use
 with make-reader-graph.

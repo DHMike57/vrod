@@ -6,7 +6,7 @@ Networking
 
 1. TCP
 
- (require racket/tcp) package: base ~
+ (require racket/tcp) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/tcp
 and racket libraries, but not racket/base.
@@ -19,10 +19,10 @@ by W. Richard Stevens.
             [max-allow-wait     
              reuse?             
              hostname])     -> tcp-listener?
-  port-no : (integer-in 0 65535) ~
-  max-allow-wait : exact-nonnegative-integer? = 4 ~
-  reuse? : any/c = #f ~
-  hostname : (or/c string? #f) = #f ~
+  port-no : listen-port-number? ~ ~
+  max-allow-wait : exact-nonnegative-integer? = 4 ~ ~
+  reuse? : any/c = #f ~ ~
+  hostname : (or/c string? #f) = #f ~ ~
 
 Creates a “listening” server on the local machine at the port number
 specified by port-no. If port-no is 0 the socket binds to an ephemeral
@@ -72,10 +72,10 @@ itself.
               port-no             
              [local-hostname      
               local-port-no]) -> input-port? output-port?
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  local-hostname : (or/c string? #f) = #f ~
-  local-port-no : (or/c (integer-in 1 65535) #f) = #f ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  local-hostname : (or/c string? #f) = #f ~ ~
+  local-port-no : (or/c port-number? #f) = #f ~ ~
 
 Attempts to connect as a client to a listening server.  The hostname
 argument is the server host’s Internet address name, and port-no is the
@@ -128,10 +128,10 @@ exn:fail:network exception is raised.
                           [local-hostname] 
                            local-port-no)  
  -> input-port? output-port?
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  local-hostname : (or/c string? #f) = #f ~
-  local-port-no : (or/c (integer-in 1 65535) #f) ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  local-hostname : (or/c string? #f) = #f ~ ~
+  local-port-no : (or/c port-number? #f) ~ ~
 
 Like tcp-connect, but breaking is enabled (see [missing]) while trying
 to connect. If breaking is disabled when tcp-connect/enable-break is
@@ -140,7 +140,7 @@ raised, but not both.
 
                                         *tcp-accept*
 (tcp-accept listener) -> input-port? output-port? ~
-  listener : tcp-listener? ~
+  listener : tcp-listener? ~ ~
 
 Accepts a client connection for the server associated with listener. If
 no client connection is waiting on the listening port, the call to
@@ -159,7 +159,7 @@ been closed, the exn:fail:network exception is raised.
 
                                         *tcp-accept/enable-break*
 (tcp-accept/enable-break listener) -> input-port? output-port? ~
-  listener : tcp-listener? ~
+  listener : tcp-listener? ~ ~
 
 Like tcp-accept, but breaking is enabled (see [missing]) while trying to
 accept a connection. If breaking is disabled when
@@ -168,7 +168,7 @@ exn:break exception is raised, but not both.
 
                                         *tcp-accept-ready?*
 (tcp-accept-ready? listener) -> boolean? ~
-  listener : tcp-listener? ~
+  listener : tcp-listener? ~ ~
 
 Tests whether an unaccepted client has connected to the server
 associated with listener. If a client is waiting, the return value is
@@ -181,7 +181,7 @@ raised.
 
                                         *tcp-close*
 (tcp-close listener) -> void? ~
-  listener : tcp-listener? ~
+  listener : tcp-listener? ~ ~
 
 Shuts down the server associated with listener. All unaccepted clients
 receive an end-of-file from the server; connections to accepted clients
@@ -196,25 +196,25 @@ information, see Stevens’s explanation of the TIME_WAIT TCP state.
 
                                         *tcp-listener?*
 (tcp-listener? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a TCP listener created by tcp-listen, #f otherwise.
 
                                         *tcp-accept-evt*
 (tcp-accept-evt listener) -> evt? ~
-  listener : tcp-listener? ~
+  listener : tcp-listener? ~ ~
 
 Returns a synchronizable event (see [missing]) that is ready for
 synchronization when tcp-accept on listener would not block. The
 synchronization result is a list of two items, which correspond to the
-two results of tcp-accept. (If the event is not chosen in a syntax, no
+two results of tcp-accept. (If the event is not chosen in a sync, no
 connections are accepted.) The ports are placed into the management of
 the custodian that is the current custodian (see [missing]) at the time
 that tcp-accept-evt is called.
 
                                         *tcp-abandon-port*
 (tcp-abandon-port tcp-port) -> void? ~
-  tcp-port : tcp-port? ~
+  tcp-port : tcp-port? ~ ~
 
 Like close-output-port or close-input-port (depending on whether
 tcp-port is an input or output port), but if tcp-port is an output port
@@ -229,20 +229,20 @@ input TCP ports.
                                         *tcp-addresses*
 (tcp-addresses tcp-port [port-numbers?]) ~
  -> (or/c (values string? string?)
-          (values string? (integer-in 1 65535)
-                  string? (integer-in 0 65535)))
-  tcp-port : (or/c tcp-port? tcp-listener?) ~
-  port-numbers? : any/c = #f ~
+          (values string? port-number?
+                  string? listen-port-number?))
+  tcp-port : (or/c tcp-port? tcp-listener? udp?) ~ ~
+  port-numbers? : any/c = #f ~ ~
 
 Returns two strings when port-numbers? is #f (the default). The first
-string is the Internet address for the local machine a viewed by the
-given TCP port’s connection or for the TCP listener. (For most machines,
-the answer corresponds to the current machine’s only Internet address,
-but when a machine serves multiple addresses, the result is
-connection-specific or listener-specific.) If a listener is given and it
-has no specific host, the first string result is "0.0.0.0". The second
-string is the Internet address for the other end of the connection, or
-always "0.0.0.0" for a listener.
+string is the Internet address for the local machine as viewed by the
+given TCP port’s connection, for the TCP listener, or the UDP socket.
+(When a machine serves multiple addresses, as it usually does if you
+count the loopback device, the result is connection-specific or
+listener-specific.) If a listener or UDP socket is given and it has no
+specific host, the first string result is "0.0.0.0". The second string
+is the Internet address for the other end of the connection, or always
+"0.0.0.0" for a listener or unconnected UDP socket.
 
 If port-numbers? is true, then four results are returned: a string for
 the local machine’s address, an exact integer between 1 and 65535 for
@@ -250,20 +250,32 @@ the local machine’s port number, a string for the remote machine’s
 address, and an exact integer between 1 and 65535 for the remote
 machine’s port number or 0 for a listener.
 
-If the given port has been closed, the exn:fail:network exception is
-raised.
+If the given port, listener, or socket has been closed, the
+exn:fail:network exception is raised.
 
                                         *tcp-port?*
 (tcp-port? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a TCP port—which is a port returned by tcp-accept,
 tcp-connect, tcp-accept/enable-break, or tcp-connect/enable-break—#f
 otherwise.
 
+port-number? : contract? ~ ~
+
+Equivalent to (between/c 1 65535).
+
+Added in version 6.3 of package base.
+
+listen-port-number? : contract? ~ ~
+
+Equivalent to (between/c 0 65535).
+
+Added in version 6.3 of package base.
+
 2. UDP
 
- (require racket/udp) package: base ~
+ (require racket/udp) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/udp
 and racket libraries, but not racket/base.
@@ -274,8 +286,8 @@ by W. Richard Stevens.
                                         *udp-open-socket*
 (udp-open-socket [family-hostname       ~
                   family-port-no]) -> udp?
-  family-hostname : (or/c string? #f) = #f ~
-  family-port-no : (or/c (integer-in 1 65535) #f) = #f ~
+  family-hostname : (or/c string? #f) = #f ~ ~
+  family-port-no : (or/c port-number? #f) = #f ~ ~
 
 Creates and returns a UDP socket to send and receive datagrams
 (broadcasting is allowed). Initially, the socket is not bound or
@@ -296,10 +308,10 @@ family-port-no is non-#f, then the socket’s protocol family is IPv4.
             hostname-string     
             port-no             
            [reuse?])        -> void?
-  udp-socket : udp? ~
-  hostname-string : (or/c string? #f) ~
-  port-no : (integer-in 0 65535) ~
-  reuse? : any/c = #f ~
+  udp-socket : udp? ~ ~
+  hostname-string : (or/c string? #f) ~ ~
+  port-no : listen-port-number? ~ ~
+  reuse? : any/c = #f ~ ~
 
 Binds an unbound udp-socket to the local port number port-no.  If
 port-no is 0 the udp-socket is bound to an ephemeral port, which can be
@@ -338,10 +350,9 @@ multicast.
 (udp-connect! udp-socket           ~
               hostname-string     
               port-no)        -> void?
-  udp-socket : udp? ~
-  hostname-string : (or/c string? #f) ~
-  port-no : (or/c (integer-in 1 65535) ~
-                  #f)
+  udp-socket : udp? ~ ~
+  hostname-string : (or/c string? #f) ~ ~
+  port-no : (or/c port-number? #f) ~ ~
 
 Connects the socket to the indicated remote address and port if
 hostname-string is a string and port-no is an exact integer.
@@ -363,13 +374,13 @@ If udp-socket is closed, the exn:fail:network exception is raised.
               port-no        
               bstr           
              [start-pos      
-              end-pos])  -> void
-  udp-socket : udp? ~
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+              end-pos])  -> void?
+  udp-socket : udp? ~ ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Sends (subbytes bytes start-pos end-pos) as a datagram from the
 unconnected udp-socket to the socket at the remote machine
@@ -386,11 +397,11 @@ If udp-socket is closed or connected, the exn:fail:network exception is
 raised.
 
                                         *udp-send*
-(udp-send udp-socket bstr [start-pos end-pos]) -> void ~
-  udp-socket : udp? ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+(udp-send udp-socket bstr [start-pos end-pos]) -> void? ~
+  udp-socket : udp? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-send-to, except that udp-socket must be connected, and the
 datagram goes to the connection target.  If udp-socket is closed or
@@ -403,12 +414,12 @@ unconnected, the exn:fail:network exception is raised.
                bstr           
               [start-pos      
                end-pos])  -> boolean?
-  udp-socket : udp? ~
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  udp-socket : udp? ~ ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-send-to, but never blocks; if the socket’s outgoing queue is
 too full to support the send, #f is returned, otherwise the datagram is
@@ -416,10 +427,10 @@ queued and the result is #t.
 
                                         *udp-send**
 (udp-send* udp-socket bstr [start-pos end-pos]) -> boolean? ~
-  udp-socket : udp? ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  udp-socket : udp? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-send, except that (like udp-send-to) it never blocks and
 returns #f or #t.
@@ -430,13 +441,13 @@ returns #f or #t.
                            port-no        
                            bstr           
                           [start-pos      
-                           end-pos])  -> void
-  udp-socket : udp? ~
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+                           end-pos])  -> void?
+  udp-socket : udp? ~ ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-send-to, but breaking is enabled (see [missing]) while trying
 to send the datagram. If breaking is disabled when
@@ -447,11 +458,11 @@ the exn:break exception is raised, but not both.
 (udp-send/enable-break  udp-socket      ~
                         bstr           
                        [start-pos      
-                        end-pos])  -> void
-  udp-socket : udp? ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+                        end-pos])  -> void?
+  udp-socket : udp? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-send, except that breaks are enabled like
 udp-send-to/enable-break.
@@ -462,11 +473,11 @@ udp-send-to/enable-break.
               [start-pos      
                end-pos])  -> exact-nonnegative-integer?
                              string?
-                             (integer-in 1 65535)
-  udp-socket : udp? ~
-  bstr : (and/c bytes? (not immutable?)) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+                             port-number?
+  udp-socket : udp? ~ ~
+  bstr : (and/c bytes? (not immutable?)) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Accepts up to end-pos-start-pos bytes of udp-socket’s next incoming
 datagram into bstr, writing the datagram bytes starting at position
@@ -491,11 +502,11 @@ exception is raised.
                 end-pos])  
  -> (or/c exact-nonnegative-integer? #f)
     (or/c string? #f)
-    (or/c (integer-in 1 65535) #f)
-  udp-socket : udp? ~
-  bstr : (and/c bytes? (not immutable?)) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+    (or/c port-number? #f)
+  udp-socket : udp? ~ ~
+  bstr : (and/c bytes? (not immutable?)) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-receive!, except that it never blocks. If no datagram is
 available, the three result values are all #f.
@@ -507,47 +518,62 @@ available, the three result values are all #f.
                             end-pos])  
  -> exact-nonnegative-integer?
     string?
-    (integer-in 1 65535)
-  udp-socket : udp? ~
-  bstr : (and/c bytes? (not immutable?)) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+    port-number?
+  udp-socket : udp? ~ ~
+  bstr : (and/c bytes? (not immutable?)) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like udp-receive!, but breaking is enabled (see [missing]) while trying
 to receive the datagram. If breaking is disabled when
 udp-receive!/enable-break is called, then either a datagram is received
 or the exn:break exception is raised, but not both.
 
+                                        *udp-set-receive-buffer-size!*
+(udp-set-receive-buffer-size! udp-socket      ~
+                              size)      -> void?
+  udp-socket : udp? ~ ~
+  size : exact-positive-integer? ~ ~
+
+Set the receive buffer size (SO_RCVBUF) for udp-socket. Using a larger
+buffer can minimize packet loss that can occur due to slow polling of a
+connection, including during a major garbage collection.
+
+If size is greater than the maximum allowed by the system, the
+exn:fail:network exception is raised.
+
+Added in version 7.1.0.11 of package base.
+
                                         *udp-close*
 (udp-close udp-socket) -> void? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Closes udp-socket, discarding unreceived datagrams.  If the socket is
 already closed, the exn:fail:network exception is raised.
 
                                         *udp?*
 (udp? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a socket created by udp-open-socket, #f otherwise.
 
                                         *udp-bound?*
 (udp-bound? udp-socket) -> boolean? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Returns #t if udp-socket is bound to a local address and port, #f
 otherwise.
 
                                         *udp-connected?*
 (udp-connected? udp-socket) -> boolean? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Returns #t if udp-socket is connected to a remote address and port, #f
 otherwise.
 
                                         *udp-send-ready-evt*
 (udp-send-ready-evt udp-socket) -> evt? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Returns a synchronizable event (see [missing]) that is in a blocking
 state when udp-send-to on udp-socket would block. The synchronization
@@ -555,7 +581,7 @@ result is the event itself.
 
                                         *udp-receive-ready-evt*
 (udp-receive-ready-evt udp-socket) -> evt? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Returns a synchronizable event (see [missing]) that is in a blocking
 state when udp-receive! on udp-socket would block. The synchronization
@@ -568,12 +594,12 @@ result is the event itself.
                   bstr           
                  [start-pos      
                   end-pos])  -> evt?
-  udp-socket : udp? ~
-  hostname : string? ~
-  port-no : (integer-in 1 65535) ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  udp-socket : udp? ~ ~
+  hostname : string? ~ ~
+  port-no : port-number? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Returns a synchronizable event. The event is in a blocking state when
 udp-send-to on udp-socket would block. Otherwise, if the event is chosen
@@ -587,10 +613,10 @@ not chosen.)
                bstr           
               [start-pos      
                end-pos])  -> evt?
-  udp-socket : udp? ~
-  bstr : bytes? ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  udp-socket : udp? ~ ~
+  bstr : bytes? ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Returns a synchronizable event. The event is ready for synchronization
 when udp-send on udp-socket would not block. Otherwise, if the event is
@@ -605,10 +631,10 @@ synchronization attempt.
                    bstr           
                   [start-pos      
                    end-pos])  -> evt?
-  udp-socket : udp? ~
-  bstr : (and/c bytes? (not immutable?)) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  udp-socket : udp? ~ ~
+  bstr : (and/c bytes? (not immutable?)) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Returns a synchronizable event. The event is ready for synchronization
 when udp-receive on udp-socket would not block. Otherwise, if the event
@@ -621,10 +647,10 @@ content is not modified if the event is not chosen.)
                                         *udp-addresses*
 (udp-addresses udp-port [port-numbers?]) ~
  -> (or/c (values string? string?)
-          (values string? (integer-in 0 65535)
-                  string? (integer-in 0 65535)))
-  udp-port : udp? ~
-  port-numbers? : any/c = #f ~
+          (values string? listen-port-number?
+                  string? listen-port-number?))
+  udp-port : udp? ~ ~
+  port-numbers? : any/c = #f ~ ~
 
 Returns two strings when port-numbers? is #f (the default). The first
 string is the Internet address for the local machine a viewed by the
@@ -644,19 +670,32 @@ unconnected.
 If the given port has been closed, the exn:fail:network exception is
 raised.
 
+                                        *udp-set-ttl!*
+(udp-set-ttl! udp-socket ttl) -> void? ~
+  udp-socket : udp? ~ ~
+  ttl : byte? ~ ~
+(udp-ttl udp-socket) -> byte?
+  udp-socket : udp? ~ ~
+
+Time-to-live settings correspond to the IP_TTL setting of the socket.
+
+Sets or retrieves the current time-to-live setting of udp-socket.
+
+Added in version 7.5.0.5 of package base.
+
                                         *udp-multicast-join-group!*
 (udp-multicast-join-group! udp-socket          ~
                            multicast-addr     
                            hostname)      -> void?
-  udp-socket : udp? ~
-  multicast-addr : string? ~
-  hostname : (or/c string? #f) ~
+  udp-socket : udp? ~ ~
+  multicast-addr : string? ~ ~
+  hostname : (or/c string? #f) ~ ~
 (udp-multicast-leave-group! udp-socket         
                             multicast-addr     
                             hostname)      -> void?
-  udp-socket : udp? ~
-  multicast-addr : string? ~
-  hostname : (or/c string? #f) ~
+  udp-socket : udp? ~ ~
+  multicast-addr : string? ~ ~
+  hostname : (or/c string? #f) ~ ~
 
 Adds or removes udp-socket to a named multicast group.
 
@@ -671,11 +710,11 @@ that were used to join the group.
 
                                         *udp-multicast-interface*
 (udp-multicast-interface udp-socket) -> string? ~
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 (udp-multicast-set-interface! udp-socket     
                               hostname)  -> void?
-  udp-socket : udp? ~
-  hostname : (or/c string? #f) ~
+  udp-socket : udp? ~ ~
+  hostname : (or/c string? #f) ~ ~
 
 Retrieves or sets the interface that udp-socket uses to send (not
 receive) multicast datagrams. If the result or hostname is either #f or
@@ -685,10 +724,10 @@ multicast datagram is sent.
                                         *udp-multicast-set-loopback!*
 (udp-multicast-set-loopback! udp-socket      ~
                              loopback?) -> void?
-  udp-socket : udp? ~
-  loopback? : any/c ~
+  udp-socket : udp? ~ ~
+  loopback? : any/c ~ ~
 (udp-multicast-loopback? udp-socket) -> boolean?
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Loopback settings correspond to the IP_MULTICAST_LOOP setting of the
 socket.
@@ -699,10 +738,10 @@ enabled, and #f indicates that self-receipt is disabled.
 
                                         *udp-multicast-set-ttl!*
 (udp-multicast-set-ttl! udp-socket ttl) -> void? ~
-  udp-socket : udp? ~
-  ttl : byte? ~
+  udp-socket : udp? ~ ~
+  ttl : byte? ~ ~
 (udp-multicast-ttl udp-socket) -> byte?
-  udp-socket : udp? ~
+  udp-socket : udp? ~ ~
 
 Time-to-live settings correspond to the IP_MULTICAST_TTL setting of the
 socket.

@@ -4,7 +4,7 @@ Filesystem
 
                                         *find-system-path*
 (find-system-path kind) -> path? ~
-  kind : symbol? ~
+  kind : symbol? ~ ~
 
 Returns a machine-specific path for a standard type of path specified by
 kind, which must be one of the following:
@@ -15,7 +15,7 @@ kind, which must be one of the following:
   as a complete path, then the path is used as the user’s home
   directory.
 
-  On Unix and Mac OS X, when PLTUSERHOME does not apply, the user’s home
+  On Unix and Mac OS, when PLTUSERHOME does not apply, the user’s home
   directory is determined by expanding the path "~", which is expanded
   by first checking for a HOME environment variable. If none is defined,
   the USER and LOGNAME environment variables are consulted (in that
@@ -39,17 +39,17 @@ kind, which must be one of the following:
   determined by PLTUSERHOME, otherwise in the user’s application-data
   folder as specified by the Windows registry; the application-data
   folder is usually "Application Data" in the user’s profile directory.
-  On Mac OS X, the preferences directory is "Library/Preferences" in the
+  On Mac OS, the preferences directory is "Library/Preferences" in the
   user’s home directory. The preferences directory might not exist.
 
 * 'pref-file — a file that contains a symbol-keyed association list of
   preference values. The file’s directory path always matches the result
   returned for 'pref-dir. The file name is "racket-prefs.rktd" on Unix
-  and Windows, and it is "org.racket-lang.prefs.rktd" on Mac OS X. The
+  and Windows, and it is "org.racket-lang.prefs.rktd" on Mac OS. The
   file’s directory might not exist. See also get-preference.
 
 * 'temp-dir — the standard directory for storing temporary files. On
-  Unix and Mac OS X, this is the directory specified by the TMPDIR
+  Unix and Mac OS, this is the directory specified by the TMPDIR
   environment variable, if it is defined, otherwise it is the first path
   that exists among "/var/tmp", "/usr/tmp", and "/tmp". On Windows, the
   result is the directory specified by the TMP or TEMP environment
@@ -62,7 +62,7 @@ kind, which must be one of the following:
   directory part of the path is the same path as returned for 'init-dir.
   The file name is platform-specific:
 
-  * Unix and Mac OS X: ".racketrc"
+  * Unix and Mac OS: ".racketrc"
 
   * Windows: "racketrc.rktl"
 
@@ -75,31 +75,36 @@ kind, which must be one of the following:
   'config-dir) is a relative path, it is relative to the current
   executable. The directory might not exist.
 
+* 'host-config-dir — like 'config-dir, but when cross-platform build
+  mode has been selected (through the -C or --cross argument to racket;
+  see [missing]), the result refers to a directory for the current
+  system’s installation, instead of for the target system.
+
 * 'addon-dir — a directory for user-specific Racket configuration,
   packages, and extension. This directory is specified by the
   PLTADDONDIR environment variable, and it can be overridden by the
   --addon or -A command-line flag.  If no environment variable or flag
   is specified, or if the value is not a legal path name, then this
   directory defaults to "Library/Racket" in the user’s home directory on
-  Mac OS X and 'pref-dir otherwise.  The directory might not exist.
+  Mac OS and 'pref-dir otherwise.  The directory might not exist.
 
 * 'doc-dir — the standard directory for storing the current user’s
   documents. On Unix, it’s the user’s home directory.  On Windows, it is
   the user’s home directory if determined by PLTUSERHOME, otherwise it
   is the user’s documents folder as specified by the Windows registry;
   the documents folder is usually "My Documents" in the user’s home
-  directory.  On Mac OS X, it’s the "Documents" directory in the user’s
+  directory.  On Mac OS, it’s the "Documents" directory in the user’s
   home directory.
 
 * 'desk-dir — the directory for the current user’s desktop. On Unix,
   it’s the user’s home directory. On Windows, it is the user’s home
   directory if determined by PLTUSERHOME, otherwise it is the user’s
   desktop folder as specified by the Windows registry; the desktop
-  folder is usually "Desktop" in the user’s home directory. On Mac OS X,
+  folder is usually "Desktop" in the user’s home directory. On Mac OS,
   it is "Desktop" in the user’s home directory
 
 * 'sys-dir — the directory containing the operating system for Windows.
-  On Unix and Mac OS X, the result is "/".
+  On Unix and Mac OS, the result is "/".
 
 * 'exec-file — the path of the Racket executable as provided by the
   operating system for the current invocation. For some operating
@@ -123,21 +128,31 @@ kind, which must be one of the following:
   the Racket executable, but it can be overridden by the --collects or
   -X command-line flag.
 
+* 'host-collects-dir — like 'collects-dir, but when cross-platform build
+  mode has been selected (through the -C or --cross argument to racket;
+  see [missing]), the result refers to a directory for the current
+  system’s installation, instead of for the target system. In
+  cross-platform build mode, collection files are normally read from the
+  target system’s installation, but some tasks require current-system
+  directories (such as the one that holds foreign libraries) that are
+  configured relative to the main library-collection path.
+
 * 'orig-dir — the current directory at start-up, which can be useful in
   converting a relative-path result from (find-system-path 'exec-file)
   or (find-system-path 'run-file) to a complete path.
 
-Changed in version 6.0.0.3: Added PLTUSERHOME.
+Changed in version 6.0.0.3: Added PLTUSERHOME. Changed in version
+6.9.0.1: Added 'host-config-dir and 'host-collects-dir.
 
                                         *path-list-string->path-list*
 (path-list-string->path-list str                 ~
                              default-path-list) 
  -> (listof path?)
-  str : (or/c string? bytes?) ~
-  default-path-list : (listof path?) ~
+  str : (or/c string? bytes?) ~ ~
+  default-path-list : (listof path?) ~ ~
 
 Parses a string or byte string containing a list of paths, and returns a
-list of path strings. On Unix and Mac OS X, paths in a path list are
+list of path strings. On Unix and Mac OS, paths in a path list are
 separated by a :; on Windows, paths are separated by a ;, and all "s in
 the string are discarded. Whenever the path list contains an empty path,
 the list default-path-list is spliced into the returned list of paths.
@@ -148,9 +163,9 @@ returned list.
 (find-executable-path  program         ~
                       [related        
                        deepest?]) -> (or/c path? #f)
-  program : path-string? ~
-  related : (or/c path-string? #f) = #f ~
-  deepest? : any/c = #f ~
+  program : path-string? ~ ~
+  related : (or/c path-string? #f) = #f ~ ~
+  deepest? : any/c = #f ~ ~
 
 Finds a path for the executable program, returning #f if the path cannot
 be found.
@@ -163,7 +178,7 @@ full path for the found related, instead of the path for the executable.
 This procedure is used by the Racket executable to find the standard
 library collection directory (see [missing]).  In this case, program is
 the name used to start Racket and related is "collects".  The related
-argument is used because, on Unix and Mac OS X, program may involve a
+argument is used because, on Unix and Mac OS, program may involve a
 sequence of soft links; in this case, related determines which link in
 the chain is relevant.
 
@@ -190,7 +205,7 @@ Windows.)
 
                                         *file-exists?*
 (file-exists? path) -> boolean? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Returns #t if a file (not a directory) path exists, #f otherwise.
 
@@ -199,7 +214,7 @@ filenames (e.g., "LPT1", "x:/baddir/LPT1").
 
                                         *link-exists?*
 (link-exists? path) -> boolean? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Returns #t if a link path exists, #f otherwise.
 
@@ -217,7 +232,7 @@ Changed in version 6.0.1.12: Added support for links on Windows.
 
                                         *delete-file*
 (delete-file path) -> void? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Deletes the file with path path if it exists, otherwise the
 exn:fail:filesystem exception is raised. If path is a link, the link is
@@ -233,6 +248,15 @@ permission change if the deletion fails.
 On Windows, delete-file can delete a symbolic link, but not a junction.
 Use delete-directory to delete a junction.
 
+On Windows, beware that if a file is deleted while it remains in use by
+some process (e.g., a background search indexer), then the file’s
+content will eventually go away, but the file’s name remains occupied
+until the file is no longer used. As long as the name remains occupied,
+attempts to open, delete, or replace the file will trigger a permission
+error (as opposed to a file-exists error). A common technique to avoid
+this pitfall is to move the file to a generated temporary name before
+deleting it. See also delete-directory/files.
+
 Changed in version 6.1.1.7: Changed Windows behavior to use
 current-force-delete-permissions.
 
@@ -240,23 +264,24 @@ current-force-delete-permissions.
 (rename-file-or-directory  old               ~
                            new              
                           [exists-ok?]) -> void?
-  old : path-string? ~
-  new : path-string? ~
-  exists-ok? : any/c = #f ~
+  old : path-string? ~ ~
+  new : path-string? ~ ~
+  exists-ok? : any/c = #f ~ ~
 
 Renames the file or directory with path old—if it exists—to the path
 new. If the file or directory is not renamed successfully, the
 exn:fail:filesystem exception is raised.
 
 This procedure can be used to move a file/directory to a different
-directory (on the same disk) as well as rename a file/directory within a
-directory. Unless exists-ok?  is provided as a true value, new cannot
-refer to an existing file or directory. Even if exists-ok? is true, new
-cannot refer to an existing file when old is a directory, and vice
-versa.
+directory (on the same filesystem) as well as rename a file/directory
+within a directory. Unless exists-ok?  is provided as a true value, new
+cannot refer to an existing file or directory, but the check is not
+atomic with the rename operation on Unix and Mac OS. Even if exists-ok?
+is true, new cannot refer to an existing file when old is a directory,
+and vice versa.
 
 If new exists and is replaced, the replacement is atomic on Unix and Mac
-OS X, but it is not guaranteed to be atomic on Windows. Furthermore, if
+OS, but it is not guaranteed to be atomic on Windows. Furthermore, if
 new exists and is opened by any process for reading or writing, then
 attempting to replace it will typically fail on Windows. See also
 call-with-atomic-output-file.
@@ -264,22 +289,30 @@ call-with-atomic-output-file.
 If old is a link, the link is renamed rather than the destination of the
 link, and it counts as a file for replacing any existing new.
 
+On Windows, beware that a directory cannot be renamed if any file within
+the directory is open. That constraint is particularly problematic if a
+search indexer is running in the background (as in the default Windows
+configuration). A possible workaround is to combine copy-directory/files
+and delete-directory/files, since the latter can deal with open files,
+although that sequence is obviously not atomic and temporarily
+duplicates files.
+
                                         *file-or-directory-modify-seconds*
 (file-or-directory-modify-seconds  path          ~
                                   [secs-n]) -> exact-integer?
-  path : path-string? ~
-  secs-n : #f = #f ~
+  path : path-string? ~ ~
+  secs-n : #f = #f ~ ~
 (file-or-directory-modify-seconds path        
                                   secs-n) -> void?
-  path : path-string? ~
-  secs-n : exact-integer? ~
+  path : path-string? ~ ~
+  secs-n : exact-integer? ~ ~
 (file-or-directory-modify-seconds  path             
                                   [secs-n           
                                    fail-thunk]) -> any
-  path : path-string? ~
-  secs-n : (or/c exact-integer? #f) = #f ~
-  fail-thunk : (-> any) ~
-             = (lambda () (raise (make-exn:fail:filesystem ....))) ~
+  path : path-string? ~ ~
+  secs-n : (or/c exact-integer? #f) = #f ~ ~
+  fail-thunk : (-> any) ~ ~
+             = (lambda () (raise (make-exn:fail:filesystem ....))) ~ ~
 
 Returns the file or directory’s last modification date in seconds since
 midnight UTC, January 1, 1970 (see also [missing]) when secs-n is not
@@ -300,19 +333,19 @@ error raises exn:fail:filesystem.
                                         *file-or-directory-permissions*
 (file-or-directory-permissions path [mode]) ~
  -> (listof (or/c 'read 'write 'execute))
-  path : path-string? ~
-  mode : #f = #f ~
+  path : path-string? ~ ~
+  mode : #f = #f ~ ~
 (file-or-directory-permissions path mode) -> (integer-in 0 65535)
-  path : path-string? ~
-  mode : 'bits ~
+  path : path-string? ~ ~
+  mode : 'bits ~ ~
 (file-or-directory-permissions path mode) -> void
-  path : path-string? ~
-  mode : (integer-in 0 65535) ~
+  path : path-string? ~ ~
+  mode : (integer-in 0 65535) ~ ~
 
 When given one argument or #f as the second argument, returns a list
 containing 'read, 'write, and/or 'execute to indicate permission the
 given file or directory path by the current user and group. On Unix and
-Mac OS X, permissions are checked for the current effective user instead
+Mac OS, permissions are checked for the current effective user instead
 of the real user.
 
 If 'bits is supplied as the second argument, the result is a
@@ -322,28 +355,28 @@ and group. The lowest nine bits of the encoding are somewhat portable,
 reflecting permissions for the file or directory’s owner, members of the
 file or directory’s group, or other users:
 
-* #o100 : owner has read permission
+* #o400 : owner has read permission
 
 * #o200 : owner has write permission
 
-* #o400 : owner has execute permission
+* #o100 : owner has execute permission
 
-* #o010 : group has read permission
+* #o040 : group has read permission
 
 * #o020 : group has write permission
 
-* #o040 : group has execute permission
+* #o010 : group has execute permission
 
-* #o001 : others have read permission
+* #o004 : others have read permission
 
 * #o002 : others have write permission
 
-* #o004 : others have execute permission
+* #o001 : others have execute permission
 
 See also user-read-bit, etc. On Windows, permissions from all three
 (owner, group, and others) are always the same, and read and execute
-permission are always available. On Unix and Mac OS X, higher bits have
-a platform-specific meaning.
+permission are always available. On Unix and Mac OS, higher bits have a
+platform-specific meaning.
 
 If an integer is supplied as the second argument, its is used as an
 encoding of properties (mostly permissions) to install for the file.
@@ -354,8 +387,8 @@ In all modes, the exn:fail:filesystem exception is raised on error
                                         *file-or-directory-identity*
 (file-or-directory-identity path [as-link?]) ~
  -> exact-positive-integer?
-  path : path-string? ~
-  as-link? : any/c = #f ~
+  path : path-string? ~ ~
+  as-link? : any/c = #f ~ ~
 
 Returns a number that represents the identity of path in terms of the
 device and file or directory that it accesses. This function can be used
@@ -368,17 +401,17 @@ referenced file or directory (if any).
 
                                         *file-size*
 (file-size path) -> exact-nonnegative-integer? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
-Returns the (logical) size of the specified file in bytes. On Mac OS X,
+Returns the (logical) size of the specified file in bytes. On Mac OS,
 this size excludes the resource-fork size. On error (e.g., if no such
 file exists), the exn:fail:filesystem exception is raised.
 
                                         *copy-file*
 (copy-file src dest [exists-ok?]) -> void? ~
-  src : path-string? ~
-  dest : path-string? ~
-  exists-ok? : any/c = #f ~
+  src : path-string? ~ ~
+  dest : path-string? ~ ~
+  exists-ok? : any/c = #f ~ ~
 
 Creates the file dest as a copy of src, if dest does not already exist.
 If dest already exists and exists-ok? is #f, the copy fails with
@@ -392,8 +425,8 @@ updated.
 
                                         *make-file-or-directory-link*
 (make-file-or-directory-link to path) -> void? ~
-  to : path-string? ~
-  path : path-string? ~
+  to : path-string? ~ ~
+  path : path-string? ~ ~
 
 Creates a link path to to. The creation will fail if path already
 exists. The to need not refer to an existing file or directory, and to
@@ -412,7 +445,7 @@ Changed in version 6.0.1.12: Added support for links on Windows.
                                         *current-force-delete-permissions*
 (current-force-delete-permissions) -> boolean? ~
 (current-force-delete-permissions any/c) -> void?
-  any/c : boolean? ~
+  any/c : boolean? ~ ~
 
 A parameter that determines on Windows whether delete-file and
 delete-directory attempt to change a file or directory’s permissions to
@@ -426,7 +459,7 @@ file-or-directory-permissions.
                                         *current-directory*
 (current-directory) -> (and/c path? complete-path?) ~
 (current-directory path) -> void?
-  path : path-string? ~
+  path : path-string? ~ ~
 
 A parameter that determines the current directory for resolving relative
 paths.
@@ -440,7 +473,7 @@ always a cleansed, simplified, complete, directory path.
 
 The path is not checked for existence when the parameter is set.
 
-On Unix and Mac OS X, the initial value of the parameter for a Racket
+On Unix and Mac OS, the initial value of the parameter for a Racket
 process is taken from the PWD environment variable—if the value of the
 environment variable identifies the same directory as the operating
 system’s report of the current directory.
@@ -448,7 +481,7 @@ system’s report of the current directory.
                                         *current-directory-for-user*
 (current-directory-for-user) -> (and/c path? complete-path?) ~
 (current-directory-for-user path) -> void?
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Like current-directory, but use only by srcloc->string for reporting
 paths relative to a directory.
@@ -468,20 +501,20 @@ the drive of the current directory.
 
                                         *directory-exists?*
 (directory-exists? path) -> boolean? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Returns #t if path refers to a directory, #f otherwise.
 
                                         *make-directory*
 (make-directory path) -> void? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Creates a new directory with the path path.  If the directory is not
 created successfully, the exn:fail:filesystem exception is raised.
 
                                         *delete-directory*
 (delete-directory path) -> void? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Deletes an existing directory with the path path. If the directory is
 not deleted successfully, the exn:fail:filesystem exception is raised.
@@ -497,9 +530,9 @@ Changed in version 6.1.1.7: Changed Windows behavior to use
 current-force-delete-permissions.
 
                                         *directory-list*
-(directory-list [path #:build? build?]) -> (listof path?) ~ ~
-  path : path-string? = (current-directory) ~
-  build? : any/c = #f ~
+(directory-list [path #:build? build?]) -> (listof path?) ~ ~ ~
+  path : path-string? = (current-directory) ~ ~
+  build? : any/c = #f ~ ~
 
 See also the in-directory sequence constructor.
 
@@ -524,16 +557,15 @@ those notifications are reflected in Racket by filesystem change events.
 
                                         *filesystem-change-evt?*
 (filesystem-change-evt? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
-Returns #f if v is a filesystem change event, #f otherwise.
+Returns #t if v is a filesystem change event, #f otherwise.
 
                                         *filesystem-change-evt*
-(filesystem-change-evt path) -> filesystem-change-evt? ~
-  path : path-string? ~
-(filesystem-change-evt path failure-thunk) -> any
-  path : path-string? ~
-  failure-thunk : (-> any) ~
+(filesystem-change-evt path [failure-thunk]) ~
+ -> (or/c filesystem-change-evt? any)
+  path : path-string? ~ ~
+  failure-thunk : (or/c (-> any) #f) = #f ~ ~
 
 Creates a filesystem change event, which is a synchronizable event that
 becomes ready for synchronization after a change to path:
@@ -561,32 +593,36 @@ the event itself.
 
 If the current platform does not support filesystem-change
 notifications, then the exn:fail:unsupported exception is raised if
-failure-thunk is not provided, or failure-thunk is called in tail
-position if provided. Similarly, if there is any operating-system error
-when creating the event (such as a non-existent file), then the
-exn:fail:filesystem exception is raised or failure-thunk is called.
+failure-thunk is not provided as a procedure, or failure-thunk is called
+in tail position if provided. Similarly, if there is any
+operating-system error when creating the event (such as a non-existent
+file), then the exn:fail:filesystem exception is raised or failure-thunk
+is called.
 
-Creation of a filesystem change event alloates resources at the
+Creation of a filesystem change event allocates resources at the
 operating-system level. The resources are released at latest when the
-event is sychronized and ready for synchronization or when the event is
-canceled with filesystem-change-evt-cancel. See also system-type in
-'fs-change mode.
+event is sychronized and ready for synchronization, when the event is
+canceled with filesystem-change-evt-cancel, or when the garbage
+collector determine that the filesystem change event is unreachable. See
+also system-type in 'fs-change mode.
 
 A filesystem change event is placed under the management of the current
 custodian when it is created. If the custodian is shut down,
 filesystem-change-evt-cancel is applied to the event.
 
+Changed in version 7.3.0.8: Allow #f for failure-thunk.
+
                                         *filesystem-change-evt-cancel*
 (filesystem-change-evt-cancel evt) -> void? ~
-  evt : filesystem-change-evt? ~
+  evt : filesystem-change-evt? ~ ~
 
 Causes evt to become immediately ready for synchronization, whether it
-was ready or before not, and releases and resources (at the
+was ready or not before, and releases the resources (at the
 operating-system level) for tracking filesystem changes.
 
 5. Declaring Paths Needed at Run Time
 
- (require racket/runtime-path) package: base ~
+ (require racket/runtime-path) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/runtime-path library, not racket/base or racket.
@@ -603,13 +639,18 @@ provides #%datum in phase level 1, since string constants are often used
 as compile-time expressions with define-runtime-path.
 
                                         *define-runtime-path*
-(define-runtime-path id expr) ~
+(define-runtime-path id maybe-runtime?-id expr) ~
+ 
+maybe-runtime? = 
+               | #:runtime?-id runtime?-id ~ ~
 
 Uses expr as both a compile-time (i.e., phase 1) expression and a
 run-time (i.e., phase 0) expression. In either context, expr should
 produce a path, a string that represents a path, a list of the form
 (list 'lib str ...+), or a list of the form (list 'so str) or (list 'so
-str vers).
+str vers). If runtime?-id is provided, then it is bound in the context
+of expr to #f for the compile-time instance of expr and #t for the
+run-time instance of expr.
 
 For run time, id is bound to a path that is based on the result of expr.
 The path is normally computed by taking a relative path result from expr
@@ -638,6 +679,13 @@ using str directly, then it tries adding each version specified by
 vers—which defaults to '(#f)—along with a platform-specific
 shared-library extension—as produced by (system-type 'so-suffix). A vers
 can be a string, or it can be a list of strings and #f.
+
+If expr produces a list of the form (list 'share str), the value bound
+to id can be either str or an absolute path; it is an absolute path when
+searching in the directories reported by find-user-share-dir and
+find-share-dir (in that order) locates the path. In this way, files that
+are installed in Racket’s "share" directory get carried along in
+distributions.
 
 If expr produces a list of the form (list 'module module-path var-ref)
 or (list 'so str (list str-or-false ...)), the value bound to id is a
@@ -681,7 +729,8 @@ from the define-runtime-path syntactic form:
   then the source location is determined by preserving the original
   expression as a syntax object, extracting its source module path at
   run time (again using syntax-source-module), and then resolving the
-  resulting module path index.
+  resulting module path index. Note that syntax-source-module is based
+  on a syntax object’s lexical information, not its source location.
 
 * If the expression has no source module, the syntax-source location
   associated with the form is used, if is a string or path.
@@ -696,12 +745,13 @@ a result of collection-file-path, then the path is record as relative to
 the corresponding module path.
 
 Changed in version 6.0.1.6 of package base: Preserve relative paths only
-within a package.
+within a package. Changed in version 7.5.0.7: Added support for 'share
+in expr.
 
 Examples:
 
   ; Access a file "data.txt" at run-time that is originally
-  ; located in the same directory as the module source file: ~
+  ; located in the same directory as the module source file: ~ ~
   (define-runtime-path data-file "data.txt")
   (define (read-data)
     (with-input-from-file data-file
@@ -710,7 +760,7 @@ Examples:
    
   ; Load a platform-specific shared object (using ffi-lib)
   ; that is located in a platform-specific sub-directory of the
-  ; module's source directory: ~
+  ; module's source directory: ~ ~
   (define-runtime-path libfit-path
     (build-path "compiled" "native" (system-library-subpath #f)
                 (path-replace-suffix "libfit"
@@ -719,26 +769,28 @@ Examples:
    
   ; Load a platform-specific shared object that might be installed
   ; as part of the operating system, or might be installed
-  ; specifically for Racket: ~
+  ; specifically for Racket: ~ ~
   (define-runtime-path libssl-so
     (case (system-type)
       [(windows) '(so "ssleay32")]
       [else '(so "libssl")]))
   (define libssl (ffi-lib libssl-so))
 
+Changed in version 6.4 of package base: Added #:runtime?-id.
+
                                         *define-runtime-paths*
-(define-runtime-paths (id ...) expr) ~
+(define-runtime-paths (id ...) maybe-runtime?-id expr) ~
 
 Like define-runtime-path, but declares and binds multiple paths at once.
 The expr should produce as many values as ids.
 
                                         *define-runtime-path-list*
-(define-runtime-path-list id expr) ~
+(define-runtime-path-list id maybe-runtime?-id expr) ~
 
 Like define-runtime-path, but expr should produce a list of paths.
 
                                         *define-runtime-module-path-index*
-(define-runtime-module-path-index id module-path-expr) ~
+(define-runtime-module-path-index id maybe-runtime?-id module-path-expr) ~
 
 Similar to define-runtime-path, but id is bound to a module path index
 that encapsulates the result of module-path-expr relative to the
@@ -787,51 +839,51 @@ not include module paths bound through define-runtime-module-path.
 
 6. More File and Directory Utilities
 
- (require racket/file) package: base ~
+ (require racket/file) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/file
 and racket libraries, but not racket/base.
 
                                         *file->string*
-(file->string path [#:mode mode-flag]) -> string? ~ ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+(file->string path [#:mode mode-flag]) -> string? ~ ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Reads all characters from path and returns them as a string. The
 mode-flag argument is the same as for open-input-file.
 
                                         *file->bytes*
-(file->bytes path [#:mode mode-flag]) -> bytes? ~ ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+(file->bytes path [#:mode mode-flag]) -> bytes? ~ ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Reads all characters from path and returns them as a byte string.  The
 mode-flag argument is the same as for open-input-file.
 
                                         *file->value*
-(file->value path [#:mode mode-flag]) -> any ~ ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+(file->value path [#:mode mode-flag]) -> any ~ ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Reads a single S-expression from path using read. The mode-flag argument
 is the same as for open-input-file.
 
                                         *file->list*
-(file->list path [proc #:mode mode-flag]) -> (listof any/c) ~ ~
-  path : path-string? ~
-  proc : (input-port? . -> . any/c) = read ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+(file->list path [proc #:mode mode-flag]) -> (listof any/c) ~ ~ ~
+  path : path-string? ~ ~
+  proc : (input-port? . -> . any/c) = read ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Repeatedly calls proc to consume the contents of path, until eof is
 produced. The mode-flag argument is the same as for open-input-file.
 
                                         *file->lines*
 (file->lines  path                         ~
-             [#:mode mode-flag             ~
-              #:line-mode line-mode]) -> (listof string?) ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~
+             [#:mode mode-flag             ~ ~
+              #:line-mode line-mode]) -> (listof string?) ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~ ~
             = 'any
 
 Read all characters from path, breaking them into lines. The line-mode
@@ -841,11 +893,11 @@ as for open-input-file.
 
                                         *file->bytes-lines*
 (file->bytes-lines  path                         ~
-                   [#:mode mode-flag             ~
-                    #:line-mode line-mode]) -> (listof bytes?) ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~
+                   [#:mode mode-flag             ~ ~
+                    #:line-mode line-mode]) -> (listof bytes?) ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  line-mode : (or/c 'linefeed 'return 'return-linefeed 'any 'any-one) ~ ~
             = 'any
 
 Like file->lines, but reading bytes and collecting them into lines like
@@ -854,12 +906,12 @@ read-bytes-line.
                                         *display-to-file*
 (display-to-file  v                           ~
                   path                       
-                 [#:mode mode-flag            ~
-                  #:exists exists-flag]) -> void? ~
-  v : any/c ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+                 [#:mode mode-flag            ~ ~
+                  #:exists exists-flag]) -> void? ~ ~
+  v : any/c ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -869,12 +921,12 @@ are the same as for open-output-file.
                                         *write-to-file*
 (write-to-file  v                           ~
                 path                       
-               [#:mode mode-flag            ~
-                #:exists exists-flag]) -> void? ~
-  v : any/c ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+               [#:mode mode-flag            ~ ~
+                #:exists exists-flag]) -> void? ~ ~
+  v : any/c ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -883,14 +935,14 @@ Like display-to-file, but using write instead of display.
                                         *display-lines-to-file*
 (display-lines-to-file  lst                         ~
                         path                       
-                       [#:separator separator       ~
-                        #:mode mode-flag            ~
-                        #:exists exists-flag]) -> void? ~
-  lst : list? ~
-  path : path-string? ~
-  separator : any/c = #"\n" ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+                       [#:separator separator       ~ ~
+                        #:mode mode-flag            ~ ~
+                        #:exists exists-flag]) -> void? ~ ~
+  lst : list? ~ ~
+  path : path-string? ~ ~
+  separator : any/c = #"\n" ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -899,30 +951,36 @@ element. The mode-flag and exists-flag arguments are the same as for
 open-output-file.
 
                                         *copy-directory/files*
-(copy-directory/files                                               ~
-                      src                                          
-                      dest                                         
-                      #:keep-modify-seconds? keep-modify-seconds?)  ~
+(copy-directory/files                                              ~
+                      src                                         
+                      dest                                        
+                      #:keep-modify-seconds? keep-modify-seconds?  ~ ~
+                      #:preserve-links? preserve-links?)           ~ ~
  -> void?
-  src : path-string? ~
-  dest : path-string? ~
-  keep-modify-seconds? : #f ~
+  src : path-string? ~ ~
+  dest : path-string? ~ ~
+  keep-modify-seconds? : #f ~ ~
+  preserve-links? : #f ~ ~
 
 Copies the file or directory src to dest, raising exn:fail:filesystem if
 the file or directory cannot be copied, possibly because dest exists
 already. If src is a directory, the copy applies recursively to the
-directory’s content. If a source is a link, the target of the link is
-copied rather than the link itself.
+directory’s content. If a source is a link and preserve-links? is #f,
+the target of the link is copied rather than the link itself; if
+preserve-links? is #t, the link is copied.
 
 If keep-modify-seconds? is #f, then file copies keep only the properties
-kept by copy-file, If keep-modify-seconds? is true, then each file copy
+kept by copy-file. If keep-modify-seconds? is true, then each file copy
 also keeps the modification date of the original.
+
+Changed in version 6.3 of package base: Added the #:preserve-links?
+argument.
 
                                         *delete-directory/files*
 (delete-directory/files path                            ~
-                        #:must-exist? must-exist?) -> void? ~
-  path : path-string? ~
-  must-exist? : #t ~
+                        #:must-exist? must-exist?) -> void? ~ ~
+  path : path-string? ~ ~
+  must-exist? : #t ~ ~
 
 Deletes the file or directory specified by path, raising
 exn:fail:filesystem if the file or directory cannot be deleted. If path
@@ -935,13 +993,27 @@ if path does not exist (but a failure is possible if path initially
 exists and is removed by another thread or process before
 delete-directory/files deletes it).
 
+On Windows, delete-directory/files attempts to move a file into the
+temporary-file directory before deleting it, which avoids problems
+caused by deleting a file that is currently open (e.g., by a search
+indexer running as a background process). If the move attempt fails
+(e.g., because the temporary directory is on a different drive than the
+file), then the file is deleted directly with delete-file.
+
+Changed in version 7.0 of package base: Added Windows-specific file
+deletion.
+
                                         *find-files*
-(find-files  predicate                           ~
-            [start-path]                        
-             #:follow-links? follow-links?) -> (listof path?) ~
-  predicate : (path? . -> . any/c) ~
-  start-path : (or/c path-string? #f) = #f ~
-  follow-links? : #f ~
+(find-files                                                       ~
+             predicate                                           
+            [start-path]                                         
+             #:skip-filtered-directory? skip-filtered-directory?  ~ ~
+             #:follow-links? follow-links?)                       ~ ~
+ -> (listof path?)
+  predicate : (path? . -> . any/c) ~ ~
+  start-path : (or/c path-string? #f) = #f ~ ~
+  skip-filtered-directory? : #f ~ ~
+  follow-links? : #f ~ ~
 
 Traverses the filesystem starting at start-path and creates a list of
 all files and directories for which predicate returns true. If
@@ -957,6 +1029,9 @@ complete paths in the former case and relative paths in the latter.
 Another difference is that predicate is not called for the current
 directory when start-path is #f.
 
+If skip-filtered-directory? is true, then when predicate returns #f for
+a directory, the directory’s content is not traversed.
+
 If follow-links? is true, the find-files traversal follows links, and
 links are not included in the result. If follow-links? is #f, then links
 are not followed, and links are included in the result.
@@ -967,12 +1042,17 @@ predicate will be called exactly once with start-path as the argument.
 The find-files procedure raises an exception if it encounters a
 directory for which directory-list fails.
 
+Changed in version 6.3.0.11 of package base: Added the
+#:skip-filtered-directory? argument.
+
                                         *pathlist-closure*
-(pathlist-closure path-list                       ~
-                  #:follow-links? follow-links?)  ~
+(pathlist-closure  path-list                        ~
+                  [#:path-filter path-filter        ~ ~
+                   #:follow-links? follow-links?])  ~ ~
  -> (listof path?)
-  path-list : (listof path-string?) ~
-  follow-links? : #f ~
+  path-list : (listof path-string?) ~ ~
+  path-filter : (or/c #f (path? . -> . any/c)) = #f ~ ~
+  follow-links? : any/c = #f ~ ~
 
 Given a list of paths, either absolute or relative to the current
 directory, returns a list such that
@@ -981,28 +1061,36 @@ directory, returns a list such that
   the result (but the same ancestor is not added twice);
 
 * if a path refers to directory, all of its descendants are also
-  included in the result;
+  included in the result, except as omitted by path-filter;
 
 * ancestor directories appear before their descendants in the result
-  list.
+  list, as long as they are not misordered in the given path-list.
+
+If path-filter is a procedure, then it is applied to each descendant of
+a directory. If path-filter returns #f, then the descendant (and any of
+its descendants, in the case of a subdirectory) are omitted from the
+result.
 
 If follow-links? is true, then the traversal of directories and files
 follows links, and the link paths are not included in the result. If
-follow-links? is #f, then he result list includes paths to link and the
+follow-links? is #f, then the result list includes paths to link and the
 links are not followed.
+
+Changed in version 6.3.0.11 of package base: Added the #:path-filter
+argument.
 
                                         *fold-files*
 (fold-files  proc                 ~
              init-val            
             [start-path          
              follow-links?]) -> any
-  proc : (or/c (path? (or/c 'file 'dir 'link) any/c ~
+  proc : (or/c (path? (or/c 'file 'dir 'link) any/c ~ ~
                  . -> . any/c)
                (path? (or/c 'file 'dir 'link) any/c
                  . -> . (values any/c any/c)))
-  init-val : any/c ~
-  start-path : (or/c path-string? #f) = #f ~
-  follow-links? : any/c = #t ~
+  init-val : any/c ~ ~
+  start-path : (or/c path-string? #f) = #f ~ ~
+  follow-links? : any/c = #t ~ ~
 
 Traverses the filesystem starting at start-path, calling proc on each
 discovered file, directory, and link. If start-path is #f, then the
@@ -1045,7 +1133,7 @@ disappear during the scan, then an exception is raised.
 
                                         *make-directory**
 (make-directory* path) -> void? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Creates directory specified by path, creating intermediate directories
 as necessary, and never failing if path exists already.
@@ -1056,7 +1144,7 @@ considers only explicit elements of path.
 
                                         *make-parent-directory**
 (make-parent-directory* path) -> void? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Creates the parent directory of the path specified by path, creating
 intermediate directories as necessary, and never failing if an ancestor
@@ -1073,9 +1161,9 @@ Added in version 6.1.1.3 of package base.
 (make-temporary-file [template                ~
                       copy-from-filename     
                       directory])        -> path?
-  template : string? = "rkttmp~a" ~
-  copy-from-filename : (or/c path-string? #f 'directory) = #f ~
-  directory : (or/c path-string? #f) = #f ~
+  template : string? = "rkttmp~a" ~ ~
+  copy-from-filename : (or/c path-string? #f 'directory) = #f ~ ~
+  directory : (or/c path-string? #f) = #f ~ ~
 
 Creates a new temporary file and returns a pathname string for the file.
 Instead of merely generating a fresh file name, the file is actually
@@ -1107,20 +1195,25 @@ and flags (probably using the 'truncate flag; see open-output-file) and
 to delete it when it is no longer needed.
 
                                         *call-with-atomic-output-file*
-(call-with-atomic-output-file  file                               ~
-                               proc                              
-                              [#:security-guard security-guard])  ~
+(call-with-atomic-output-file                                               ~
+                               file                                        
+                               proc                                        
+                              [#:security-guard security-guard              ~ ~
+                               #:rename-fail-handler rename-fail-handler])  ~ ~
  -> any
-  file : path-string? ~
-  proc : ([port output-port?] [tmp-path path?]  . -> . any) ~
-  security-guard : (or/c #f security-guard?) = #f ~
+  file : path-string? ~ ~
+  proc : ([port output-port?] [tmp-path path?]  . -> . any) ~ ~
+  security-guard : (or/c #f security-guard?) = #f ~ ~
+  rename-fail-handler : (or/c #f (exn:fail:filesystem? path> . -> . any)) ~ ~
+                      = #f
 
 Opens a temporary file for writing in the same directory as file, calls
-proc to write to the temporary file, and then atomically moves the
-temporary file in place of proc. The atomic move simply uses
-rename-file-or-directory on Unix and Mac OS X, but it uses an extra
-rename step (see below) on Windows to avoid problems due to concurrent
-readers of file.
+proc to write to the temporary file, and then atomically (except on
+Windows) moves the temporary file in place of file. The move simply uses
+rename-file-or-directory on Unix and Mac OS, and it uses
+rename-file-or-directory on Windows if rename-fail-handler is provided;
+otherwise, on Windows, the moves uses an extra rename step (see below)
+on Windows to avoid problems due to concurrent readers of file.
 
 The proc function is called with an output port for the temporary file,
 plus the path of the temporary file. The result of proc is the result of
@@ -1131,28 +1224,40 @@ files on exceptions.
 
 Windows prevents programs from deleting or replacing files that are
 open, but it allows renaming of open files. Therefore, on Windows,
-call-with-atomic-output-file creates a second temporary file
+call-with-atomic-output-file by default creates a second temporary file
 extra-tmp-file, renames file to extra-tmp-file, renames the temporary
-file written by proc to file, and finally deletes extra-tmp-file.
+file written by proc to file, and finally deletes extra-tmp-file. Since
+that process is not atomic, however, rename-file-or-directory is used if
+rename-fail-handler is provided, where rename-file-or-directory has some
+chance of being atomic, since that the source and destination of the
+moves will be in the same directory; any filesystem exception while
+attempting to rename the file is send to rename-fail-handler, which can
+re-raise the exception or simply return to try again, perhaps after a
+delay. In addition to a filesystem exception, the rename-fail-handler
+procedure also receives the temporary file path to be moved to path. The
+rename-fail-handler argument is used only on Windows.
+
+Changed in version 7.1.0.6 of package base: Added the
+#:rename-fail-handler argument.
 
                                         *get-preference*
 (get-preference  name                                         ~
                 [failure-thunk                               
                  flush-mode                                  
                  filename                                    
-                 #:use-lock? use-lock?                        ~
-                 #:timeout-lock-there timeout-lock-there      ~
-                 #:lock-there lock-there])               -> any ~
-  name : symbol? ~
-  failure-thunk : (-> any) = (lambda () #f) ~
-  flush-mode : any/c = 'timestamp ~
-  filename : (or/c string-path? #f) = #f ~
-  use-lock? : any/c = #t ~
-  timeout-lock-there : (or/c (path? . -> . any) #f) = #f ~
-  lock-there : (or/c (path? . -> . any) #f) ~
+                 #:use-lock? use-lock?                        ~ ~
+                 #:timeout-lock-there timeout-lock-there      ~ ~
+                 #:lock-there lock-there])               -> any ~ ~
+  name : symbol? ~ ~
+  failure-thunk : (-> any) = (lambda () #f) ~ ~
+  flush-mode : any/c = 'timestamp ~ ~
+  filename : (or/c string-path? #f) = #f ~ ~
+  use-lock? : any/c = #t ~ ~
+  timeout-lock-there : (or/c (path? . -> . any) #f) = #f ~ ~
+  lock-there : (or/c (path? . -> . any) #f) ~ ~
              = (make-handle-get-preference-locked
                 0.01 name failure-thunk flush-mode filename
-                #:lock-there timeout-lock-there) ~
+                #:lock-there timeout-lock-there) ~ ~
 
 Extracts a preference value from the file designated by
 (find-system-path 'pref-file), or by filename if it is provided and is
@@ -1200,7 +1305,7 @@ paths are checked for compatibility with old versions of Racket:
 * Windows: (build-path (find-system-path 'pref-dir) 'up "PLT Scheme"
   "plt-prefs.ss")
 
-* Mac OS X: (build-path (find-system-path 'pref-dir)
+* Mac OS: (build-path (find-system-path 'pref-dir)
   "org.plt-scheme.prefs.ss")
 
 * Unix: (expand-user-path "~/.plt-scheme/plt-prefs.ss")
@@ -1210,10 +1315,10 @@ paths are checked for compatibility with old versions of Racket:
                   vals            
                  [locked-proc     
                   filename])  -> void?
-  names : (listof symbol?) ~
-  vals : list? ~
-  locked-proc : (or/c #f (path? . -> . any)) = #f ~
-  filename : (or/c #f path-string?) = #f ~
+  names : (listof symbol?) ~ ~
+  vals : list? ~ ~
+  locked-proc : (or/c #f (path? . -> . any)) = #f ~ ~
+  filename : (or/c #f path-string?) = #f ~ ~
 
 Installs a set of preference values and writes all current values to the
 preference file designated by (find-system-path 'pref-file), or filename
@@ -1267,16 +1372,16 @@ interfere with replacing the file via rename-file-or-directory.)
                                    [failure-thunk           
                                     flush-mode              
                                     filename                
-                                    #:lock-there lock-there  ~
-                                    #:max-delay max-delay])  ~
+                                    #:lock-there lock-there  ~ ~
+                                    #:max-delay max-delay])  ~ ~
  -> (path-string? . -> . any)
-  delay : real? ~
-  name : symbol? ~
-  failure-thunk : (-> any) = (lambda () #f) ~
-  flush-mode : any/c = 'timestamp ~
-  filename : (or/c path-string? #f) = #f ~
-  lock-there : (or/c (path? . -> . any) #f) = #f ~
-  max-delay : real? = 0.2 ~
+  delay : real? ~ ~
+  name : symbol? ~ ~
+  failure-thunk : (-> any) = (lambda () #f) ~ ~
+  flush-mode : any/c = 'timestamp ~ ~
+  filename : (or/c path-string? #f) = #f ~ ~
+  lock-there : (or/c (path? . -> . any) #f) = #f ~ ~
+  max-delay : real? = 0.2 ~ ~
 
 Creates a procedure suitable for use as the #:lock-there argument to
 get-preference, where the name, failure-thunk, flush-mode, and filename
@@ -1295,16 +1400,16 @@ is called with the given lock-there, instead.
                               kind                        
                               thunk                       
                               failure-thunk               
-                             [#:lock-file lock-file        ~
-                              #:delay delay                ~
-                              #:max-delay max-delay]) -> any ~
-  filename : (or/c path-string? #f) ~
-  kind : (or/c 'shared 'exclusive) ~
-  thunk : (-> any) ~
-  failure-thunk : (-> any) ~
-  lock-file : (or/c #f path-string?) = #f ~
-  delay : (and/c real? (not/c negative?)) = 0.01 ~
-  max-delay : (and/c real? (not/c negative?)) = 0.2 ~
+                             [#:lock-file lock-file        ~ ~
+                              #:delay delay                ~ ~
+                              #:max-delay max-delay]) -> any ~ ~
+  filename : (or/c path-string? #f) ~ ~
+  kind : (or/c 'shared 'exclusive) ~ ~
+  thunk : (-> any) ~ ~
+  failure-thunk : (-> any) ~ ~
+  lock-file : (or/c #f path-string?) = #f ~ ~
+  delay : (and/c real? (not/c negative?)) = 0.01 ~ ~
+  max-delay : (and/c real? (not/c negative?)) = 0.2 ~ ~
 
 Obtains a lock for the filename lock-file and then calls thunk.  The
 filename argument specifies a file path prefix that is used only to
@@ -1323,44 +1428,45 @@ kind argument specifies whether the lock is 'shared or 'exclusive in the
 sense of port-try-file-lock?.
 
 Examples:
+
   > (call-with-file-lock/timeout filename 'exclusive
       (lambda () (printf "File is locked\n"))
       (lambda () (printf "Failed to obtain lock for file\n")))
   File is locked
-
   > (call-with-file-lock/timeout #f 'exclusive
       (lambda ()
         (call-with-file-lock/timeout filename 'shared
           (lambda () (printf "Shouldn't get here\n"))
           (lambda () (printf "Failed to obtain lock for file\n"))))
       (lambda () (printf "Shouldn't get here either\n"))
-      #:lock-file (make-lock-file-name filename)) ~
+      #:lock-file (make-lock-file-name filename)) ~ ~
   Failed to obtain lock for file
-
 
                                         *make-lock-file-name*
 (make-lock-file-name path) -> path? ~
-  path : (or path-string? path-for-some-system?) ~
+  path : (or path-string? path-for-some-system?) ~ ~
 (make-lock-file-name dir name) -> path?
-  dir : (or path-string? path-for-some-system?) ~
-  name : path-element? ~
+  dir : (or path-string? path-for-some-system?) ~ ~
+  name : path-element? ~ ~
 
-Creates a lock filename by prepending "_LOCK" on Windows or ".LOCK" on
-other platforms to the file portion of the path.
+Creates a lock filename by prepending "_LOCK" on Windows (i.e., when
+cross-system-type reports 'windows) or ".LOCK" on other platforms to the
+file portion of the path.
 
 Example:
+
   > (make-lock-file-name "/home/george/project/important-file")
   #<path:/home/george/project/.LOCKimportant-file>
 
-user-read-bit : #o400 ~
-user-write-bit : #o200 ~
-user-execute-bit : #o100 ~
-group-read-bit : #o040 ~
-group-write-bit : #o020 ~
-group-execute-bit : #o010 ~
-other-read-bit : #o004 ~
-other-write-bit : #o002 ~
-other-execute-bit : #o001 ~
+user-read-bit : #o400 ~ ~
+user-write-bit : #o200 ~ ~
+user-execute-bit : #o100 ~ ~
+group-read-bit : #o040 ~ ~
+group-write-bit : #o020 ~ ~
+group-execute-bit : #o010 ~ ~
+other-read-bit : #o004 ~ ~
+other-write-bit : #o002 ~ ~
+other-execute-bit : #o001 ~ ~
 
 Constants that are useful with file-or-directory-permissions and bitwise
 operations such as bitwise-ior, and bitwise-and.

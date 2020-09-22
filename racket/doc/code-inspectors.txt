@@ -1,10 +1,10 @@
 Code Inspectors
 
 In the same way that inspectors control access to structure fields (see
-[missing]), inspectors also control access to module bindings. The
-default inspector for module bindings is determined by the
-current-code-inspector parameter, instead of the current-inspector
-parameter.
+[missing]), inspectors also control access to module bindings.
+Inspectors used this way are code inspectors. The default code inspector
+for module bindings is determined by the current-code-inspector
+parameter, instead of the current-inspector parameter.
 
 When a module declaration is evaluated, the value of the
 current-code-inspector parameter is associated with the module
@@ -51,7 +51,10 @@ changing the inspector requires control over the old one).
                                         *current-code-inspector*
 (current-code-inspector) -> inspector? ~
 (current-code-inspector insp) -> void?
-  insp : inspector? ~
+  insp : inspector? ~ ~
 
 A parameter that determines an inspector to control access to module
 bindings and redefinitions.
+
+If the code inspector is changed from its original value, then bytecode
+loaded by the default compiled-load handler is marked as non-runnable.

@@ -1,8 +1,8 @@
 Structures as Ports
 
-prop:input-port : struct-type-property? ~
+prop:input-port : struct-type-property? ~ ~
 
-prop:output-port : struct-type-property? ~
+prop:output-port : struct-type-property? ~ ~
 
 The prop:input-port and prop:output-port structure type properties
 identify structure types whose instances can serve as input and output

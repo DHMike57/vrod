@@ -58,9 +58,9 @@ on the next character or characters in the input stream as follows:
                       ( starts a pair or list; see Reading Pairs and Lists
                       [ starts a pair or list; see Reading Pairs and Lists
                       { starts a pair or list; see Reading Pairs and Lists
-                      ) matches ( or raises exn:fail:read ~
-                      ] matches [ or raises exn:fail:read ~
-                      } matches { or raises exn:fail:read ~
+                      ) matches ( or raises exn:fail:read ~ ~
+                      ] matches [ or raises exn:fail:read ~ ~
+                      } matches { or raises exn:fail:read ~ ~
                       " starts a string; see Reading Strings
                       ' starts a quote; see Reading Quotes
                       ` starts a quasiquote; see Reading Quotes
@@ -71,19 +71,19 @@ on the next character or characters in the input stream as follows:
                      #( starts a vector; see Reading Vectors
                      #[ starts a vector; see Reading Vectors
                      #{ starts a vector; see Reading Vectors
-                   #fl( starts a flvector; see Reading Vectors
-                   #fl[ starts a flvector; see Reading Vectors
-                   #fl{ starts a flvector; see Reading Vectors
-                   #fx( starts a fxvector; see Reading Vectors
-                   #fx[ starts a fxvector; see Reading Vectors
-                   #fx{ starts a fxvector; see Reading Vectors
+           #fl( or #Fl( starts a flvector; see Reading Vectors
+           #fl[ or #Fl[ starts a flvector; see Reading Vectors
+           #fl{ or #Fl{ starts a flvector; see Reading Vectors
+           #fx( or #Fx( starts a fxvector; see Reading Vectors
+           #fx[ or #Fx[ starts a fxvector; see Reading Vectors
+           #fx{ or #Fx{ starts a fxvector; see Reading Vectors
                     #s( starts a structure literal; see Reading Structures
                     #s[ starts a structure literal; see Reading Structures
                     #s{ starts a structure literal; see Reading Structures
                      #\ starts a character; see Reading Characters
                      #" starts a byte string; see Reading Strings
                      #% starts a symbol; see Reading Symbols
-                     #: starts a keyword; see Reading Keywords ~
+                     #: starts a keyword; see Reading Keywords ~ ~
                      #& starts a box; see Reading Boxes
                      #| starts a block comment; see Reading Comments
                      #; starts an S-expression comment; see Reading Comments
@@ -114,9 +114,15 @@ on the next character or characters in the input stream as follows:
          #fl>digit10<+( starts a flvector; see Reading Vectors
          #fl>digit10<+[ starts a flvector; see Reading Vectors
          #fl>digit10<+{ starts a flvector; see Reading Vectors
+         #Fl>digit10<+( starts a flvector; see Reading Vectors
+         #Fl>digit10<+[ starts a flvector; see Reading Vectors
+         #Fl>digit10<+{ starts a flvector; see Reading Vectors
          #fx>digit10<+( starts a fxvector; see Reading Vectors
          #fx>digit10<+[ starts a fxvector; see Reading Vectors
          #fx>digit10<+{ starts a fxvector; see Reading Vectors
+         #Fx>digit10<+( starts a fxvector; see Reading Vectors
+         #Fx>digit10<+[ starts a fxvector; see Reading Vectors
+         #Fx>digit10<+{ starts a fxvector; see Reading Vectors
        #>digit10<{1,8}= binds a graph tag; see Reading Graph Structure
        #>digit10<{1,8}# uses a graph tag; see Reading Graph Structure
               otherwise starts a symbol; see Reading Symbols
@@ -179,56 +185,66 @@ A #e or #i followed immediately by #b, #o, #d, or #x is treated the same
 as the reverse order: #b, #o, #d, or #x followed by #e or #i.
 
 An >exponent-markn< in an inexact number serves both to specify an
-exponent and to specify a numerical precision. If single-precision IEEE
-floating point is supported (see [missing]), the marks f and s specify
-single-precision. Otherwise, or with any other mark, double-precision
-IEEE floating point is used. In addition, single- and double-precision
-specials are distinct; specials with the .0 suffix, like +nan.0 are
-double-precision, whereas specials with the .f suffix are
-single-precision.
+exponent and to specify a numerical precision. If single-flonums are
+supported (see [missing]) and the read-single-flonum parameter is set to
+#t, the marks f and s specify single-flonums. If read-single-flonum is
+set to #f, or with any other mark, a double-precision flonum is
+produced. If single-flonums are not supported and read-single-flonum is
+set to #t, then the exn:fail:unsupported exception is raised when a
+single-flonum would otherwise be produced. Special infinity and
+not-a-number flonums and single-flonums are distinct; specials with the
+.0 suffix, like +nan.0, are double-precision flonums, while specials
+with the .f suffix, like +nan.0, are single-flonums if enabled though
+read-single-flonum.
 
 A # in an >inexactn< number is the same as 0, but # can be used to
 suggest that the digit’s actual value is unknown.
 
- >numbern<            ::= >exactn<  |  >inexactn< ~
- >exactn<             ::= >exact-rationaln<  |  >exact-complexn< ~
- >exact-rationaln<    ::= [>sign<] >unsigned-rationaln< ~
- >unsigned-rationaln< ::= >unsigned-integern< ~
+All letters in a number representation are parsed case-insensitively,
+independent of the read-case-sensitive parameter. For example,
+#I#D+InF.F+3I is parsed the same as #i#d+inf.f+3i. In the grammar below,
+each literal lowercase letter stands for both itself and its uppercase
+form.
+
+ >numbern<            ::= >exactn<  |  >inexactn< ~ ~
+ >exactn<             ::= >exact-rationaln<  |  >exact-complexn< ~ ~
+ >exact-rationaln<    ::= [>sign<] >unsigned-rationaln< ~ ~
+ >unsigned-rationaln< ::= >unsigned-integern< ~ ~
                        |  >unsigned-integern< / >unsigned-integern<
- >exact-integern<     ::= [>sign<] >unsigned-integern< ~
- >unsigned-integern<  ::= >digitn<+ ~
- >exact-complexn<     ::= >exact-rationaln< >sign< >unsigned-rationaln< i ~
- >inexactn<           ::= >inexact-realn<  |  >inexact-complexn< ~
- >inexact-realn<      ::= [>sign<] >inexact-normaln< ~
+ >exact-integern<     ::= [>sign<] >unsigned-integern< ~ ~
+ >unsigned-integern<  ::= >digitn<+ ~ ~
+ >exact-complexn<     ::= >exact-rationaln< >sign< >unsigned-rationaln< i ~ ~
+ >inexactn<           ::= >inexact-realn<  |  >inexact-complexn< ~ ~
+ >inexact-realn<      ::= [>sign<] >inexact-normaln< ~ ~
                        |  >sign< >inexact-specialn<
- >inexact-unsignedn<  ::= >inexact-normaln<  |  >inexact-specialn< ~
- >inexact-normaln<    ::= >inexact-simplen< [>exp-markn< >exact-integern<] ~
- >inexact-simplen<    ::= >digits#n< [.] #* ~
+ >inexact-unsignedn<  ::= >inexact-normaln<  |  >inexact-specialn< ~ ~
+ >inexact-normaln<    ::= >inexact-simplen< [>exp-markn< >exact-integern<] ~ ~
+ >inexact-simplen<    ::= >digits#n< [.] #* ~ ~
                        |  [>unsigned-integern<] . >digits#n<
                        |  >digits#n< / >digits#n<
- >inexact-specialn<   ::= inf.0  |  nan.0  |  inf.f  |  nan.f ~
- >digits#n<           ::= >digitn<+ #* ~
- >inexact-complexn<   ::= [>inexact-realn<] >sign< >inexact-unsignedn< i ~
+ >inexact-specialn<   ::= inf.0  |  nan.0  |  inf.f  |  nan.f ~ ~
+ >digits#n<           ::= >digitn<+ #* ~ ~
+ >inexact-complexn<   ::= [>inexact-realn<] >sign< >inexact-unsignedn< i ~ ~
                        |  >inexact-realn< @ >inexact-realn<
- >sign<               ::= +  |  - ~
- >digit16<            ::= >digit10<  |  a  |  b  |  c  |  d  |  e  |  f ~
- >digit10<            ::= >digit8<  |  8  |  9 ~
- >digit8<             ::= >digit2<  |  2  |  3  |  4  |  5  |  6  |  7 ~
- >digit2<             ::= 0  |  1 ~
- >exp-mark16<         ::= s  |  l ~
- >exp-mark10<         ::= >exp-mark16<  |  d  |  e  |  f ~
- >exp-mark8<          ::= >exp-mark10< ~
- >exp-mark2<          ::= >exp-mark10< ~
- >general-numbern<    ::= [>exactness<] >numbern< ~
- >exactness<          ::= #e  |  #i ~
+ >sign<               ::= +  |  - ~ ~
+ >digit16<            ::= >digit10<  |  a  |  b  |  c  |  d  |  e  |  f ~ ~
+ >digit10<            ::= >digit8<  |  8  |  9 ~ ~
+ >digit8<             ::= >digit2<  |  2  |  3  |  4  |  5  |  6  |  7 ~ ~
+ >digit2<             ::= 0  |  1 ~ ~
+ >exp-mark16<         ::= s  |  l ~ ~
+ >exp-mark10<         ::= >exp-mark16<  |  d  |  e  |  f ~ ~
+ >exp-mark8<          ::= >exp-mark10< ~ ~
+ >exp-mark2<          ::= >exp-mark10< ~ ~
+ >general-numbern<    ::= [>exactness<] >numbern< ~ ~
+ >exactness<          ::= #e  |  #i ~ ~
 
 Examples:
  -1         reads equal to -1
  1/2        reads equal to (/ 1 2)
  1.0        reads equal to (exact->inexact 1)
- 1+2i       reads equal to (make-complex 1 2)
- 1/2+3/4i   reads equal to (make-complex (/ 1 2) (/ 3 4))
- 1.0+3.0e7i reads equal to (exact->inexact (make-complex 1 30000000))
+ 1+2i       reads equal to (make-rectangular 1 2)
+ 1/2+3/4i   reads equal to (make-rectangular (/ 1 2) (/ 3 4))
+ 1.0+3.0e7i reads equal to (exact->inexact (make-rectangular 1 30000000))
  2e5        reads equal to (exact->inexact 200000)
  #i5        reads equal to (exact->inexact 5)
  #e2e5      reads equal to 200000
@@ -284,10 +300,19 @@ themselves in read-syntax mode, so that the result is a list or pair of
 syntax objects that is itself wrapped as a syntax object. If the reader
 constructs nested pairs because the input included a single delimited .,
 then only the innermost pair and outermost pair are wrapped as syntax
-objects. Whether wrapping a pair or list, if the pair or list was formed
-with [ and ], then a 'paren-shape property is attached to the result
-with the value #\[; if the list or pair was formed with { and }, then a
-'paren-shape property is attached to the result with the value #\{.
+objects.
+
+Whether wrapping a pair or list, if the pair or list was formed with [
+and ], then a 'paren-shape property is attached to the result with the
+value #\[. If the read-square-bracket-with-tag parameter is set to #t,
+then the resulting pair or list is wrapped by the equivalent of (cons
+'#%brackets pair-or-list).
+
+Similarly, if the list or pair was formed with { and }, then a
+'paren-shape property is attached to the result with the value #\{.  If
+the read-curly-brace-with-tag parameter is set to #t, then the resulting
+pair or list is wrapped by the equivalent of (cons '#%braces
+pair-or-list).
 
 If a delimited . appears in any other configuration, then the
 exn:fail:read exception is raised. Similarly, if the reader encounters a
@@ -304,11 +329,12 @@ Examples:
  (1 . (3))   reads equal to (list 1 3)
  (1 . 2 . 3) reads equal to (list 2 1 3)
 
-If the read-square-bracket-as-paren parameter is set to #f, then when
-the reader encounters [ and ], the "exn:fail:read" exception is raised.
-Similarly, if the read-curly-brace-as-paren parameter is set to #f, then
-when the reader encounters { and }, the "exn:fail:read" exception is
-raised.
+If the read-square-bracket-as-paren and read-square-bracket-with-tag
+parameters are set to #f, then when the reader encounters [ and ], the
+exn:fail:read exception is raised. Similarly, if the
+read-curly-brace-as-paren and read-curly-brace-with-tag parameters are
+set to #f, then when the reader encounters { and }, the exn:fail:read
+exception is raised.
 
 If the read-accept-dot parameter is set to #f, then a delimited .
 triggers an exn:fail:read exception. If the read-accept-infix-dot
@@ -484,7 +510,7 @@ The elements of the vector are recursively read until a matching ), ],
 or } is found, just as for lists (see Reading Pairs and Lists). A
 delimited . is not allowed among the vector elements. In the case of
 flvectors, the recursive read for element is implicitly prefixed with #i
-and must produce a flonum. In the case of flvectors, the recursive read
+and must produce a flonum. In the case of fxvectors, the recursive read
 for element is implicitly prefixed with #e and must produce a fixnum.
 
 An optional vector length can be specified between #, #fl, #fx  and (,
@@ -552,7 +578,7 @@ Examples, where make-... stands for make-immutable-hash:
  #hash()                  reads equal to (make-... '())
  #hasheq()                reads equal to (make-...eq '())
  #hash(("a" . 5))         reads equal to (make-... '(("a" . 5)))
- #hasheq((a . 5) (b . 7)) reads equal to (make-...eq '((b . 7) (a . 5)))
+ #hasheq((a . 5) (b . 7)) reads equal to (make-...eq '((a . 5) (b . 7)))
  #hasheq((a . 5) (a . 7)) reads equal to (make-...eq '((a . 7)))
 
 13. Reading Boxes
@@ -610,7 +636,7 @@ A #\ starts a character constant, which has one of the following forms:
 
 * #\>c<: the character >c<, as long as #\>c< and the characters
   following it do not match any of the previous cases, and as long as
-  the character after >c< is not alphabetic.
+  >c< or the character after >c< is not alphabetic.
 
 Examples:
  #\newline reads equal to (integer->char 10)
@@ -626,8 +652,8 @@ that the part after #: is never parsed as a number. The resulting
 keyword is interned.
 
 Examples:
- #:Apple reads equal to (string->keyword "Apple") ~
- #:1     reads equal to (string->keyword "1") ~
+ #:Apple reads equal to (string->keyword "Apple") ~ ~
+ #:1     reads equal to (string->keyword "1") ~ ~
 
 16. Reading Regular Expressions
 
@@ -648,7 +674,7 @@ Examples:
 
 A #>digit10<{1,8}= tags the following datum for reference via
 #>digit10<{1,8}#, which allows the reader to produce a datum that has
-graph structure.
+graph structure. Neither form is allowed in read-syntax mode.
 
 For a specific >digit10<{1,8} in a single read result, each
 #>digit10<{1,8}# reference is replaced by the datum read for the
@@ -686,7 +712,8 @@ The reader recursively reads the next datum after #reader, and passes it
 to the procedure that is the value of the current-reader-guard
 parameter; the result is used as a module path. The module path is
 passed to dynamic-require with either 'read or 'read-syntax (depending
-on whether the reader is in read or read-syntax mode).
+on whether the reader is in read or read-syntax mode). The module is
+loaded in a root namespace of the current namespace.
 
 The arity of the resulting procedure determines whether it accepts extra
 source-location information: a read procedure accepts either one
@@ -739,9 +766,36 @@ If the read-accept-reader or read-accept-lang parameter is set to #f,
 then if the reader encounters #lang or equivalent #!, the exn:fail:read
 exception is raised.
 
-18.1. S-Expression Reader Language
+19. Reading with C-style Infix-Dot Notation
 
- #lang s-exp package: base ~
+When the read-cdot parameter is set to #t, then a variety of changes
+occur in the reader.
+
+First, symbols can no longer include the character ., unless the . is
+quoted with | or \.
+
+Second, numbers can no longer include the character ., unless the number
+is prefixed with #e, #i, #b, #o, #d, #x, or an equivalent prefix as
+discussed in Reading Numbers. If these numbers are followed by a .
+intended to be read as a C-style infix dot, then a delimiter must
+precede the ..
+
+Finally, after reading any datum x, the reader will seek through
+whitespace and comments and look for zero or more sequences of a .
+followed by another datum y. It will then group x and y together in a
+#%dot form so that x.y reads equal to (#%dot x y).
+
+If x.y has another . after it, the reader will accumulate more
+.-separated datums, grouping them from left-to-right. For example, x.y.z
+reads equal to (#%dot (#%dot x y) z).
+
+In read-syntax mode, the #%dot symbol has the source location
+information of the . character and the entire list has the source
+location information spanning from the start of x to the end of y.
+
+19.1. S-Expression Reader Language
+
+ #lang s-exp package: base ~ ~
 
 +[missing] in [missing] introduces the s-exp meta-language.
 
@@ -764,9 +818,9 @@ where name-id is derived from the source input port’s name: if the port
 name is a filename path, the filename without its directory path and
 extension is used for name-id, otherwise name-id is anonymous-module.
 
-18.2. Chaining Reader Language
+19.2. Chaining Reader Language
 
- #lang reader package: base ~
+ #lang reader package: base ~ ~
 
 +[missing] in [missing] introduces the reader meta-language.
 

@@ -2,33 +2,35 @@ Reading
 
                                         *read*
 (read [in]) -> any ~
-  in : input-port? = (current-input-port) ~
+  in : input-port? = (current-input-port) ~ ~
 
 Reads and returns a single datum from in. If in has a handler associated
 to it via port-read-handler, then the handler is called. Otherwise, the
 default reader is used, as parameterized by the current-readtable
 parameter, as well as many other parameters.
 
-See [missing] for information on the default reader.
+See [missing] for information on the default reader and [missing] for
+the protocol of read.
 
                                         *read-syntax*
 (read-syntax [source-name in]) -> (or/c syntax? eof-object?) ~
-  source-name : any/c = (object-name in) ~
-  in : input-port? = (current-input-port) ~
+  source-name : any/c = (object-name in) ~ ~
+  in : input-port? = (current-input-port) ~ ~
 
 Like read, but produces a syntax object with source-location
 information. The source-name is used as the source field of the syntax
 object; it can be an arbitrary value, but it should generally be a path
 for the source file.
 
-See [missing] for information on the default reader in read-syntax mode.
+See [missing] for information on the default reader in read-syntax mode
+and [missing] for the protocol of read-syntax.
 
                                         *read/recursive*
 (read/recursive [in start readtable graph?]) -> any ~
-  in : input-port? = (current-input-port) ~
-  start : (or/c char? #f) = #f ~
-  readtable : (or/c readtable? #f) = (current-readtable) ~
-  graph? : any/c = #t ~
+  in : input-port? = (current-input-port) ~ ~
+  start : (or/c char? #f) = #f ~ ~
+  readtable : (or/c readtable? #f) = (current-readtable) ~ ~
+  graph? : any/c = #t ~ ~
 
 Similar to calling read, but normally used during the dynamic extent of
 read within a reader-extension procedure (see [missing]). The main
@@ -55,15 +57,8 @@ When graph? is #f, graph structure annotations in the read datum are
 local to the datum.
 
 When called within the dynamic extent of read, the read/recursive
-procedure produces either an opaque placeholder value, a special-comment
-value, or an end-of-file.  The result is a special-comment value (see
-[missing]) when the input stream’s first non-whitespace content parses
-as a comment. The result is end-of-file when read/recursive encounters
-an end-of-file. Otherwise, the result is a placeholder that protects
-graph references that are not yet resolved. When this placeholder is
-returned within an S-expression that is produced by any reader-extension
-procedure (see [missing]) for the same outermost read, it will be
-replaced with the actual read value before the outermost read returns.
+procedure can produce a special-comment value (see [missing]) when the
+input stream’s first non-whitespace content parses as a comment.
 
 See [missing] for an extended example that uses read/recursive.
 
@@ -76,11 +71,11 @@ apply to the delimiters of a built-in form.
                         start           
                         readtable       
                         graph?])    -> any
-  source-name : any/c = (object-name in) ~
-  in : input-port? = (current-input-port) ~
-  start : (or/c char? #f) = #f ~
-  readtable : (or/c readtable? #f) = (current-readtable) ~
-  graph? : any/c = #t ~
+  source-name : any/c = (object-name in) ~ ~
+  in : input-port? = (current-input-port) ~ ~
+  start : (or/c char? #f) = #f ~ ~
+  readtable : (or/c readtable? #f) = (current-readtable) ~ ~
+  graph? : any/c = #t ~ ~
 
 Analogous to calling read/recursive, but the resulting value
 encapsulates S-expression structure with source-location information. As
@@ -108,11 +103,13 @@ read/recursive.
                                         *read-language*
 (read-language [in fail-thunk]) ~
  -> (or/c (any/c any/c . -> . any) #f)
-  in : input-port? = (current-input-port) ~
-  fail-thunk : (-> any) = (lambda () (error ...)) ~
+  in : input-port? = (current-input-port) ~ ~
+  fail-thunk : (-> any) = (lambda () (error ...)) ~ ~
 
 Reads from in in the same way as read, but stopping as soon as a reader
-language (or its absence) is determined.
+language (or its absence) is determined, and using the current namespace
+to load a reader module instead of its root namespace (if those are
+different).
 
 A reader language is specified by #lang or #! (see [missing]) at the
 beginning of the input, though possibly after comment forms. The default
@@ -125,7 +122,8 @@ not allowed before #lang or #!.
 When it finds a #lang or #! specification, instead of dispatching to a
 read or read-syntax function as read and read-syntax do, read-language
 dispatches to the get-info function (if any) exported by the same
-module. The result of the get-info function is the result of
+module. The arguments to get-info are the same as for read as described
+in [missing]. The result of the get-info function is the result of
 read-language if it is a function of two arguments; if get-info produces
 any other kind of result, the exn:fail:contract exception is raised. If
 no get-info function is exported, read-language returns #f.
@@ -138,21 +136,13 @@ the DrRacket documentation). If no information is available for a given
 key, the result should be the second argument.
 
 Examples:
-  > ((read-language (open-input-string "#lang algol60")) 'color-lexer #f)
-  standard-module-name-resolver: collection not found
-    for module path: (submod algol60 reader) ~
-    collection: "algol60" ~
-    in collection directories: ~
-     /usr/share/racket/collects
-     ... [96 additional linked and package directories]
-  > ((read-language (open-input-string "#lang
-  algol60")) 'something-else #f)
-  standard-module-name-resolver: collection not found
-    for module path: (submod algol60 reader) ~
-    collection: "algol60" ~
-    in collection directories: ~
-     /usr/share/racket/collects
-     ... [96 additional linked and package directories]
+
+  > (define scribble-manual-info
+      (read-language (open-input-string "#lang scribble/manual")))
+  > (scribble-manual-info 'color-lexer #f)
+  #<procedure:scribble-inside-lexer>
+  > (scribble-manual-info 'something-else #f)
+  #f
 
 The get-info function itself is applied to five arguments: the input
 port being read, the module path from which the get-info function was
@@ -179,7 +169,7 @@ exn:fail:read:eof.
                                         *read-case-sensitive*
 (read-case-sensitive) -> boolean? ~
 (read-case-sensitive on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls parsing and printing of symbols. When this
 parameter’s value is #f, the reader case-folds symbols (e.g., producing
@@ -194,7 +184,7 @@ the parameter is set to #t (see current-load).
                                         *read-square-bracket-as-paren*
 (read-square-bracket-as-paren) -> boolean? ~
 (read-square-bracket-as-paren on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls whether [ and ] are treated as parentheses.
 See [missing] for more information.
@@ -202,15 +192,37 @@ See [missing] for more information.
                                         *read-curly-brace-as-paren*
 (read-curly-brace-as-paren) -> boolean? ~
 (read-curly-brace-as-paren on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls whether { and } are treated as parentheses.
 See [missing] for more information.
 
+                                        *read-square-bracket-with-tag*
+(read-square-bracket-with-tag) -> boolean? ~
+(read-square-bracket-with-tag on?) -> void?
+  on? : any/c ~ ~
+
+A parameter that controls whether [ and ] are treated as parentheses,
+but the resulting list tagged with #%brackets. See [missing] for more
+information.
+
+Added in version 6.3.0.5.
+
+                                        *read-curly-brace-with-tag*
+(read-curly-brace-with-tag) -> boolean? ~
+(read-curly-brace-with-tag on?) -> void?
+  on? : any/c ~ ~
+
+A parameter that controls whether { and } are treated as parentheses,
+but the resulting list tagged with #%braces. See [missing] for more
+information.
+
+Added in version 6.3.0.5.
+
                                         *read-accept-box*
 (read-accept-box) -> boolean? ~
 (read-accept-box on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls parsing #& input. See [missing] for more
 information.
@@ -218,7 +230,7 @@ information.
                                         *read-accept-compiled*
 (read-accept-compiled) -> boolean? ~
 (read-accept-compiled on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls parsing #~ compiled input. See [missing] and
 current-compile for more information.
@@ -226,7 +238,7 @@ current-compile for more information.
                                         *read-accept-bar-quote*
 (read-accept-bar-quote) -> boolean? ~
 (read-accept-bar-quote on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls parsing and printing of | in symbols. See
 [missing] and [missing] for more information.
@@ -234,7 +246,7 @@ A parameter that controls parsing and printing of | in symbols. See
                                         *read-accept-graph*
 (read-accept-graph) -> boolean? ~
 (read-accept-graph on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter value that controls parsing input with sharing. See
 [missing] for more information.
@@ -242,16 +254,26 @@ A parameter value that controls parsing input with sharing. See
                                         *read-decimal-as-inexact*
 (read-decimal-as-inexact) -> boolean? ~
 (read-decimal-as-inexact on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls parsing input numbers with a decimal point or
 exponent (but no explicit exactness tag). See [missing] for more
 information.
 
+                                        *read-single-flonum*
+(read-single-flonum) -> boolean? ~
+(read-single-flonum on?) -> void?
+  on? : any/c ~ ~
+
+A parameter that controls parsing input numbers that have a f, F, s, or
+S precision character. See [missing] for more information.
+
+Added in version 7.3.0.5.
+
                                         *read-accept-dot*
 (read-accept-dot) -> boolean? ~
 (read-accept-dot on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls parsing input with a dot, which is normally
 used for literal cons cells. See [missing] for more information.
@@ -259,15 +281,25 @@ used for literal cons cells. See [missing] for more information.
                                         *read-accept-infix-dot*
 (read-accept-infix-dot) -> boolean? ~
 (read-accept-infix-dot on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls parsing input with two dots to trigger infix
 conversion. See [missing] for more information.
 
+                                        *read-cdot*
+(read-cdot) -> boolean? ~
+(read-cdot on?) -> void?
+  on? : any/c ~ ~
+
+A parameter that controls parsing input with a dot, in a C structure
+accessor style. See [missing] for more information.
+
+Added in version 6.3.0.5.
+
                                         *read-accept-quasiquote*
 (read-accept-quasiquote) -> boolean? ~
 (read-accept-quasiquote on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls parsing input with ` or , which is normally
 used for quasiquote, unquote, and unquote-splicing abbreviations. See
@@ -276,7 +308,7 @@ used for quasiquote, unquote, and unquote-splicing abbreviations. See
                                         *read-accept-reader*
 (read-accept-reader) -> boolean? ~
 (read-accept-reader on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that controls whether #reader, #lang, or #! are allowed for
 selecting a parser. See [missing] for more information.
@@ -284,16 +316,16 @@ selecting a parser. See [missing] for more information.
                                         *read-accept-lang*
 (read-accept-lang) -> boolean? ~
 (read-accept-lang on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
-A parameter that (along with read-accept-reader controls whether #lang
+A parameter that (along with read-accept-reader) controls whether #lang
 and #! are allowed for selecting a parser. See [missing] for more
 information.
 
                                         *current-readtable*
 (current-readtable) -> (or/c readtable? #f) ~
 (current-readtable readtable) -> void?
-  readtable : (or/c readtable? #f) ~
+  readtable : (or/c readtable? #f) ~ ~
 
 A parameter whose value determines a readtable that adjusts the parsing
 of S-expression input, where #f implies the default behavior. See
@@ -301,7 +333,7 @@ of S-expression input, where #f implies the default behavior. See
 
                                         *call-with-default-reading-parameterization*
 (call-with-default-reading-parameterization thunk) -> any ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 Calls thunk in tail position of a parameterize to set all reader
 parameters above to their default values.
@@ -313,7 +345,7 @@ values disable evaluation of arbitrary code via #lang or #reader.
                                         *current-reader-guard*
 (current-reader-guard) -> (any/c . -> . any) ~
 (current-reader-guard proc) -> void?
-  proc : (any/c . -> . any) ~
+  proc : (any/c . -> . any) ~ ~
 
 A parameter whose value converts or rejects (by raising an exception) a
 module-path datum following #reader. See [missing] for more information.
@@ -322,7 +354,7 @@ module-path datum following #reader. See [missing] for more information.
 (read-on-demand-source) ~
  -> (or/c #f #t (and/c path? complete-path?))
 (read-on-demand-source mode) -> void?
-  mode : (or/c #f #t (and/c path? complete-path?)) ~
+  mode : (or/c #f #t (and/c path? complete-path?)) ~ ~
 
 A parameter that enables lazy parsing of compiled code, so that closure
 bodies and syntax objects are extracted (and validated) from marshaled
@@ -343,10 +375,10 @@ likely will encounter garbage, leading to an exception.
 (port-read-handler in) -> (case-> ~
                            (input-port? . -> . any)
                            (input-port?  any/c . -> . any))
-  in : input-port? ~
+  in : input-port? ~ ~
 (port-read-handler in proc) -> void?
-  in : input-port? ~
-  proc : (case-> ~
+  in : input-port? ~ ~
+  proc : (case-> ~ ~
           (input-port? . -> . any)
           (input-port? any/c . -> . any))
 

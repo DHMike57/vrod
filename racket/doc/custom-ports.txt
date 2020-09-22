@@ -16,15 +16,15 @@ action of committing bytes as read or written.
                   count-lines!         
                   init-position        
                   buffer-mode])    -> input-port?
-  name : any/c ~
-  read-in : (or/c ~
+  name : any/c ~ ~
+  read-in : (or/c ~ ~
              (bytes?
               . -> . (or/c exact-nonnegative-integer?
                            eof-object?
                            procedure?
                            evt?))
              input-port?)
-  peek : (or/c ~
+  peek : (or/c ~ ~
           (bytes? exact-nonnegative-integer? (or/c evt? #f)
                   . -> . (or/c exact-nonnegative-integer?
                                eof-object?
@@ -32,25 +32,25 @@ action of committing bytes as read or written.
                                evt?
                                #f))
           input-port?)
-  close : (-> any) ~
-  get-progress-evt : (or/c (-> evt?) #f) = #f ~
-  commit : (or/c (exact-positive-integer? evt? evt? . -> . any) ~
+  close : (-> any) ~ ~
+  get-progress-evt : (or/c (-> evt?) #f) = #f ~ ~
+  commit : (or/c (exact-positive-integer? evt? evt? . -> . any) ~ ~
                  #f)
          = #f
-  get-location : (or/c ~
+  get-location : (or/c ~ ~
                   (->
                    (values (or/c exact-positive-integer? #f)
                            (or/c exact-nonnegative-integer? #f)
                            (or/c exact-positive-integer? #f)))
                   #f)
                = #f
-  count-lines! : (-> any) = void ~
-  init-position : (or/c exact-positive-integer? ~
+  count-lines! : (-> any) = void ~ ~
+  init-position : (or/c exact-positive-integer? ~ ~
                         port?
                         #f
                         (-> (or/c exact-positive-integer? #f)))
                 = 1
-  buffer-mode : (or/c (case-> ((or/c 'block 'none) . -> . any) ~
+  buffer-mode : (or/c (case-> ((or/c 'block 'none) . -> . any) ~ ~
                               (-> (or/c 'block 'none #f)))
                       #f)
               = #f
@@ -73,8 +73,8 @@ The arguments implement the port as follows:
   * eof;
 
   * a procedure of arity four (representing a “special” result, as
-    discussed further below) and optionally of arity zero, but a
-    procedure result is allowed only when peek is not #f;
+    discussed further below), but a procedure result is allowed only
+    when peek is not #f;
 
   * a pipe input port that supplies bytes to be used as long as the pipe
     has content (see pipe-content-length) or until read-in or peek is
@@ -319,17 +319,9 @@ these) returns a procedure, the procedure is used to obtain a  non-byte
 result. (This non-byte result is not intended to  return a character or
 eof; in particular, read-char  raises an exception if it encounters a
 special-result procedure, even  if the procedure produces a byte.) A
-special-result procedure must  accept four arguments, and it can
-optionally accept zero arguments:
-
-* When the special read is triggered by read-syntax or
-  read-syntax/recursive, the procedure is passed four arguments that
-  represent a source location.
-
-* When the special read is triggered by read, read-byte-or-special,
-  read-char-or-special, peek-byte-or-special, or peek-char-or-special,
-  the procedure is passed no arguments if it accepts zero arguments,
-  otherwise it is passed four arguments that are all #f.
+special-result procedure must  accept four arguments that represent a
+source location. The first  argument is #f when the special read is
+triggered by read  or read/recursive.
 
 The special-value procedure can return an arbitrary value, and it  will
 be called zero or one times (not necessarily before further  reads or
@@ -342,9 +334,10 @@ peek-char-or-special, read-byte-or-special, or  peek-byte-or-special,
 then the exn:fail:contract exception is raised.
 
 Examples:
+
   ; A port with no input...
-  ; Easy: (open-input-bytes #"") ~
-  ; Hard: ~
+  ; Easy: (open-input-bytes #"") ~ ~
+  ; Hard: ~ ~
   > (define /dev/null-in
       (make-input-port 'null
                        (lambda (s) eof)
@@ -353,7 +346,6 @@ Examples:
                        (lambda () never-evt)
                        (lambda (k progress-evt done-evt)
                          (error "no successful peeks!"))))
-
   > (read-char /dev/null-in)
   #<eof>
   > (peek-char /dev/null-in)
@@ -362,7 +354,7 @@ Examples:
   #<eof>
   > (peek-byte-or-special /dev/null-in 100)
   #<eof>
-  ; A port that produces a stream of 1s: ~
+  ; A port that produces a stream of 1s: ~ ~
   > (define infinite-ones
       (make-input-port
        'ones
@@ -370,13 +362,12 @@ Examples:
          (bytes-set! s 0 (char->integer #\1)) 1)
        #f
        void))
-
   > (read-string 5 infinite-ones)
   "11111"
   ; But we can't peek ahead arbitrarily far, because the
   ; automatic peek must record the skipped bytes, so
   ; we'd run out of memory.
-  ; An infinite stream of 1s with a specific peek procedure: ~
+  ; An infinite stream of 1s with a specific peek procedure: ~ ~
   > (define infinite-ones
       (let ([one! (lambda (s)
                     (bytes-set! s 0 (char->integer #\1)) 1)])
@@ -385,29 +376,27 @@ Examples:
          one!
          (lambda (s skip progress-evt) (one! s))
          void)))
-
   > (read-string 5 infinite-ones)
   "11111"
-  ; Now we can peek ahead arbitrarily far: ~
+  ; Now we can peek ahead arbitrarily far: ~ ~
   > (peek-string 5 (expt 2 5000) infinite-ones)
   "11111"
-  ; The port doesn't supply procedures to implement progress events: ~
+  ; The port doesn't supply procedures to implement progress events: ~ ~
   > (port-provides-progress-evts? infinite-ones)
   #f
   > (port-progress-evt infinite-ones)
   port-progress-evt: port does not provide progress evts
-    port: #<input-port:ones> ~
-  ; Non-byte port results: ~
+    port: #<input-port:ones> ~ ~
+  ; Non-byte port results: ~ ~
   > (define infinite-voids
       (make-input-port
        'voids
        (lambda (s) (lambda args 'void))
        (lambda (skip s evt) (lambda args 'void))
        void))
-
   > (read-char infinite-voids)
   read-char: non-character in an unsupported context
-    port: #<input-port:voids> ~
+    port: #<input-port:voids> ~ ~
   > (read-char-or-special infinite-voids)
   'void
   ; This port produces 0, 1, 2, 0, 1, 2, etc., but it is not
@@ -425,7 +414,6 @@ Examples:
          (lambda (s skip evt)
            (mod! s skip))
          void)))
-
   > (read-string 5 mod3-cycle/one-thread)
   "01201"
   > (peek-string 5 (expt 2 5000) mod3-cycle/one-thread)
@@ -466,7 +454,7 @@ Examples:
                response-evts)
           (map (make-handle-commit commit-reqs response-evts)
                commit-reqs))))
-      ; Read/peek request: fill in the string and commit ~
+      ; Read/peek request: fill in the string and commit ~ ~
       (define ((handle-read commit-reqs response-evts) r)
         (let ([s (car r)]
               [skip (cadr r)]
@@ -480,7 +468,7 @@ Examples:
               (mod! s skip)
               (unless peek?
                 (commit! 1)))
-            ; Add an event to respond: ~
+            ; Add an event to respond: ~ ~
             (serve commit-reqs
                    (cons (choice-evt
                           nack
@@ -488,14 +476,14 @@ Examples:
                                                   0
                                                   (if fail? #f 1))))
                          response-evts)))))
-      ; Progress request: send a peek evt for the current ~
+      ; Progress request: send a peek evt for the current ~ ~
       ;  progress-sema
       (define ((handle-progress commit-reqs response-evts) r)
         (let ([ch (car r)]
               [nack (cdr r)])
           (unless progress-sema
             (set! progress-sema (make-semaphore (if closed? 1 0))))
-          ; Add an event to respond: ~
+          ; Add an event to respond: ~ ~
           (serve commit-reqs
                  (cons (choice-evt
                         nack
@@ -503,10 +491,10 @@ Examples:
                          ch
                          (semaphore-peek-evt progress-sema)))
                        response-evts))))
-      ; Commit request: add the request to the list ~
+      ; Commit request: add the request to the list ~ ~
       (define ((add-commit commit-reqs response-evts) r)
         (serve (cons r commit-reqs) response-evts))
-      ; Commit handling: watch out for progress, in which case ~
+      ; Commit handling: watch out for progress, in which case ~ ~
       ;  the response is a commit failure; otherwise, try
       ;  to sync for a commit. In either event, remove the
       ;  request from the list
@@ -516,7 +504,7 @@ Examples:
               [done-evt (caddr r)]
               [ch (cadddr r)]
               [nack (cddddr r)])
-          ; Note: we don't check that k is <= the sum of ~
+          ; Note: we don't check that k is <= the sum of ~ ~
           ;  previous peeks, because the entire stream is actually
           ;  known, but we could send an exception in that case.
           (choice-evt
@@ -537,14 +525,14 @@ Examples:
                              (sync nack (channel-put-evt ch #t))
                              (serve (remq r commit-reqs)
                                     response-evts)))))))
-      ; Response handling: as soon as the respondee listens, ~
+      ; Response handling: as soon as the respondee listens, ~ ~
       ;  remove the response
       (define ((make-handle-response commit-reqs response-evts) evt)
         (handle-evt evt
                     (lambda (x)
                       (serve commit-reqs
                              (remq evt response-evts)))))
-      ; Close handling: post the progress sema, if any, and set ~
+      ; Close handling: post the progress sema, if any, and set ~ ~
       ;   the closed? flag
       (define ((handle-close commit-reqs response-evts) r)
         (let ([ch (car r)]
@@ -556,22 +544,22 @@ Examples:
                  (cons (choice-evt nack
                                    (channel-put-evt ch (void)))
                        response-evts))))
-      ; Helper for reads and post-peek commits: ~
+      ; Helper for reads and post-peek commits: ~ ~
       (define (commit! k)
         (when progress-sema
           (semaphore-post progress-sema)
           (set! progress-sema #f))
         (set! n (+ n k)))
-      ; Start the server thread: ~
+      ; Start the server thread: ~ ~
       (define server-thread (thread (lambda () (serve null null))))
       ; —————————————-
-      ; Client-side helpers: ~
+      ; Client-side helpers: ~ ~
       (define (req-evt f)
         (nack-guard-evt
          (lambda (nack)
-           ; Be sure that the server thread is running: ~
+           ; Be sure that the server thread is running: ~ ~
            (thread-resume server-thread (current-thread))
-           ; Create a channel to hold the reply: ~
+           ; Create a channel to hold the reply: ~ ~
            (let ([ch (make-channel)])
              (f ch nack)
              ch))))
@@ -579,7 +567,7 @@ Examples:
         (req-evt (lambda (ch nack)
                    (channel-put read-req-ch
                                 (list* s skip ch nack evt peek?)))))
-      ; Make the port: ~
+      ; Make the port: ~ ~
       (make-input-port 'mod3-cycle
                        ; Each handler for the port just sends
                        ;  a request to the server
@@ -603,9 +591,7 @@ Examples:
                                    commit-req-ch
                                    (list* k progress-evt done-evt ch
                                           nack))))))))
-
   > (define mod3-cycle (make-mod3-cycle))
-
   > (let ([result1 #f]
           [result2 #f])
       (let ([t1 (thread
@@ -619,9 +605,7 @@ Examples:
         (string-append result1 "," result2)))
   "12020,01201"
   > (define s (make-bytes 1))
-
   > (define progress-evt (port-progress-evt mod3-cycle))
-
   > (peek-bytes-avail! s 0 progress-evt mod3-cycle)
   1
   > s
@@ -638,7 +622,6 @@ Examples:
   #f
   > (close-input-port mod3-cycle)
 
-
                                         *make-output-port*
 (make-output-port  name                       ~
                    evt                       
@@ -651,9 +634,9 @@ Examples:
                    count-lines!              
                    init-position             
                    buffer-mode])         -> output-port?
-  name : any/c ~
-  evt : evt? ~
-  write-out : (or/c ~
+  name : any/c ~ ~
+  evt : evt? ~ ~
+  write-out : (or/c ~ ~
                (bytes? exact-nonnegative-integer?
                        exact-nonnegative-integer?
                        boolean?
@@ -663,37 +646,37 @@ Examples:
                              #f
                              evt?))
                output-port?)
-  close : (-> any) ~
-  write-out-special : (or/c (any/c boolean? boolean? = #f ~
+  close : (-> any) ~ ~
+  write-out-special : (or/c (any/c boolean? boolean? = #f ~ ~
                                    . -> .
                                    (or/c any/c
                                          #f
                                          evt?))
                             output-port?
                             #f)
-  get-write-evt : (or/c                               = #f ~
+  get-write-evt : (or/c                               = #f ~ ~
                    (bytes? exact-nonnegative-integer?
                            exact-nonnegative-integer?
                            . -> .
                            evt?)
                    #f)
-  get-write-special-evt : (or/c                = #f ~
+  get-write-special-evt : (or/c                = #f ~ ~
                            (any/c . -> . evt?)
                            #f)
-  get-location : (or/c ~
+  get-location : (or/c ~ ~
                   (->
                    (values (or/c exact-positive-integer? #f)
                            (or/c exact-nonnegative-integer? #f)
                            (or/c exact-positive-integer? #f)))
                   #f)
                = #f
-  count-lines! : (-> any) = void ~
-  init-position : (or/c exact-positive-integer? ~
+  count-lines! : (-> any) = void ~ ~
+  init-position : (or/c exact-positive-integer? ~ ~
                         port?
                         #f
                         (-> (or/c exact-positive-integer? #f)))
                 = 1
-  buffer-mode : (or/c (case-> ~
+  buffer-mode : (or/c (case-> ~ ~
                        ((or/c 'block 'line 'none) . -> . any)
                        (-> (or/c 'block 'line 'none #f)))
                       #f)
@@ -758,7 +741,7 @@ write-out-special procedures.
   write-out is to pass its first three arguments to the port’s
   get-write-evt. Some port implementors, however, may choose not to
   provide get-write-evt (perhaps because writes cannot be made atomic),
-  or may implement write-proc to enable a fast path for non-blocking
+  or may implement write-out to enable a fast path for non-blocking
   writes or to enable buffering.
 
   From a user’s perspective, the difference between buffered and
@@ -928,7 +911,8 @@ write-out-special procedures.
   #f (unknown). See [missing] for more information on buffer modes.
 
 Examples:
-  ; A port that writes anything to nowhere: ~
+
+  ; A port that writes anything to nowhere: ~ ~
   > (define /dev/null-out
       (make-output-port
        'null
@@ -941,9 +925,7 @@ Examples:
                               (lambda (x)
                                 (- end start))))
        (lambda (special) always-evt)))
-
   > (display "hello" /dev/null-out)
-
   > (write-bytes-avail #"hello" /dev/null-out)
   5
   > (write-special 'hello /dev/null-out)
@@ -951,9 +933,8 @@ Examples:
   > (sync (write-bytes-avail-evt #"hello" /dev/null-out))
   5
   ; A port that accumulates bytes as characters in a list,
-  ;  but not in a thread-safe way: ~
+  ;  but not in a thread-safe way: ~ ~
   > (define accum-list null)
-
   > (define accumulator/not-thread-safe
       (make-output-port
        'accum/not-thread-safe
@@ -965,14 +946,11 @@ Examples:
                             (bytes->list (subbytes s start end)))))
          (- end start))
        void))
-
   > (display "hello" accumulator/not-thread-safe)
-
   > accum-list
   '(#\h #\e #\l #\l #\o)
-  ; Same as before, but with simple thread-safety: ~
+  ; Same as before, but with simple thread-safety: ~ ~
   > (define accum-list null)
-
   > (define accumulator
       (let* ([lock (make-semaphore 1)]
              [lock-peek-evt (semaphore-peek-evt lock)])
@@ -989,15 +967,13 @@ Examples:
                                      (subbytes s start end)))))
                  (semaphore-post lock)
                  (- end start))
-               ; Cheap strategy: block until the list is unlocked, ~
+               ; Cheap strategy: block until the list is unlocked, ~ ~
                ;   then return 0, so we get called again
                (wrap-evt
                 lock-peek
                 (lambda (x) 0))))
          void)))
-
   > (display "hello" accumulator)
-
   > accum-list
   '(#\h #\e #\l #\l #\o)
   ; A port that transforms data before sending it on
@@ -1012,9 +988,9 @@ Examples:
               (bytes->list (subbytes s start end)))))
       (make-output-port
        'byte-upcase
-       ; This port is ready when the original is ready: ~
+       ; This port is ready when the original is ready: ~ ~
        port
-       ; Writing procedure: ~
+       ; Writing procedure: ~ ~
        (lambda (s start end non-block? breakable?)
          (let ([s (byte-upcase s start end)])
            (if non-block?
@@ -1022,22 +998,18 @@ Examples:
                (begin
                  (display s port)
                  (bytes-length s)))))
-       ; Close procedure — close original port: ~
+       ; Close procedure — close original port: ~ ~
        (lambda () (close-output-port port))
        #f
-       ; Write event: ~
+       ; Write event: ~ ~
        (and (port-writes-atomic? port)
             (lambda (s start end)
               (write-bytes-avail-evt
                (byte-upcase s start end)
                port)))))
-
   > (define orig-port (open-output-string))
-
   > (define cap-port (make-latin-1-capitalize orig-port))
-
   > (display "Hello" cap-port)
-
   > (get-output-string orig-port)
   "HELLO"
   > (sync (write-bytes-avail-evt #"Bye" cap-port))

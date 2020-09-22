@@ -1,6 +1,6 @@
 Syntax Parameters
 
- (require racket/stxparam) package: base ~
+ (require racket/stxparam) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/stxparam library, not racket/base or racket.
@@ -21,19 +21,16 @@ macro that expands to a use of the target identifier, but
 syntax-local-value of id does not produce the target’s value.
 
 Examples:
+
   > (define-syntax-parameter current-class #f)
-
   > (define-syntax-parameter yield (make-rename-transformer #'abort))
-
   > (define-syntax-parameter define/public
       (λ (stx)
         (raise-syntax-error #f "use of a class keyword not in a
   class" stx)))
-
   >
   (begin-for-syntax (displayln (syntax-parameter-value #'current-class)))
   #f
-
   > (yield 5)
   5
 
@@ -55,8 +52,8 @@ expands to a use of the target identifier, but syntax-local-value of id
 does not produce the target’s value.
 
 Examples:
-  > (define-syntax-parameter abort (syntax-rules ()))
 
+  > (define-syntax-parameter abort (syntax-rules ()))
   > (define-syntax forever
       (syntax-rules ()
         [(forever body ...)
@@ -64,9 +61,7 @@ Examples:
            (syntax-parameterize
                ([abort (syntax-rules () [(_) (abort-k)])])
              (let loop () body ... (loop)))))]))
-
   > (define-syntax-parameter it (syntax-rules ()))
-
   > (define-syntax aif
       (syntax-rules ()
         [(aif test then else)
@@ -74,14 +69,43 @@ Examples:
            (syntax-parameterize ([it (syntax-id-rules () [_ t])])
              (if t then else)))]))
 
+                                        *define-rename-transformer-parameter*
+(define-rename-transformer-parameter id expr) ~
+
+Binds id as syntax to a syntax parameter that must be bound to a
+make-rename-transformer result and, unlike define-syntax-parameter,
+syntax-local-value of id does produce the target’s value, including
+inside of syntax-parameterize.
+
+Examples:
+
+  > (define-syntax (test stx)
+     (syntax-case stx ()
+       [(_ t)
+        #`#,(syntax-local-value #'t)]))
+  > (define-syntax one 1)
+  > (define-syntax two 2)
+  > (define-syntax-parameter not-num
+      (make-rename-transformer #'one))
+  > (test not-num)
+  #<procedure:syntax-parameter>
+  > (define-rename-transformer-parameter num
+      (make-rename-transformer #'one))
+  > (test num)
+  1
+  > (syntax-parameterize ([num (make-rename-transformer #'two)])
+      (test num))
+  2
+
+Added in version 6.3.0.14 of package base.
 
 1. Syntax Parameter Inspection
 
- (require racket/stxparam-exptime) package: base ~
+ (require racket/stxparam-exptime) package: base ~ ~
 
                                         *syntax-parameter-value*
 (syntax-parameter-value id-stx) -> any ~
-  id-stx : syntax? ~
+  id-stx : syntax? ~ ~
 
 This procedure is intended for use in a transformer environment, where
 id-stx is an identifier bound in the normal environment to a syntax
@@ -94,7 +118,7 @@ racket/stxparam-exptime.
 
                                         *make-parameter-rename-transformer*
 (make-parameter-rename-transformer id-stx) -> any ~
-  id-stx : syntax? ~
+  id-stx : syntax? ~ ~
 
 This procedure is intended for use in a transformer, where id-stx is an
 identifier bound to a syntax parameter. The result is a transformer that

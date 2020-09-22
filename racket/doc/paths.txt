@@ -29,39 +29,40 @@ Most Racket primitives that accept paths first cleanse the path before
 using it. Procedures that build paths or merely check the form of a path
 do not cleanse paths, with the exceptions of cleanse-path,
 expand-user-path, and simplify-path.  For more information about path
-cleansing and other platform-specific details, see Unix and Mac OS X
-Paths and Windows Paths.
+cleansing and other platform-specific details, see Unix and Mac OS Paths
+and Windows Paths.
 
 1. Manipulating Paths
 
                                         *path?*
 (path? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a path value for the current platform (not a string,
 and not a path for a different platform), #f otherwise.
 
                                         *path-string?*
 (path-string? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
-Return #t if v is either a path value for the current platform or a
-non-empty string without nul characters, #f otherwise.
+Returns #t if v is either a path or string: either a path for the
+current platform or a non-empty string without nul characters. Returns
+#f otherwise.
 
                                         *path-for-some-system?*
 (path-for-some-system? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a path value for some platform (not a string), #f
 otherwise.
 
                                         *string->path*
 (string->path str) -> path? ~
-  str : string? ~
+  str : string? ~ ~
 
 Produces a path whose byte-string encoding is (string->bytes/locale str
-(char->integer #\?)) on Unix and Mac OS X or (string->bytes/utf-8 str)
-on Windows.
+(char->integer #\?)) on Unix and Mac OS or (string->bytes/utf-8 str) on
+Windows.
 
 Beware that the current locale might not encode every string, in which
 case string->path can produce the same path for different strs. See also
@@ -78,8 +79,8 @@ UTF-8.
 
                                         *bytes->path*
 (bytes->path bstr [type]) -> path? ~
-  bstr : bytes? ~
-  type : (or/c 'unix 'windows) = (system-path-convention-type) ~
+  bstr : bytes? ~ ~
+  type : (or/c 'unix 'windows) = (system-path-convention-type) ~ ~
 
 Produces a path (for some platform) whose byte-string encoding is bstr.
 The optional type specifies the convention to use for the path.
@@ -93,13 +94,13 @@ Representation and Windows Path Representation.
 
                                         *path->string*
 (path->string path) -> string? ~
-  path : path? ~
+  path : path? ~ ~
 
 Produces a string that represents path by decoding path’s byte-string
-encoding using the current locale on Unix and Mac OS X and by using
-UTF-8 on Windows. In the former case, ? is used in the result string
-where encoding fails, and if the encoding result is the empty string,
-then the result is "?".
+encoding using the current locale on Unix and Mac OS and by using UTF-8
+on Windows. In the former case, ? is used in the result string where
+encoding fails, and if the encoding result is the empty string, then the
+result is "?".
 
 The resulting string is suitable for displaying to a user,
 string-ordering comparisons, etc., but it is not suitable for
@@ -119,7 +120,7 @@ UTF-8.
 
                                         *path->bytes*
 (path->bytes path) -> bytes? ~
-  path : path-for-some-system? ~
+  path : path-for-some-system? ~ ~
 
 Produces path’s byte-string representation. No information is lost in
 this translation, so that (bytes->path (path->bytes path)
@@ -138,16 +139,16 @@ Representation and Windows Path Representation.
 
                                         *string->path-element*
 (string->path-element str) -> path? ~
-  str : string? ~
+  str : string? ~ ~
 
 Like string->path, except that str corresponds to a single relative
 element in a path, and it is encoded as necessary to convert it to a
-path. See Unix and Mac OS X Paths and Windows Paths for more information
+path. See Unix and Mac OS Paths and Windows Paths for more information
 on the conversion of paths.
 
 If str does not correspond to any path element (e.g., it is an absolute
 path, or it can be split), or if it corresponds to an up-directory or
-same-directory indicator on Unix and Mac OS X, then exn:fail:contract
+same-directory indicator on Unix and Mac OS, then exn:fail:contract
 exception is raised.
 
 Like path->string, information can be lost from str in the
@@ -155,8 +156,8 @@ locale-specific conversion to a path.
 
                                         *bytes->path-element*
 (bytes->path-element bstr [type]) -> path-for-some-system? ~
-  bstr : bytes? ~
-  type : (or/c 'unix 'windows) = (system-path-convention-type) ~
+  bstr : bytes? ~ ~
+  type : (or/c 'unix 'windows) = (system-path-convention-type) ~ ~
 
 Like bytes->path, except that bstr corresponds to a single relative
 element in a path. In terms of conversions and restrictions on bstr,
@@ -169,7 +170,7 @@ manipulation of path elements is necessary.
 
                                         *path-element->string*
 (path-element->string path) -> string? ~
-  path : path-element? ~
+  path : path-element? ~ ~
 
 Like path->string, except that trailing path separators are removed (as
 by split-path). On Windows, any \\?\REL encoding prefix is also removed;
@@ -184,7 +185,7 @@ presenting a pathless file or directory name to a user.
 
                                         *path-element->bytes*
 (path-element->bytes path) -> bytes? ~
-  path : path-element? ~
+  path : path-element? ~ ~
 
 Like path->bytes, except that any encoding prefix is removed, etc., as
 for path-element->string.
@@ -202,15 +203,18 @@ bytes->path-element and build-path).
 
                                         *path<?*
 (path<? a-path b-path ...) -> boolean? ~
-  a-path : path? ~
-  b-path : path? ~
+  a-path : path? ~ ~
+  b-path : path? ~ ~
 
 Returns #t if the arguments are sorted, where the comparison for each
 pair of paths is the same as using path->bytes and bytes<?.
 
+Changed in version 7.0.0.13: Allow one argument, in addition to allowing
+two or more.
+
                                         *path-convention-type*
 (path-convention-type path) -> (or/c 'unix 'windows) ~
-  path : path-for-some-system? ~
+  path : path-for-some-system? ~ ~
 
 Accepts a path value (not a string) and returns its convention type.
 
@@ -218,12 +222,12 @@ Accepts a path value (not a string) and returns its convention type.
 (system-path-convention-type) -> (or/c 'unix 'windows) ~
 
 Returns the path convention type of the current platform: 'unix for Unix
-and Mac OS X, 'windows for Windows.
+and Mac OS, 'windows for Windows.
 
                                         *build-path*
 (build-path base sub ...) -> path-for-some-system? ~
-  base : (or/c path-string? path-for-some-system? 'up 'same) ~
-  sub : (or/c (and/c (or/c path-string? path-for-some-system?) ~
+  base : (or/c path-string? path-for-some-system? 'up 'same) ~ ~
+  sub : (or/c (and/c (or/c path-string? path-for-some-system?) ~ ~
                      (not/c complete-path?))
               (or/c 'up 'same))
 
@@ -254,32 +258,32 @@ contains a nul character), the exn:fail:contract exception is raised.
 The build-path procedure builds a path without checking the validity of
 the path or accessing the filesystem.
 
-See Unix and Mac OS X Paths and Windows Paths for more information on
-the construction of paths.
+See Unix and Mac OS Paths and Windows Paths for more information on the
+construction of paths.
 
 The following examples assume that the current directory is
 "/home/joeuser" for Unix examples and "C:\Joe’s Files" for Windows
 examples.
 
   (define p1 (build-path (current-directory) "src" "racket"))
-   ; Unix: p1 is "/home/joeuser/src/racket" ~
-   ; Windows: p1 is "C:\\Joe's Files\\src\\racket" ~
+   ; Unix: p1 is "/home/joeuser/src/racket" ~ ~
+   ; Windows: p1 is "C:\\Joe's Files\\src\\racket" ~ ~
   (define p2 (build-path 'up 'up "docs" "Racket"))
-   ; Unix: p2 is "../../docs/Racket" ~
-   ; Windows: p2 is "..\\..\\docs\\Racket" ~
+   ; Unix: p2 is "../../docs/Racket" ~ ~
+   ; Windows: p2 is "..\\..\\docs\\Racket" ~ ~
   (build-path p2 p1)
-   ; Unix and Windows: raises exn:fail:contract; p1 is absolute ~
+   ; Unix and Windows: raises exn:fail:contract; p1 is absolute ~ ~
   (build-path p1 p2)
-   ; Unix: is "/home/joeuser/src/racket/../../docs/Racket" ~
-   ; Windows: is "C:\\Joe's Files\\src\\racket\\..\\..\\docs\\Racket" ~
+   ; Unix: is "/home/joeuser/src/racket/../../docs/Racket" ~ ~
+   ; Windows: is "C:\\Joe's Files\\src\\racket\\..\\..\\docs\\Racket" ~ ~
 
                                         *build-path/convention-type*
 (build-path/convention-type type          ~
                             base         
                             sub ...) -> path-for-some-system?
-  type : (or/c 'unix 'windows) ~
-  base : (or/c path-string? path-for-some-system? 'up 'same) ~
-  sub : (or/c (and/c (or/c path-string? path-for-some-system?) ~
+  type : (or/c 'unix 'windows) ~ ~
+  base : (or/c path-string? path-for-some-system? 'up 'same) ~ ~
+  sub : (or/c (and/c (or/c path-string? path-for-some-system?) ~ ~
                      (not/c complete-path?))
               (or/c 'up 'same))
 
@@ -287,7 +291,7 @@ Like build-path, except a path convention type is specified explicitly.
 
                                         *absolute-path?*
 (absolute-path? path) -> boolean? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path? string? path-for-some-system?) ~ ~
 
 Returns #t if path is an absolute path, #f otherwise. The path argument
 can be a path for any platform. If path is not a legal path string
@@ -296,7 +300,7 @@ not access the filesystem.
 
                                         *relative-path?*
 (relative-path? path) -> boolean? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path? string? path-for-some-system?) ~ ~
 
 Returns #t if path is a relative path, #f otherwise. The path argument
 can be a path for any platform. If path is not a legal path string
@@ -305,7 +309,7 @@ not access the filesystem.
 
                                         *complete-path?*
 (complete-path? path) -> boolean? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path? string? path-for-some-system?) ~ ~
 
 Returns #t if path is a completely determined path (not relative to a
 directory or drive), #f otherwise. The path argument can be a path for
@@ -318,8 +322,8 @@ This procedure does not access the filesystem.
 
                                         *path->complete-path*
 (path->complete-path path [base]) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
-  base : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  base : (or/c path-string? path-for-some-system?) ~ ~
        = (current-directory)
 
 Returns path as a complete path. If path is already a complete path, it
@@ -334,21 +338,21 @@ This procedure does not access the filesystem.
 
                                         *path->directory-path*
 (path->directory-path path) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
 Returns path if path syntactically refers to a directory and ends in a
 separator, otherwise it returns an extended version of path that
 specifies a directory and ends with a separator. For example, on Unix
-and Mac OS X, the path "x/y/" syntactically refers to a directory and
-ends in a separator, but "x/y" would be extended to "x/y/", and "x/.."
-would be extended to "x/../". The path argument can be a path for any
+and Mac OS, the path "x/y/" syntactically refers to a directory and ends
+in a separator, but "x/y" would be extended to "x/y/", and "x/.." would
+be extended to "x/../". The path argument can be a path for any
 platform, and the result will be for the same platform.
 
 This procedure does not access the filesystem.
 
                                         *resolve-path*
 (resolve-path path) -> path? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Cleanses path and returns a path that references the same file or
 directory as path. If path is a soft link to another path, then the
@@ -366,24 +370,30 @@ Changed in version 6.0.1.12: Added support for links on Windows.
 
                                         *cleanse-path*
 (cleanse-path path) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
 Cleanses path (as described at the beginning of this chapter) without
 consulting the filesystem.
 
+Example:
+
+  > (let ([p (string->some-system-path "tiny//dancer" 'unix)])
+      (cleanse-path p))
+  #<path:tiny/dancer>
+
                                         *expand-user-path*
 (expand-user-path path) -> path? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
-Cleanses path. In addition, on Unix and Mac OS X, a leading ~ is treated
+Cleanses path. In addition, on Unix and Mac OS, a leading ~ is treated
 as user’s home directory and expanded; the username follows the ~
 (before a / or the end of the path), where ~ by itself indicates the
 home directory of the current user.
 
                                         *simplify-path*
 (simplify-path path [use-filesystem?]) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
-  use-filesystem? : boolean? = #t ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  use-filesystem? : boolean? = #t ~ ~
 
 Eliminates redundant path separators (except for a single trailing
 separator), up-directory .., and same-directory . indicators in path,
@@ -398,10 +408,10 @@ separator.
 
 When path is simplified and use-filesystem? is true (the default), a
 complete path is returned. If path is relative, it is resolved with
-respect to the current directory. On Unix and Mac OS X, up-directory
+respect to the current directory. On Unix and Mac OS, up-directory
 indicators are removed taking into account soft links (so that the
 resulting path refers to the same directory as before); on Windows,
-up-directory indicators are removed by by deleting a preceding path
+up-directory indicators are removed by deleting a preceding path
 element.
 
 When use-filesystem? is #f, up-directory indicators are removed by
@@ -421,20 +431,27 @@ be simplified due to a cycle of links, the exn:fail:filesystem exception
 is raised (but a successfully simplified path may still involve a cycle
 of links if the cycle did not inhibit the simplification).
 
-See Unix and Mac OS X Paths and Windows Paths for more information on
+See Unix and Mac OS Paths and Windows Paths for more information on
 simplifying paths.
+
+Example:
+
+  >
+  (let ([p (string->some-system-path "tiny//in/my/head/../../../dancer" 'unix)])
+      (simplify-path p #f))
+  #<path:tiny/dancer>
 
                                         *normal-case-path*
 (normal-case-path path) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
-Returns path with “normalized” case letters. For Unix and Mac OS X
+Returns path with “normalized” case characters. For Unix and Mac OS
 paths, this procedure always returns the input path, because filesystems
 for these platforms can be case-sensitive. For Windows paths, if path
-does not start \\?\, the resulting string uses only lowercase letters,
-based on the current locale. In addition, for Windows paths when the
-path does not start \\?\, all /s are converted to \s, and trailing
-spaces and .s are removed.
+does not start with \\?\, the resulting string uses only lowercase
+letters, based on the current locale. In addition, for Windows paths
+when the path does not start with \\?\, all /s are converted to \s, and
+trailing spaces and .s are removed.
 
 The path argument can be a path for any platform, but beware that
 local-sensitive decoding and conversion of the path may be different on
@@ -446,7 +463,7 @@ This procedure does not access the filesystem.
 (split-path path) -> (or/c path-for-some-system? 'relative #f) ~
                      (or/c path-for-some-system? 'up 'same)
                      boolean?
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
 Deconstructs path into a smaller path and an immediate directory or file
 name.  Three values are returned:
@@ -483,13 +500,13 @@ for the same platform.
 
 This procedure does not access the filesystem.
 
-See Unix and Mac OS X Paths and Windows Paths for more information on
+See Unix and Mac OS Paths and Windows Paths for more information on
 splitting paths.
 
                                         *explode-path*
 (explode-path path) ~
  -> (listof (or/c path-for-some-system? 'up 'same))
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
 Returns the list of path elements that constitute path.  If path is
 simplified in the sense of simple-form-path, then the result is always a
@@ -499,33 +516,92 @@ The explode-path function computes its result in time proportional to
 the length of path (unlike a loop in that uses split-path, which must
 allocate intermediate paths).
 
-                                        *path-replace-suffix*
-(path-replace-suffix path suffix) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
-  suffix : (or/c string? bytes?) ~
+                                        *path-replace-extension*
+(path-replace-extension path ext) -> path-for-some-system? ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  ext : (or/c string? bytes?) ~ ~
 
-Returns a path that is the same as path, except that the suffix for the
-last element of the path is changed to suffix. If the last element of
-path has no suffix, then suffix is added to the path. A suffix is
-defined as a . followed by any number of non-. characters/bytes at the
-end of the path element, as long as the path element is not ".." or ".".
+Returns a path that is the same as path, except that the extension for
+the last element of the path (including the extension separator) is
+changed to ext. If the last element of path has no extension, then ext
+is added to the path.
+
+An extension is defined as a . that is not at the start of the path
+element followed by any number of non-. characters/bytes at the end of
+the path element, as long as the path element is not a directory
+indicator like "..".
+
 The path argument can be a path for any platform, and the result is for
 the same platform. If path represents a root, the exn:fail:contract
-exception is raised.
+exception is raised. The given ext typically starts with ., but it is
+not required to start with an extension separator.
+
+Examples:
+
+  > (path-replace-extension "x/y.ss" #".rkt")
+  #<path:x/y.rkt>
+  > (path-replace-extension "x/y.ss" #"")
+  #<path:x/y>
+  > (path-replace-extension "x/y" #".rkt")
+  #<path:x/y.rkt>
+  > (path-replace-extension "x/y.tar.gz" #".rkt")
+  #<path:x/y.tar.rkt>
+  > (path-replace-extension "x/.racketrc" #".rkt")
+  #<path:x/.racketrc.rkt>
+
+Added in version 6.5.0.3.
+
+                                        *path-add-extension*
+(path-add-extension path ext [sep]) -> path-for-some-system? ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  ext : (or/c string? bytes?) ~ ~
+  sep : (or/c string? bytes?) = #"_" ~ ~
+
+Similar to path-replace-extension, but any existing extension on path is
+preserved by replacing the . before the extension with sep, and then the
+ext is added to the end.
+
+Examples:
+
+  > (path-add-extension "x/y.ss" #".rkt")
+  #<path:x/y_ss.rkt>
+  > (path-add-extension "x/y" #".rkt")
+  #<path:x/y.rkt>
+  > (path-add-extension "x/y.tar.gz" #".rkt")
+  #<path:x/y.tar_gz.rkt>
+  > (path-add-extension "x/y.tar.gz" #".rkt" #".")
+  #<path:x/y.tar.gz.rkt>
+  > (path-add-extension "x/.racketrc" #".rkt")
+  #<path:x/.racketrc.rkt>
+
+Added in version 6.5.0.3. Changed in version 6.8.0.2: Added the sep
+optional argument.
+
+                                        *path-replace-suffix*
+(path-replace-suffix path ext) -> path-for-some-system? ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  ext : (or/c string? bytes?) ~ ~
+
+  NOTE: This function is deprecated; use path-replace-extension,
+  instead.
+
+Like path-replace-extension, but treats a leading . in a path element as
+an extension separator.
 
                                         *path-add-suffix*
-(path-add-suffix path suffix) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
-  suffix : (or/c string? bytes?) ~
+(path-add-suffix path ext) -> path-for-some-system? ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  ext : (or/c string? bytes?) ~ ~
 
-Similar to path-replace-suffix, but any existing suffix on path is
-preserved by replacing every . in the last path element with _, and then
-the suffix is added to the end.
+  NOTE: This function is deprecated; use path-add-extension, instead.
+
+Like path-add-extension, but treats a leading . in a path element as an
+extension separator.
 
                                         *reroot-path*
 (reroot-path path root-path) -> path-for-some-system? ~
-  path : (or/c path-string? path-for-some-system?) ~
-  root-path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  root-path : (or/c path-string? path-for-some-system?) ~ ~
 
 Produces a path that extends root-path based on the complete form of
 path.
@@ -539,33 +615,86 @@ a root UNC path is prefixed with "UNC" as a path element and the machine
 and volume names become path elements.
 
 Examples:
+
   > (reroot-path (bytes->path #"/home/caprica/baltar" 'unix)
                  (bytes->path #"/earth" 'unix))
   #<path:/earth/home/caprica/baltar>
-  > (reroot-path (bytes->path #"c:\\usr\\adama" 'windows) ~
+  > (reroot-path (bytes->path #"c:\\usr\\adama" 'windows) ~ ~
                  (bytes->path #"\\\\earth\\africa\\" 'windows))
   #<windows-path:\\earth\africa\c\usr\adama>
   > (reroot-path (bytes->path #"\\\\galactica\\cac\\adama" 'windows)
-                 (bytes->path #"s:\\earth\\africa\\" 'windows)) ~
+                 (bytes->path #"s:\\earth\\africa\\" 'windows)) ~ ~
   #<windows-path:s:\earth\africa\UNC\galactica\cac\adama>
 
 2. More Path Utilities
 
- (require racket/path) package: base ~
+ (require racket/path) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/path
 and racket libraries, but not racket/base.
 
                                         *file-name-from-path*
 (file-name-from-path path) -> (or/c path-for-some-system? #f) ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
 Returns the last element of path. If path is syntactically a directory
 path (see split-path), then the result is #f.
 
+                                        *path-get-extension*
+(path-get-extension path) -> (or/c bytes? #f) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+
+Returns a byte string that is the extension part of the filename in
+path, including the . separator. If the path has no extension, #f is
+returned.
+
+See path-replace-extension for the definition of a filename extension.
+
+Examples:
+
+  > (path-get-extension "x/y.rkt")
+  #".rkt"
+  > (path-get-extension "x/y")
+  #f
+  > (path-get-extension "x/y.tar.gz")
+  #".gz"
+  > (path-get-extension "x/.racketrc")
+  #f
+
+Added in version 6.5.0.3 of package base.
+
+                                        *path-has-extension?*
+(path-has-extension? path ext) -> (or/c bytes? #f) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+  ext : (or/c bytes? string?) ~ ~
+
+Determines whether the last element of path ends with ext but is not
+exactly the same as ext.
+
+If ext is a byte string with the shape of an extension (i.e., starting
+with .), this check is equivalent to checking whether
+(path-get-extension path) produces ext.
+
+Examples:
+
+  > (path-has-extension? "x/y.rkt" #".rkt")
+  #t
+  > (path-has-extension? "x/y.ss" #".rkt")
+  #f
+  > (path-has-extension? "x/y" #".rkt")
+  #f
+  > (path-has-extension? "x/.racketrc" #".racketrc")
+  #f
+  > (path-has-extension? "x/compiled/y_rkt.zo" #"_rkt.zo")
+  #t
+
+Added in version 6.5.0.3 of package base.
+
                                         *filename-extension*
 (filename-extension path) -> (or/c bytes? #f) ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
+
+  NOTE: This function is deprecated; use path-get-extension, instead.
 
 Returns a byte string that is the extension part of the filename in path
 without the . separator. If path is syntactically a directory (see
@@ -574,25 +703,48 @@ split-path) or if the path has no extension, #f is returned.
                                         *find-relative-path*
 (find-relative-path  base                                 ~
                      path                                
-                    [#:more-than-root? more-than-root?])  ~
- -> path-for-some-system?
-  base : (or/c path-string? path-for-some-system?) ~
-  path : (or/c path-string?  path-for-some-system?) ~
-  more-than-root? : any/c = #f ~
+                    [#:more-than-root? more-than-root?    ~ ~
+                     #:more-than-same? more-than-same?    ~ ~
+                     #:normalize-case? normalize-case?])  ~ ~
+ -> (or/c path-for-some-system? path-string?)
+  base : (or/c path-string? path-for-some-system?) ~ ~
+  path : (or/c path-string?  path-for-some-system?) ~ ~
+  more-than-root? : any/c = #f ~ ~
+  more-than-same? : any/c = #t ~ ~
+  normalize-case? : any/c = #t ~ ~
 
 Finds a relative pathname with respect to base that names the same file
 or directory as path. Both base and path must be simplified in the sense
-of simple-form-path.  If path shares no subpath in common with base,
-path is returned.
+of simple-form-path. If path shares no subpath in common with base, path
+is returned.
 
 If more-than-root? is true, if base and path share only a Unix root in
 common, and if neither base nor path is just a root path, then path is
 returned.
 
+If path is the same as base, then (build-path 'same) is returned only if
+more-than-same? is true. Otherwise, path is returned when path is the
+same as base.
+
+If normalize-case? is true (the default), then pairs of path elements to
+be compared are first converted via normal-case-path, which means that
+path elements are comparsed case-insentively on Windows. If
+normalize-case? is #f, then path elements and the path roots match only
+if they have the same case.
+
+The result is normally a path in the sense of path?. The result is a
+string only if path is provided a string and also returned as the
+result.
+
+Changed in version 6.8.0.3 of package base: Made path elements
+case-normalized for comparison by default, and added the
+#:normalize-case? argument. Changed in version 6.90.0.21: Added the
+#:more-than-same? argument.
+
                                         *normalize-path*
 (normalize-path path [wrt]) -> path? ~
-  path : path-string? ~
-  wrt : (and/c path-string? complete-path?) ~
+  path : path-string? ~ ~
+  wrt : (and/c path-string? complete-path?) ~ ~
       = (current-directory)
 
 For most purposes, simple-form-path is the preferred mechanism to
@@ -614,9 +766,14 @@ An error is signaled by normalize-path if the input path contains an
 embedded path for a non-existent directory, or if an infinite cycle of
 soft links is detected.
 
+Example:
+
+  > (equal? (current-directory) (normalize-path "."))
+  #t
+
                                         *path-element?*
 (path-element? path) -> boolean? ~
-  path : any/c ~
+  path : any/c ~ ~
 
 Returns #t if path is a path element: a path value for some platform
 (see path-for-some-system?) such that split-path applied to path would
@@ -625,15 +782,27 @@ Otherwise, the result is #f.
 
                                         *path-only*
 (path-only path) -> (or/c #f path-for-some-system?) ~
-  path : (or/c path-string? path-for-some-system?) ~
+  path : (or/c path-string? path-for-some-system?) ~ ~
 
-If path is a filename, the file’s path is returned. If path is
-syntactically a directory, path is returned (as a path, if it was a
-string). If path has no directory part #f is returned.
+Returns path without its final path element in the case that path is not
+syntactically a directory; if path has only a single, non-directory path
+element, #f is returned. If path is syntactically a directory, then path
+is returned unchanged (but as a path, if it was a string).
+
+Examples:
+
+  > (path-only (build-path "a" "b"))
+  #<path:a/>
+  > (path-only (build-path "a"))
+  #f
+  > (path-only (path->directory-path (build-path "a")))
+  #<path:a/>
+  > (path-only (build-path 'up 'up))
+  #<path:../..>
 
                                         *simple-form-path*
 (simple-form-path path) -> path? ~
-  path : path-string? ~
+  path : path-string? ~ ~
 
 Returns (simplify-path (path->complete-path path)), which ensures that
 the result is a complete path containing no up- or same-directory
@@ -641,7 +810,7 @@ indicators.
 
                                         *some-system-path->string*
 (some-system-path->string path) -> string? ~
-  path : path-for-some-system? ~
+  path : path-for-some-system? ~ ~
 
 Converts path to a string using a UTF-8 encoding of the path’s bytes.
 
@@ -651,8 +820,8 @@ encoding) and when starting and ending with strings.
 
                                         *string->some-system-path*
 (string->some-system-path str kind) -> path-for-some-system? ~
-  str : string? ~
-  kind : (or/c 'unix 'windows) ~
+  str : string? ~ ~
+  kind : (or/c 'unix 'windows) ~ ~
 
 Converts str to a kind path using a UTF-8 encoding of the path’s bytes.
 
@@ -662,14 +831,15 @@ encoding) and when starting and ending with strings.
 
                                         *shrink-path-wrt*
 (shrink-path-wrt pth other-pths) -> (or/c #f path?) ~
-  pth : path? ~
-  other-pths : (listof path?) ~
+  pth : path? ~ ~
+  other-pths : (listof path?) ~ ~
 
 Returns a suffix of pth that shares nothing in common with the suffixes
 of other-pths, or pth, if not possible (e.g. when other-pths is empty or
 contains only paths with the same elements as pth).
 
 Examples:
+
   > (shrink-path-wrt (build-path "racket" "list.rkt")
                      (list (build-path "racket" "list.rkt")
                            (build-path "racket" "base.rkt")))
@@ -680,16 +850,16 @@ Examples:
                            (build-path "racket" "base.rkt")))
   #<path:racket/list.rkt>
 
-3. Unix and Mac OS X Paths
+3. Unix and Mac OS Paths
 
-In a path on Unix and Mac OS X, a / separates elements of the path, . as
-a path element always means the directory indicated by preceding path,
-and .. as a path element always means the parent of the directory
-indicated by the preceding path. A leading ~ in a path is not treated
-specially, but expand-user-path can be used to convert a leading ~
-element to a user-specific directory. No other character or byte has a
-special meaning within a path. Multiple adjacent / are equivalent to a
-single / (i.e., they act as a single path separator).
+In a path on Unix and Mac OS, a / separates elements of the path, . as a
+path element always means the directory indicated by preceding path, and
+.. as a path element always means the parent of the directory indicated
+by the preceding path. A leading ~ in a path is not treated specially,
+but expand-user-path can be used to convert a leading ~ element to a
+user-specific directory. No other character or byte has a special
+meaning within a path. Multiple adjacent / are equivalent to a single /
+(i.e., they act as a single path separator).
 
 A path root is always /. A path starting with / is an absolute, complete
 path, and a path starting with any other character is a relative path.
@@ -697,7 +867,7 @@ path, and a path starting with any other character is a relative path.
 Any pathname that ends with a / syntactically refers to a directory, as
 does any path whose last element is . or ...
 
-A Unix and Mac OS X path is cleansed by replacing multiple adjacent /s
+A Unix and Mac OS path is cleansed by replacing multiple adjacent /s
 with a single /.
 
 For (bytes->path-element bstr), bstr must not contain any /, otherwise
@@ -708,15 +878,15 @@ that is not the case for other platforms, however, path-element->bytes
 and path-element->string should be used when converting individual path
 elements.
 
-On Mac OS X, Finder aliases are zero-length files.
+On Mac OS, Finder aliases are zero-length files.
 
 3.1. Unix Path Representation
 
-A path on Unix and Mac OS X is natively a byte string. For presentation
-to users and for other string-based operations, a path is converted
-to/from a string using the current locale’s encoding with ? (encoding)
-or #\uFFFD (decoding) in place of errors. Beware that the encoding may
-not accommodate all possible paths as distinct strings.
+A path on Unix and Mac OS is natively a byte string. For presentation to
+users and for other string-based operations, a path is converted to/from
+a string using the current locale’s encoding with ? (encoding) or
+#\uFFFD (decoding) in place of errors. Beware that the encoding may not
+accommodate all possible paths as distinct strings.
 
 4. Windows Paths
 

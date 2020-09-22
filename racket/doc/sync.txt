@@ -43,18 +43,20 @@ decremented, just as with semaphore-wait. For most kinds of events,
 however (such as a port), synchronizing does not modify the event’s
 state.
 
-Racket values that act as synchronizable events include semaphores,
-channels, asynchronous channels, ports, TCP listeners, log receivers,
-threads, subprocesses, will executors, and custodian boxes. Libraries
-can define new synchronizable events, especially though prop:evt.
+Racket values that act as synchronizable events include asynchronous
+channels, channels, custodian boxes, log receivers, place channels,
+ports, semaphores, subprocesses, TCP listeners, threads, and will
+executors. Libraries can define new synchronizable events, especially
+though prop:evt.
 
                                         *evt?*
 (evt? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a synchronizable event, #f otherwise.
 
 Examples:
+
   > (evt? never-evt)
   #t
   > (evt? (make-channel))
@@ -64,7 +66,7 @@ Examples:
 
                                         *sync*
 (sync evt ...) -> any ~
-  evt : evt? ~
+  evt : evt? ~ ~
 
 Blocks as long as none of the synchronizable events evts are ready, as
 defined above.
@@ -76,20 +78,19 @@ current-evt-pseudo-random-generator parameter sets the random-number
 generator that controls this choice.
 
 Examples:
-  > (define ch (make-channel))
 
+  > (define ch (make-channel))
   > (thread (λ () (displayln (sync ch))))
   #<thread>
   > (channel-put ch 'hellooooo)
   hellooooo
 
-
 Changed in version 6.1.0.3: Allow 0 arguments instead of 1 or more.
 
                                         *sync/timeout*
 (sync/timeout timeout evt ...) -> any ~
-  timeout : (or/c #f (and/c real? (not/c negative?)) (-> any)) ~
-  evt : evt? ~
+  timeout : (or/c #f (and/c real? (not/c negative?)) (-> any)) ~ ~
+  evt : evt? ~ ~
 
 Like sync if timeout is #f. If timeout is a real number, then the result
 is #f if timeout seconds pass without a successful synchronization. If
@@ -103,6 +104,7 @@ timeout.
 See also alarm-evt for an alternative timeout mechanism.
 
 Examples:
+
   ; times out before waking up
   > (sync/timeout
      0.5
@@ -113,12 +115,11 @@ Examples:
      never-evt)
   no ready events
 
-
 Changed in version 6.1.0.3: Allow 1 argument instead of 2 or more.
 
                                         *sync/enable-break*
 (sync/enable-break evt ...) -> any ~
-  evt : evt? ~
+  evt : evt? ~ ~
 
 Like sync, but breaking is enabled (see [missing]) while waiting on the
 evts. If breaking is disabled when sync/enable-break is called, then
@@ -127,14 +128,14 @@ but not both.
 
                                         *sync/timeout/enable-break*
 (sync/timeout/enable-break timeout evt ...) -> any ~
-  timeout : (or/c #f (and/c real? (not/c negative?)) (-> any)) ~
-  evt : evt? ~
+  timeout : (or/c #f (and/c real? (not/c negative?)) (-> any)) ~ ~
+  evt : evt? ~ ~
 
 Like sync/enable-break, but with a timeout as for sync/timeout.
 
                                         *choice-evt*
 (choice-evt evt ...) -> evt? ~
-  evt : evt? ~
+  evt : evt? ~ ~
 
 Creates and returns a single event that combines the evts. Supplying the
 result to sync is the same as supplying each evt to the same call.
@@ -146,12 +147,10 @@ chosen pseudo-randomly, and the synchronization result is the chosen
 evt’s synchronization result.
 
 Examples:
+
   > (define ch1 (make-channel))
-
   > (define ch2 (make-channel))
-
   > (define either-channel (choice-evt ch1 ch2))
-
   > (thread (λ () (displayln (sync either-channel))))
   #<thread>
   > (channel-put
@@ -159,11 +158,10 @@ Examples:
      'tuturuu)
   tuturuu
 
-
                                         *wrap-evt*
 (wrap-evt evt wrap) -> evt? ~
-  evt : evt? ~
-  wrap : (any/c ... . -> . any) ~
+  evt : evt? ~ ~
+  wrap : (any/c ... . -> . any) ~ ~
 
 Creates an event that is ready for synchronization when evt is ready for
 synchronization, but whose synchronization result is determined by
@@ -174,20 +172,18 @@ synchronization result of evt.
 The call to wrap is parameterize-breaked to disable breaks initially.
 
 Examples:
+
   > (define ch (make-channel))
-
-  > (define evt (wrap-evt ch (λ (v) (format "you've got mail: ~a" v)))) ~
-
+  > (define evt (wrap-evt ch (λ (v) (format "you've got mail: ~a" v)))) ~ ~
   > (thread (λ () (displayln (sync evt))))
   #<thread>
   > (channel-put ch "Dear Alice ...")
   you've got mail: Dear Alice ...
 
-
                                         *handle-evt*
 (handle-evt evt handle) -> handle-evt? ~
-  evt : evt? ~
-  handle : (any/c ... . -> . any) ~
+  evt : evt? ~ ~
+  handle : (any/c ... . -> . any) ~ ~
 
 Like wrap-evt, except that handle is called in tail position with
 respect to the synchronization request—and without breaks explicitly
@@ -195,10 +191,9 @@ disabled—when it is not wrapped by wrap-evt, chaperone-evt, or another
 handle-evt.
 
 Examples:
+
   > (define msg-ch (make-channel))
-
   > (define exit-ch (make-channel))
-
   > (thread
      (λ ()
        (let loop ([val 0])
@@ -213,17 +208,14 @@ Examples:
   > (channel-put msg-ch 5)
   val = 0
   val = 5
-
   > (channel-put msg-ch 7)
-
   > (channel-put exit-ch 'done)
   val = 7
   done
 
-
                                         *guard-evt*
 (guard-evt maker) -> evt? ~
-  maker : (-> (or/c evt? any/c)) ~
+  maker : (-> (or/c evt? any/c)) ~ ~
 
 Creates a value that behaves as an event, but that is actually an event
 maker.
@@ -241,7 +233,7 @@ is guard.
 
                                         *nack-guard-evt*
 (nack-guard-evt maker) -> evt? ~
-  maker : (evt? . -> . (or/c evt? any/c)) ~
+  maker : (evt? . -> . (or/c evt? any/c)) ~ ~
 
 Like guard-evt, but when maker is called, it is given a NACK (“negative
 acknowledgment”) event. After starting the call to maker, if the event
@@ -258,7 +250,7 @@ synchronization.
 
                                         *poll-guard-evt*
 (poll-guard-evt maker) -> evt? ~
-  maker : (boolean? . -> . (or/c evt? any/c)) ~
+  maker : (boolean? . -> . (or/c evt? any/c)) ~ ~
 
 Like guard-evt, but when maker is called, it is provided a boolean value
 that indicates whether the event will be used for a poll, #t, or for a
@@ -271,8 +263,8 @@ result.
 
                                         *replace-evt*
 (replace-evt evt maker) -> evt? ~
-  evt : evt? ~
-  maker : (any/c ... . -> . (or/c evt? any/c)) ~
+  evt : evt? ~ ~
+  maker : (any/c ... . -> . (or/c evt? any/c)) ~ ~
 
 Like guard-evt, but maker is called only after evt becomes ready for
 synchronization, and the synchronization result of evt is passed to
@@ -292,20 +284,22 @@ is guard.
 
 Added in version 6.1.0.3.
 
-always-evt : evt? ~
+always-evt : evt? ~ ~
 
 A constant event that is always ready for synchronization, with itself
 as its synchronization result.
 
 Example:
+
   > (sync always-evt)
   #<always-evt>
 
-never-evt : evt? ~
+never-evt : evt? ~ ~
 
 A constant event that is never ready for synchronization.
 
 Example:
+
   > (sync/timeout 0.1 never-evt)
   #f
 
@@ -321,18 +315,16 @@ not yet expired. The system-idle event’s synchronization result is
 event.
 
 Examples:
-  > (define th (thread (λ () (let loop () (loop)))))
 
+  > (define th (thread (λ () (let loop () (loop)))))
   > (sync/timeout 0.1 (system-idle-evt))
   #f
   > (kill-thread th)
-
   > (sync (system-idle-evt))
-
 
                                         *alarm-evt*
 (alarm-evt msecs) -> evt? ~
-  msecs : real? ~
+  msecs : real? ~ ~
 
 Returns a synchronizable event that is not ready for synchronization
 when (current-inexact-milliseconds) would return a value that is less
@@ -342,26 +334,27 @@ msecs. The synchronization result of a alarm event is the alarm event
 itself.
 
 Examples:
-  > (define alarm (alarm-evt (+ (current-inexact-milliseconds) 100)))
 
+  > (define alarm (alarm-evt (+ (current-inexact-milliseconds) 100)))
   > (sync alarm)
   #<alarm-evt>
 
                                         *handle-evt?*
 (handle-evt? evt) -> boolean? ~
-  evt : evt? ~
+  evt : evt? ~ ~
 
 Returns #t if evt was created by handle-evt or by choice-evt applied to
 another event for which handle-evt? produces #t. For any other event,
 handle-evt?  produces #f.
 
 Examples:
+
   > (handle-evt? never-evt)
   #f
   > (handle-evt? (handle-evt always-evt values))
   #t
 
-prop:evt : struct-type-property? ~
+prop:evt : struct-type-property? ~ ~
 
 A structure type property that identifies structure types whose
 instances can serve as synchronizable events. The property value can  be
@@ -385,6 +378,10 @@ any of the following:
   or procedure is used as above. Otherwise, the structure acts as an
   event that is never ready.
 
+For working with foreign libraries, a prop:evt value can also be a
+result of unsafe-poller, although that possibility is omitted from the
+safe contract of prop:evt.
+
 Instances of a structure type with the prop:input-port or
 prop:output-port property are also synchronizable events by virtue of
 being a port. If the structure type has more than one of prop:evt,
@@ -394,28 +391,23 @@ and the prop:input-port property takes precedence over prop:output-port
 for synchronization.
 
 Examples:
+
   > (define-struct wt (base val)
-                   #:property prop:evt (struct-field-index base)) ~
-
+                   #:property prop:evt (struct-field-index base)) ~ ~
   > (define sema (make-semaphore))
-
   > (sync/timeout 0 (make-wt sema #f))
   #f
   > (semaphore-post sema)
-
   > (sync/timeout 0 (make-wt sema #f))
   #<semaphore>
   > (semaphore-post sema)
-
   > (sync/timeout 0 (make-wt (lambda (self) (wt-val self)) sema))
   #<semaphore>
   > (semaphore-post sema)
-
   > (define my-wt (make-wt (lambda (self) (wrap-evt
                                            (wt-val self)
                                            (lambda (x) self)))
                            sema))
-
   > (sync/timeout 0 my-wt)
   #<wt>
   > (sync/timeout 0 my-wt)
@@ -425,7 +417,7 @@ Examples:
 (current-evt-pseudo-random-generator) ~
  -> pseudo-random-generator?
 (current-evt-pseudo-random-generator generator) -> void?
-  generator : pseudo-random-generator? ~
+  generator : pseudo-random-generator? ~ ~
 
 A parameter that determines the pseudo-random number generator used by
 sync for events created by choice-evt.
@@ -451,7 +443,7 @@ For buffered asynchronous channels, see Buffered Asynchronous Channels.
 
                                         *channel?*
 (channel? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a channel, #f otherwise.
 
@@ -466,29 +458,29 @@ value through the channel.
 
                                         *channel-get*
 (channel-get ch) -> any ~
-  ch : channel? ~
+  ch : channel? ~ ~
 
 Blocks until a sender is ready to provide a value through ch. The result
 is the sent value.
 
                                         *channel-try-get*
 (channel-try-get ch) -> any ~
-  ch : channel? ~
+  ch : channel? ~ ~
 
 Receives and returns a value from ch if a sender is immediately ready,
 otherwise returns #f.
 
                                         *channel-put*
 (channel-put ch v) -> void? ~
-  ch : channel? ~
-  v : any/c ~
+  ch : channel? ~ ~
+  v : any/c ~ ~
 
 Blocks until a receiver is ready to accept the value v through ch.
 
                                         *channel-put-evt*
 (channel-put-evt ch v) -> channel-put-evt? ~
-  ch : channel? ~
-  v : any/c ~
+  ch : channel? ~ ~
+  v : any/c ~ ~
 
 Returns a fresh synchronizable event for use with sync. The event is
 ready for synchronization when (channel-put ch v) would not block, and
@@ -496,7 +488,7 @@ the event’s synchronization result is the event itself.
 
                                         *channel-put-evt?*
 (channel-put-evt? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a channel-put event produced by channel-put-evt, #f
 otherwise.
@@ -522,13 +514,13 @@ synchronization result of a semaphore is the semaphore itself.
 
                                         *semaphore?*
 (semaphore? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a semaphore, #f otherwise.
 
                                         *make-semaphore*
 (make-semaphore [init]) -> semaphore? ~
-  init : exact-nonnegative-integer? = 0 ~
+  init : exact-nonnegative-integer? = 0 ~ ~
 
 Creates and returns a new semaphore with the counter initially set to
 init. If init is larger than a semaphore’s maximum internal counter
@@ -536,7 +528,7 @@ value, the exn:fail exception is raised.
 
                                         *semaphore-post*
 (semaphore-post sema) -> void? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Increments the semaphore’s internal counter and returns #<void>. If the
 semaphore’s internal counter has already reached its maximum value, the
@@ -544,7 +536,7 @@ exn:fail exception is raised.
 
                                         *semaphore-wait*
 (semaphore-wait sema) -> void? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Blocks until the internal counter for semaphore sema is non-zero. When
 the counter is non-zero, it is decremented and semaphore-wait returns
@@ -552,7 +544,7 @@ the counter is non-zero, it is decremented and semaphore-wait returns
 
                                         *semaphore-try-wait?*
 (semaphore-try-wait? sema) -> boolean? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Like semaphore-wait, but semaphore-try-wait? never blocks execution.  If
 sema’s internal counter is zero, semaphore-try-wait? returns #f
@@ -561,7 +553,7 @@ positive, it is decremented and #t is returned.
 
                                         *semaphore-wait/enable-break*
 (semaphore-wait/enable-break sema) -> void? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Like semaphore-wait, but breaking is enabled (see [missing]) while
 waiting on sema. If breaking is disabled when
@@ -571,7 +563,7 @@ both.
 
                                         *semaphore-peek-evt*
 (semaphore-peek-evt sema) -> semaphore-peek-evt? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Creates and returns a new synchronizable event (for use with sync, for
 example) that is ready for synchronization when sema is ready, but
@@ -581,7 +573,7 @@ event itself.
 
                                         *semaphore-peek-evt?*
 (semaphore-peek-evt? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a semaphore wrapper produced by semaphore-peek-evt,
 #f otherwise.
@@ -591,10 +583,10 @@ Returns #t if v is a semaphore wrapper produced by semaphore-peek-evt,
                       proc                
                      [try-fail-thunk]     
                       arg ...)        -> any
-  sema : semaphore? ~
-  proc : procedure? ~
-  try-fail-thunk : (or/c (-> any) #f) = #f ~
-  arg : any/c ~
+  sema : semaphore? ~ ~
+  proc : procedure? ~ ~
+  try-fail-thunk : (or/c (-> any) #f) = #f ~ ~
+  arg : any/c ~ ~
 
 Waits on sema using semaphore-wait, calls proc with all args, and then
 posts to sema. A continuation barrier blocks full continuation jumps
@@ -608,10 +600,10 @@ and try-fail-thunk is called if the wait fails.
                                    proc                
                                   [try-fail-thunk]     
                                    arg ...)        -> any
-  sema : semaphore? ~
-  proc : procedure? ~
-  try-fail-thunk : (or/c (-> any) #f) = #f ~
-  arg : any/c ~
+  sema : semaphore? ~ ~
+  proc : procedure? ~ ~
+  try-fail-thunk : (or/c (-> any) #f) = #f ~ ~
+  arg : any/c ~ ~
 
 Like call-with-semaphore, except that semaphore-wait/enable-break is
 used with sema in non-try mode. When try-fail-thunk is provided and not
@@ -620,7 +612,7 @@ sema.
 
 4. Buffered Asynchronous Channels
 
- (require racket/async-channel) package: base ~
+ (require racket/async-channel) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/async-channel library, not racket/base or racket.
@@ -640,13 +632,13 @@ synchronization result is the same as the async-channel-get result.
 
                                         *async-channel?*
 (async-channel? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an asynchronous channel, #f otherwise.
 
                                         *make-async-channel*
 (make-async-channel [limit]) -> async-channel? ~
-  limit : (or/c exact-positive-integer? #f) = #f ~
+  limit : (or/c exact-positive-integer? #f) = #f ~ ~
 
 Returns an asynchronous channel with a buffer limit of limit items. A
 get operation blocks when the channel is empty, and a put operation
@@ -655,14 +647,14 @@ channel buffer has no limit (so a put never blocks).
 
                                         *async-channel-get*
 (async-channel-get ach) -> any/c ~
-  ach : async-channel? ~
+  ach : async-channel? ~ ~
 
 Blocks until at least one value is available in ach, and then returns
 the first of the values that were put into async-channel.
 
                                         *async-channel-try-get*
 (async-channel-try-get ach) -> any/c ~
-  ach : async-channel? ~
+  ach : async-channel? ~ ~
 
 If at least one value is immediately available in ach, returns the first
 of the values that were put into ach. If async-channel is empty, the
@@ -670,24 +662,25 @@ result is #f.
 
                                         *async-channel-put*
 (async-channel-put ach v) -> void? ~
-  ach : async-channel? ~
-  v : any/c ~
+  ach : async-channel? ~ ~
+  v : any/c ~ ~
 
 Puts v into ach, blocking if ach’s buffer is full until space is
 available.
 
                                         *async-channel-put-evt*
 (async-channel-put-evt ach v) -> evt? ~
-  ach : async-channel? ~
-  v : any/c ~
+  ach : async-channel? ~ ~
+  v : any/c ~ ~
 
 Returns a synchronizable event that is ready for synchronization when
 (async-channel-put ach v) would return a value (i.e., when the channel
 holds fewer values already than its limit); the synchronization result
-of a asychronous channel-put event is the asychronous channel-put event
-itself.
+of a asynchronous channel-put event is the asynchronous channel-put
+event itself.
 
 Examples:
+
   (define (server input-channel output-channel)
     (thread (lambda ()
               (define (get)
@@ -705,48 +698,34 @@ Examples:
                   [(long) (begin
                             (put (do-large-computation))
                             (loop (get)))])))))
-
-
   (define to-server (make-async-channel))
-
-
   (define from-server (make-async-channel))
-
-
+   
   > (server to-server from-server)
   #<thread>
   > (async-channel? to-server)
   #t
   > (printf "Adding 1 to 4\n")
   Adding 1 to 4
-
   > (async-channel-put to-server 'add)
-
   > (async-channel-put to-server 4)
-
   > (printf "Result is ~a\n" (async-channel-get from-server))
   Result is 5
-
   > (printf "Ask server to do a long computation\n")
   Ask server to do a long computation
-
   > (async-channel-put to-server 'long)
-
   > (printf "I can do other stuff\n")
   I can do other stuff
-
   > (printf "Ok, computation from server is ~a\n"
             (async-channel-get from-server))
   Ok, computation from server is 3
-
   > (async-channel-put to-server 'quit)
-
 
 4.2. Contracts and Impersonators on Asynchronous Channels
 
                                         *async-channel/c*
 (async-channel/c c) -> contract? ~
-  c : contract? ~
+  c : contract? ~ ~
 
 Returns a contract that recognizes asynchronous channels. Values put
 into or retrieved from the channel must match c.
@@ -768,11 +747,11 @@ contract.
                            prop-val ... 
                            ...)         
  -> (and/c async-channel? impersonator?)
-  channel : async-channel? ~
-  get-proc : (any/c . -> . any/c) ~
-  put-proc : (any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  channel : async-channel? ~ ~
+  get-proc : (any/c . -> . any/c) ~ ~
+  put-proc : (any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any ~ ~
 
 Returns an impersonator of channel, which redirects the
 async-channel-get and async-channel-put operations.
@@ -801,11 +780,11 @@ override impersonator property values of channel.
                          prop-val ... 
                          ...)         
  -> (and/c async-channel? chaperone?)
-  channel : async-channel? ~
-  get-proc : (any/c . -> . any/c) ~
-  put-proc : (any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  channel : async-channel? ~ ~
+  get-proc : (any/c . -> . any/c) ~ ~
+  put-proc : (any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any ~ ~
 
 Like impersonate-async-channel, but the get-proc procedure must produce
 the same value or a chaperone of the original value, and put-proc must

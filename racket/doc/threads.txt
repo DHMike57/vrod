@@ -3,7 +3,7 @@ Threads
 +[missing] in [missing] introduces threads.
 
 See [missing] for basic information on the Racket thread model. See also
-[missing].
+[missing] and [missing].
 
 When a thread is created, it is placed into the management of the
 current custodian and added to the current thread group. A thread can
@@ -25,23 +25,11 @@ A thread can be used as a synchronizable event (see [missing]).  A
 thread is ready for synchronization when thread-wait would not block;
 the synchronization result of a thread is the thread itself.
 
-All constant-time procedures and operations provided by Racket are
-thread-safe because they are atomic. For example, set! assigns to a
-variable as an atomic action with respect to all threads, so that no
-thread can see a “half-assigned” variable. Similarly, vector-set!
-assigns to a vector atomically. The hash-set! procedure is not atomic,
-but the table is protected by a lock; see [missing] for more
-information. Port operations are generally not atomic, but they are
-thread-safe in the sense that a byte consumed by one thread from an
-input port will not be returned also to another thread, and procedures
-like port-commit-peeked and write-bytes-avail offer specific concurrency
-guarantees.
-
 1. Creating Threads
 
                                         *thread*
 (thread thunk) -> thread? ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 Calls thunk with no arguments in a new thread of control. The thread
 procedure returns immediately with a thread descriptor value. When the
@@ -50,7 +38,7 @@ terminates.
 
                                         *thread?*
 (thread? v) -> thread? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a thread descriptor, #f otherwise.
 
@@ -61,7 +49,7 @@ Returns the thread descriptor for the currently executing thread.
 
                                         *thread/suspend-to-kill*
 (thread/suspend-to-kill thunk) -> thread? ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 Like thread, except that “killing” the thread through kill-thread or
 custodian-shutdown-all merely suspends the thread instead of terminating
@@ -69,8 +57,8 @@ it.
 
                                         *call-in-nested-thread*
 (call-in-nested-thread thunk [cust]) -> any ~
-  thunk : (-> any) ~
-  cust : custodian? = (current-custodian) ~
+  thunk : (-> any) ~ ~
+  cust : custodian? = (current-custodian) ~ ~
 
 Creates a nested thread managed by cust to execute thunk. (The nested
 thread’s current custodian is inherited from the creating thread,
@@ -95,11 +83,16 @@ nested thread is created, the break is moved to the nested thread. If a
 break remains queued on the nested thread when it completes, the break
 is moved to the original thread.
 
+If the thread created by call-in-nested-thread dies while itself in a
+call to call-in-nested-thread, the outer call to call-in-nested-thread
+waits for the innermost nested thread to complete, and any breaks
+pending on the inner threads are moved to the original thread.
+
 2. Suspending, Resuming, and Killing Threads
 
                                         *thread-suspend*
 (thread-suspend thd) -> void? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Immediately suspends the execution of thd if it is running. If the
 thread has terminated or is already suspended, thread-suspend has no
@@ -111,8 +104,8 @@ and the thread is not suspended.
 
                                         *thread-resume*
 (thread-resume thd [benefactor]) -> void? ~
-  thd : thread? ~
-  benefactor : (or/c thread? custodian? #f) = #f ~
+  thd : thread? ~ ~
+  benefactor : (or/c thread? custodian? #f) = #f ~ ~
 
 Resumes the execution of thd if it is suspended and has at least one
 custodian (possibly added through benefactor, as described below). If
@@ -141,7 +134,7 @@ if benefactor is supplied, it triggers up to three additional actions:
 
                                         *kill-thread*
 (kill-thread thd) -> void? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Terminates the specified thread immediately, or suspends the thread if
 thd was created with thread/suspend-to-kill. Terminating the main thread
@@ -159,8 +152,8 @@ and other threads can safely use the port.
 
                                         *break-thread*
 (break-thread thd [kind]) -> void? ~
-  thd : thread? ~
-  kind : (or/c #f 'hang-up 'terminate) = #f ~
+  thd : thread? ~ ~
+  kind : (or/c #f 'hang-up 'terminate) = #f ~ ~
 
 Registers a break with the specified thread, where kind optionally
 indicates the kind of break to register. If breaking is disabled in thd,
@@ -168,7 +161,7 @@ the break will be ignored until breaks are re-enabled (see [missing]).
 
                                         *sleep*
 (sleep [secs]) -> void? ~
-  secs : (>=/c 0) = 0 ~
+  secs : (>=/c 0) = 0 ~ ~
 
 Causes the current thread to sleep until at least secs seconds have
 passed after it starts sleeping. A zero value for secs simply acts as a
@@ -178,13 +171,13 @@ of the actual sleep time is unspecified.
 
                                         *thread-running?*
 (thread-running? thd) -> any ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Returns #t if thd has not terminated and is not suspended, #f otherwise.
 
                                         *thread-dead?*
 (thread-dead? thd) -> any ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Returns #t if thd has terminated, #f otherwise.
 
@@ -192,7 +185,7 @@ Returns #t if thd has terminated, #f otherwise.
 
                                         *thread-wait*
 (thread-wait thd) -> void? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Blocks execution of the current thread until thd has terminated. Note
 that (thread-wait (current-thread)) deadlocks the current thread, but a
@@ -200,7 +193,7 @@ break can end the deadlock (if breaking is enabled; see [missing]).
 
                                         *thread-dead-evt*
 (thread-dead-evt thd) -> evt? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Returns a synchronizable event (see [missing]) that is ready for
 synchronization if and only if thd has terminated.  Unlike using thd
@@ -212,7 +205,7 @@ itself.
 
                                         *thread-resume-evt*
 (thread-resume-evt thd) -> evt? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Returns a synchronizable event (see [missing]) that becomes ready for
 synchronization when thd is running.  (If thd has terminated, the event
@@ -225,15 +218,16 @@ to the event does not prevent thd from being garbage collected (see
 
                                         *thread-suspend-evt*
 (thread-suspend-evt thd) -> evt? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Returns a synchronizable event (see [missing]) that becomes ready for
 synchronization when thd is suspended.  (If thd has terminated, the
 event will never unblock.)  If thd is suspended and then resumes after a
 call to thread-suspend-evt, the result event remains ready; after each
 resume of thd created a fresh event to be returned by
-thread-suspend-evt. The synchronization result of a thread-suspend event
-is the thread-suspend event itself.
+thread-suspend-evt. The result of the event is thd, but if thd is never
+resumed, then reference to the event does not prevent thd from being
+garbage collected (see [missing]).
 
 4. Thread Mailboxes
 
@@ -245,9 +239,9 @@ channel.
 
                                         *thread-send*
 (thread-send thd v [fail-thunk]) -> any ~
-  thd : thread? ~
-  v : any/c ~
-  fail-thunk : (or/c (-> any) #f) ~
+  thd : thread? ~ ~
+  v : any/c ~ ~
+  fail-thunk : (or/c (-> any) #f) ~ ~
              = (lambda () (raise-mismatch-error ....))
 
 Queues v as a message to thd without blocking. If the message is queued,
@@ -279,7 +273,7 @@ thread-receive event itself.
 
                                         *thread-rewind-receive*
 (thread-rewind-receive lst) -> void? ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Pushes the elements of lst back onto the front of the current thread’s
 queue. The elements are pushed one by one, so that the first available

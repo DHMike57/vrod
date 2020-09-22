@@ -2,32 +2,32 @@ Byte and String Output
 
                                         *write-char*
 (write-char char [out]) -> void? ~
-  char : char? ~
-  out : output-port? = (current-output-port) ~
+  char : char? ~ ~
+  out : output-port? = (current-output-port) ~ ~
 
 Writes a single character to out; more precisely, the bytes that are the
 UTF-8 encoding of char are written to out.
 
                                         *write-byte*
 (write-byte byte [out]) -> void? ~
-  byte : byte? ~
-  out : output-port? = (current-output-port) ~
+  byte : byte? ~ ~
+  out : output-port? = (current-output-port) ~ ~
 
 Writes a single byte to out.
 
                                         *newline*
 (newline [out]) -> void? ~
-  out : output-port? = (current-output-port) ~
+  out : output-port? = (current-output-port) ~ ~
 
 The same as (write-char #\newline out).
 
                                         *write-string*
 (write-string str [out start-pos end-pos]) ~
  -> exact-nonnegative-integer?
-  str : string? ~
-  out : output-port? = (current-output-port) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (string-length str) ~
+  str : string? ~ ~
+  out : output-port? = (current-output-port) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (string-length str) ~ ~
 
 Writes characters to out from str starting from index start-pos
 (inclusive) up to end-pos (exclusive). Like substring, the
@@ -45,10 +45,10 @@ functions.)
                                         *write-bytes*
 (write-bytes bstr [out start-pos end-pos]) ~
  -> exact-nonnegative-integer?
-  bstr : bytes? ~
-  out : output-port? = (current-output-port) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  bstr : bytes? ~ ~
+  out : output-port? = (current-output-port) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like write-string, but writes bytes instead of characters.
 
@@ -57,10 +57,10 @@ Like write-string, but writes bytes instead of characters.
                    [out           
                     start-pos     
                     end-pos]) -> exact-nonnegative-integer?
-  bstr : bytes? ~
-  out : output-port? = (current-output-port) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  bstr : bytes? ~ ~
+  out : output-port? = (current-output-port) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like write-bytes, but returns without blocking after writing as many
 bytes as it can immediately flush. It blocks only if no bytes can be
@@ -81,10 +81,10 @@ before any bytes have been written, an exception is raised.
                      start-pos 
                      end-pos]) 
  -> (or/c exact-nonnegative-integer? #f)
-  bstr : bytes? ~
-  out : output-port? = (current-output-port) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  bstr : bytes? ~ ~
+  out : output-port? = (current-output-port) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like write-bytes-avail, but never blocks, returns #f if the port
 contains buffered data that cannot be written immediately, and returns 0
@@ -97,10 +97,10 @@ bytes can be written immediately.
                                  start-pos 
                                  end-pos]) 
  -> exact-nonnegative-integer?
-  bstr : bytes? ~
-  out : output-port? = (current-output-port) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  bstr : bytes? ~ ~
+  out : output-port? = (current-output-port) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Like write-bytes-avail, except that breaks are enabled during the write.
 The procedure provides a guarantee about the interaction of writing and
@@ -110,8 +110,8 @@ call, then no bytes will have been written to out.  See also [missing].
 
                                         *write-special*
 (write-special v [out]) -> boolean? ~
-  v : any/c ~
-  out : output-port? = (current-output-port) ~
+  v : any/c ~ ~
+  out : output-port? = (current-output-port) ~ ~
 
 Writes v directly to out if the port supports special writes, or raises
 exn:fail:contract if the port does not support special write. The result
@@ -119,8 +119,8 @@ is always #t, indicating that the write succeeded.
 
                                         *write-special-avail**
 (write-special-avail* v [out]) -> boolean? ~
-  v : any/c ~
-  out : output-port? = (current-output-port) ~
+  v : any/c ~ ~
+  out : output-port? = (current-output-port) ~ ~
 
 Like write-special, but without blocking. If v cannot be written
 immediately, the result is #f without writing v, otherwise the result is
@@ -131,10 +131,10 @@ immediately, the result is #f without writing v, otherwise the result is
                        [out           
                         start-pos     
                         end-pos]) -> evt?
-  bstr : bytes? ~
-  out : output-port? = (current-output-port) ~
-  start-pos : exact-nonnegative-integer? = 0 ~
-  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~
+  bstr : bytes? ~ ~
+  out : output-port? = (current-output-port) ~ ~
+  start-pos : exact-nonnegative-integer? = 0 ~ ~
+  end-pos : exact-nonnegative-integer? = (bytes-length bstr) ~ ~
 
 Similar to write-bytes-avail, but instead of writing bytes immediately,
 it returns a synchronizable event (see [missing]).  The out must support
@@ -149,8 +149,8 @@ synchronization, then no bytes will have been written to out.
 
                                         *write-special-evt*
 (write-special-evt v [out]) -> evt? ~
-  v : any/c ~
-  out : output-port? = (current-output-port) ~
+  v : any/c ~ ~
+  out : output-port? = (current-output-port) ~ ~
 
 Similar to write-special, but instead of writing the special value
 immediately, it returns a synchronizable event (see [missing]).  The out
@@ -163,7 +163,7 @@ have been written to out.
 
                                         *port-writes-atomic?*
 (port-writes-atomic? out) -> boolean? ~
-  out : output-port? ~
+  out : output-port? ~ ~
 
 Returns #t if write-bytes-avail/enable-break can provide an exclusive-or
 guarantee (break or write, but not both) for out, and if the port can be
@@ -174,7 +174,7 @@ writes.
 
                                         *port-writes-special?*
 (port-writes-special? out) -> boolean? ~
-  out : output-port? ~
+  out : output-port? ~ ~
 
 Returns #t if procedures like write-special can write arbitrary values
 to the port. Racket’s file-stream ports, pipes, string ports, and TCP

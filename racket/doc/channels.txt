@@ -19,7 +19,7 @@ For buffered asynchronous channels, see [missing].
 
                                         *channel?*
 (channel? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a channel, #f otherwise.
 
@@ -34,29 +34,29 @@ value through the channel.
 
                                         *channel-get*
 (channel-get ch) -> any ~
-  ch : channel? ~
+  ch : channel? ~ ~
 
 Blocks until a sender is ready to provide a value through ch. The result
 is the sent value.
 
                                         *channel-try-get*
 (channel-try-get ch) -> any ~
-  ch : channel? ~
+  ch : channel? ~ ~
 
 Receives and returns a value from ch if a sender is immediately ready,
 otherwise returns #f.
 
                                         *channel-put*
 (channel-put ch v) -> void? ~
-  ch : channel? ~
-  v : any/c ~
+  ch : channel? ~ ~
+  v : any/c ~ ~
 
 Blocks until a receiver is ready to accept the value v through ch.
 
                                         *channel-put-evt*
 (channel-put-evt ch v) -> channel-put-evt? ~
-  ch : channel? ~
-  v : any/c ~
+  ch : channel? ~ ~
+  v : any/c ~ ~
 
 Returns a fresh synchronizable event for use with sync. The event is
 ready for synchronization when (channel-put ch v) would not block, and
@@ -64,7 +64,7 @@ the event’s synchronization result is the event itself.
 
                                         *channel-put-evt?*
 (channel-put-evt? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a channel-put event produced by channel-put-evt, #f
 otherwise.

@@ -16,19 +16,19 @@ synchronizing with other processes.
 
                                         *make-thread-group*
 (make-thread-group [group]) -> thread-group? ~
-  group : thread-group? = (current-thread-group) ~
+  group : thread-group? = (current-thread-group) ~ ~
 
 Creates a new thread group that belongs to group.
 
                                         *thread-group?*
 (thread-group? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a thread group value, #f otherwise.
 
                                         *current-thread-group*
 (current-thread-group) -> thread-group? ~
 (current-thread-group group) -> void?
-  group : thread-group? ~
+  group : thread-group? ~ ~
 
 A parameter that determines the thread group for newly created threads.

@@ -12,11 +12,11 @@ to flush the port.
 
                                         *open-input-file*
 (open-input-file  path                             ~
-                 [#:mode mode-flag                 ~
-                  #:for-module? for-module?]) -> input-port? ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  for-module? : any/c = #f ~
+                 [#:mode mode-flag                 ~ ~
+                  #:for-module? for-module?]) -> input-port? ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  for-module? : any/c = #f ~ ~
 
 Opens the file specified by path for input. The mode-flag argument
 specifies how the file’s bytes are translated on input:
@@ -27,7 +27,7 @@ specifies how the file’s bytes are translated on input:
 * 'text — return and linefeed bytes (10 and 13) as read from the file
   are filtered by the port in a platform specific manner:
 
-  * Unix and Mac OS X: no filtering occurs.
+  * Unix and Mac OS: no filtering occurs.
 
   * Windows: a return-linefeed combination from a file is returned by
     the port as a single linefeed; no filtering occurs for return bytes
@@ -53,33 +53,34 @@ more automatically (see [missing]).
 A path value that is the cleansed version of path is used as the name of
 the opened port.
 
-If opening the file fails, if for-module? is true, and
-current-module-path-for-load has a non-#f value, then the raised
-exception is either exn:fail:syntax:missing-module (if the value of
-current-module-path-for-load is a syntax object) or
+If opening the file fails due to an error in the filesystem, then
+exn:fail:filesystem:errno exception is raised—as long as for-module? is
+#f, current-module-path-for-load has a non-#f value, or the filesystem
+error is not recognized as a file-not-found error. Otherwise, when
+for-module? is true, current-module-path-for-load has a non-#f value,
+and the filesystem error is recognized as a file-not-found error, then
+the raised exception is either exn:fail:syntax:missing-module (if the
+value of current-module-path-for-load is a syntax object) or
 exn:fail:filesystem:missing-module (otherwise).
 
 Changed in version 6.0.1.6: Added #:for-module?.
 
 Examples:
+
   > (with-output-to-file some-file
       (lambda () (printf "hello world")))
-
-  (define in (open-input-file some-file))
-
-
+  > (define in (open-input-file some-file))
   > (read-string 11 in)
   "hello world"
   > (close-input-port in)
 
-
                                         *open-output-file*
 (open-output-file  path                        ~
-                  [#:mode mode-flag            ~
-                   #:exists exists-flag]) -> output-port? ~
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update 'can-update ~
+                  [#:mode mode-flag            ~ ~
+                   #:exists exists-flag]) -> output-port? ~ ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update 'can-update ~ ~
                       'replace 'truncate
                       'must-truncate 'truncate/replace)
               = 'error
@@ -130,7 +131,9 @@ The file specified by path need not be a regular file. It might be a
 device that is connected through the filesystem, such as "aux" on
 Windows or "/dev/null" on Unix. The output port is block-buffered by
 default, unless the file corresponds to a terminal, in which case it is
-line-buffered by default.
+line-buffered by default. On Unix and Mac OS, if the file is a fifo,
+then the port will block for writing until a reader for the fifo is
+available; see also port-waiting-peer?.
 
 The port produced by open-output-file should be explicitly closed,
 either though close-output-port or indirectly via
@@ -142,23 +145,29 @@ output port to close it more automatically (see [missing]).
 A path value that is the cleansed version of path is used as the name of
 the opened port.
 
+If opening the file fails due to an error in the underlying filesystem
+then exn:fail:filesystem:errno exception is raised.
+
 Examples:
-  (define out (open-output-file some-file))
 
-
+  > (define out (open-output-file some-file))
   > (write "hello world" out)
-
   > (close-output-port out)
 
+Changed in version 6.9.0.6: On Unix and Mac OS, make 'truncate/replace
+replace on a permission error. On Windows, make 'replace always replace
+instead truncating like 'truncate/replace. Changed in version 7.4.0.5:
+Changed handling of a fifo on Unix and Mac OS to make the port block for
+output until the fifo has a reader.
 
                                         *open-input-output-file*
 (open-input-output-file  path                    ~
-                        [#:mode mode-flag        ~
-                         #:exists exists-flag])  ~
+                        [#:mode mode-flag        ~ ~
+                         #:exists exists-flag])  ~ ~
  -> input-port? output-port?
-  path : path-string? ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update 'can-update ~
+  path : path-string? ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update 'can-update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -175,10 +184,10 @@ open-input-file and open-output-file calls to avoid confusion.
                                         *call-with-input-file*
 (call-with-input-file  path                    ~
                        proc                   
-                      [#:mode mode-flag]) -> any ~
-  path : path-string? ~
-  proc : (input-port? . -> . any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+                      [#:mode mode-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  proc : (input-port? . -> . any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Calls open-input-file with the path and mode-flag arguments, and passes
 the resulting port to proc. The result of proc is the result of the
@@ -186,9 +195,9 @@ call-with-input-file call, but the newly opened port is closed when proc
 returns.
 
 Examples:
+
   > (with-output-to-file some-file
       (lambda () (printf "text in a file")))
-
   > (call-with-input-file some-file
       (lambda (in) (read-string 14 in)))
   "text in a file"
@@ -196,12 +205,12 @@ Examples:
                                         *call-with-output-file*
 (call-with-output-file  path                        ~
                         proc                       
-                       [#:mode mode-flag            ~
-                        #:exists exists-flag]) -> any ~
-  path : path-string? ~
-  proc : (output-port? . -> . any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+                       [#:mode mode-flag            ~ ~
+                        #:exists exists-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  proc : (output-port? . -> . any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -209,10 +218,10 @@ Analogous to call-with-input-file, but passing path, mode-flag and
 exists-flag to open-output-file.
 
 Examples:
+
   > (call-with-output-file some-file
       (lambda (out)
         (write 'hello out)))
-
   > (call-with-input-file some-file
       (lambda (in)
         (read-string 5 in)))
@@ -221,10 +230,10 @@ Examples:
                                         *call-with-input-file**
 (call-with-input-file*  path                    ~
                         proc                   
-                       [#:mode mode-flag]) -> any ~
-  path : path-string? ~
-  proc : (input-port? . -> . any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+                       [#:mode mode-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  proc : (input-port? . -> . any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Like call-with-input-file, but the newly opened port is closed whenever
 control escapes the dynamic extent of the call-with-input-file* call,
@@ -234,12 +243,12 @@ prompt-based abort.
                                         *call-with-output-file**
 (call-with-output-file*  path                        ~
                          proc                       
-                        [#:mode mode-flag            ~
-                         #:exists exists-flag]) -> any ~
-  path : path-string? ~
-  proc : (output-port? . -> . any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+                        [#:mode mode-flag            ~ ~
+                         #:exists exists-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  proc : (output-port? . -> . any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -251,10 +260,10 @@ prompt-based abort.
                                         *with-input-from-file*
 (with-input-from-file  path                    ~
                        thunk                  
-                      [#:mode mode-flag]) -> any ~
-  path : path-string? ~
-  thunk : (-> any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
+                      [#:mode mode-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  thunk : (-> any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
 
 Like call-with-input-file*, but instead of passing the newly opened port
 to the given procedure argument, the port is installed as the current
@@ -262,9 +271,9 @@ input port (see current-input-port) using parameterize around the call
 to thunk.
 
 Examples:
+
   > (with-output-to-file some-file
       (lambda () (printf "hello")))
-
   > (with-input-from-file some-file
       (lambda () (read-string 5)))
   "hello"
@@ -272,12 +281,12 @@ Examples:
                                         *with-output-to-file*
 (with-output-to-file  path                        ~
                       thunk                      
-                     [#:mode mode-flag            ~
-                      #:exists exists-flag]) -> any ~
-  path : path-string? ~
-  thunk : (-> any) ~
-  mode-flag : (or/c 'binary 'text) = 'binary ~
-  exists-flag : (or/c 'error 'append 'update ~
+                     [#:mode mode-flag            ~ ~
+                      #:exists exists-flag]) -> any ~ ~
+  path : path-string? ~ ~
+  thunk : (-> any) ~ ~
+  mode-flag : (or/c 'binary 'text) = 'binary ~ ~
+  exists-flag : (or/c 'error 'append 'update ~ ~
                       'replace 'truncate 'truncate/replace)
               = 'error
 
@@ -287,17 +296,17 @@ current output port (see current-output-port) using parameterize around
 the call to thunk.
 
 Examples:
+
   > (with-output-to-file some-file
       (lambda () (printf "hello")))
-
   > (with-input-from-file some-file
       (lambda () (read-string 5)))
   "hello"
 
                                         *port-try-file-lock?*
 (port-try-file-lock? port mode) -> boolean? ~
-  port : file-stream-port? ~
-  mode : (or/c 'shared 'exclusive) ~
+  port : file-stream-port? ~ ~
+  mode : (or/c 'shared 'exclusive) ~ ~
 
 Attempts to acquire a lock on the file using the current platform’s
 facilities for file locking. Multiple processes can acquire a 'shared
@@ -316,10 +325,10 @@ affect only the ability of processes to acquire locks) or they may
 correspond to mandatory locks that prevent reads and writes to the
 locked file. Specifically, locks are mandatory on Windows and advisory
 on other platforms. Multiple tries for a 'shared lock on a single port
-can succeed; on Unix and Mac OS X, a single port-file-unlock release the
+can succeed; on Unix and Mac OS, a single port-file-unlock release the
 lock, while on other Windows, a port-file-unlock is needed for each
-successful port-try-file-lock?. On Unix and Mac OS X, multiple tries for
-a 'exclusive lock can succeed and a single port-file-unlock releases the
+successful port-try-file-lock?. On Unix and Mac OS, multiple tries for a
+'exclusive lock can succeed and a single port-file-unlock releases the
 lock, while on Windows, a try for an 'exclusive lock fails for a given
 port if the port already holds the lock.
 
@@ -329,11 +338,11 @@ vice versa. If the output port from open-input-output-file holds an
 'exclusive lock, the corresponding input port can still acquire a
 'shared lock, even multiple times; on Windows, a port-file-unlock is
 needed for each successful lock try, while a single port-file-unlock
-balances the lock tries on Unix and Mac OS X. A 'shared lock on an input
+balances the lock tries on Unix and Mac OS. A 'shared lock on an input
 port can be upgraded to an 'exclusive lock through the corresponding
-output port on Unix and Mac OS X, in which case a single
-port-file-unlock (on either port) releases the lock, while such upgrades
-are not allowed on Windows.
+output port on Unix and Mac OS, in which case a single port-file-unlock
+(on either port) releases the lock, while such upgrades are not allowed
+on Windows.
 
 Locking is normally supported only for file ports, and attempting to
 acquire a lock with other kinds of file-stream ports raises an
@@ -341,13 +350,13 @@ exn:fail:filesystem exception.
 
                                         *port-file-unlock*
 (port-file-unlock port) -> void? ~
-  port : file-stream-port? ~
+  port : file-stream-port? ~ ~
 
 Releases a lock held by the current process on the file of port.
 
                                         *port-file-identity*
 (port-file-identity port) -> exact-positive-integer? ~
-  port : file-stream-port? ~
+  port : file-stream-port? ~ ~
 
 Returns a number that represents the identity of the device and file
 read or written by port. For two ports whose open times overlap, the
@@ -360,17 +369,12 @@ exception is raised.  On Windows 95, 98, and Me, if port is connected to
 a pipe instead of a file, the exn:fail:filesystem exception is raised.
 
 Examples:
-  (define file1 (open-output-file some-file))
 
-
-  (define file2 (open-output-file some-other-file))
-
-
+  > (define file1 (open-output-file some-file))
+  > (define file2 (open-output-file some-other-file))
   > (port-file-identity file1)
-  4632302337
+  37797378607030872834203
   > (port-file-identity file2)
-  4632703489
+  37797378607030872840167
   > (close-output-port file1)
-
   > (close-output-port file2)
-

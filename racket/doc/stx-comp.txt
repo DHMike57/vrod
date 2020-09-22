@@ -1,10 +1,10 @@
 Syntax Object Bindings
 
-                                        *bound-identifier*
+                                        *bound-identifier=?*
 (bound-identifier=? a-id b-id [phase-level]) -> boolean? ~
-  a-id : syntax? ~
-  b-id : syntax? ~
-  phase-level : (or/c exact-integer? #f) ~
+  a-id : syntax? ~ ~
+  b-id : syntax? ~ ~
+  phase-level : (or/c exact-integer? #f) ~ ~
               = (syntax-local-phase-level)
 
 Returns #t if the identifier a-id would bind b-id (or vice versa) if the
@@ -13,32 +13,31 @@ phase level indicated by phase-level, #f otherwise. A #f value for
 phase-level corresponds to the label phase level.
 
 Examples:
+
   > (define-syntax (check stx)
       (syntax-case stx ()
         [(_ x y)
          (if (bound-identifier=? #'x #'y)
              #'(let ([y 'wrong]) (let ([x 'binds]) y))
              #'(let ([y 'no-binds]) (let ([x 'wrong]) y)))]))
-
   > (check a a)
   'binds
   > (check a b)
   'no-binds
   > (define-syntax-rule (check-a x) (check a x))
-
   > (check-a a)
   'no-binds
 
-                                        *free-identifier*
+                                        *free-identifier=?*
 (free-identifier=?  a-id                 ~
                     b-id                
                    [a-phase-level       
                     b-phase-level]) -> boolean?
-  a-id : identifier? ~
-  b-id : identifier? ~
-  a-phase-level : (or/c exact-integer? #f) ~
+  a-id : identifier? ~ ~
+  b-id : identifier? ~ ~
+  a-phase-level : (or/c exact-integer? #f) ~ ~
                 = (syntax-local-phase-level)
-  b-phase-level : (or/c exact-integer? #f) = a-phase-level ~
+  b-phase-level : (or/c exact-integer? #f) = a-phase-level ~ ~
 
 Returns #t if a-id and b-id access the same local binding, module
 binding, or top-level binding—perhaps via rename transformers—at the
@@ -53,13 +52,13 @@ transformer binding to a rename transformer, the identifiers may return
 distinct results with syntax-e.
 
 Examples:
+
   > (define-syntax (check stx)
       (syntax-case stx ()
         [(_ x)
          (if (free-identifier=? #'car #'x)
-             #'(list 'same: x) ~
-             #'(list 'different: x))])) ~
-
+             #'(list 'same: x) ~ ~
+             #'(list 'different: x))])) ~ ~
   > (check car)
   '(same: #<procedure:car>)
   > (check mcar)
@@ -68,34 +67,33 @@ Examples:
       (check car))
   '(different: #<procedure:list>)
   > (require (rename-in racket/base [car kar]))
-
   > (check kar)
   '(same: #<procedure:car>)
 
-                                        *free-transformer-identifier*
+                                        *free-transformer-identifier=?*
 (free-transformer-identifier=? a-id b-id) -> boolean? ~
-  a-id : identifier? ~
-  b-id : identifier? ~
+  a-id : identifier? ~ ~
+  b-id : identifier? ~ ~
 
 Same as (free-identifier=? a-id b-id (add1 (syntax-local-phase-level))).
 
-                                        *free-template-identifier*
+                                        *free-template-identifier=?*
 (free-template-identifier=? a-id b-id) -> boolean? ~
-  a-id : identifier? ~
-  b-id : identifier? ~
+  a-id : identifier? ~ ~
+  b-id : identifier? ~ ~
 
 Same as (free-identifier=? a-id b-id (sub1 (syntax-local-phase-level))).
 
-                                        *free-label-identifier*
+                                        *free-label-identifier=?*
 (free-label-identifier=? a-id b-id) -> boolean? ~
-  a-id : identifier? ~
-  b-id : identifier? ~
+  a-id : identifier? ~ ~
+  b-id : identifier? ~ ~
 
 Same as (free-identifier=? a-id b-id #f).
 
                                         *check-duplicate-identifier*
 (check-duplicate-identifier ids) -> (or/c identifier? #f) ~
-  ids : (listof identifier?) ~
+  ids : (listof identifier?) ~ ~
 
 Compares each identifier in ids with every other identifier in the list
 with bound-identifier=?. If any comparison returns #t, one of the
@@ -103,27 +101,30 @@ duplicate identifiers is returned (the first one in ids that is a
 duplicate), otherwise the result is #f.
 
                                         *identifier-binding*
-(identifier-binding id-stx [phase-level]) ~
+(identifier-binding  id-stx               ~
+                    [phase-level         
+                     top-level-symbol?]) 
  -> (or/c 'lexical
           #f
-          (listof module-path-index?
+          (list/c module-path-index?
                   symbol?
                   module-path-index?
                   symbol?
                   exact-nonnegative-integer?
                   (or/c exact-integer? #f)
-                  (or/c exact-integer? #f)))
-  id-stx : identifier? ~
-  phase-level : (or/c exact-integer? #f) ~
+                  (or/c exact-integer? #f))
+          (list/c symbol?))
+  id-stx : identifier? ~ ~
+  phase-level : (or/c exact-integer? #f) ~ ~
               = (syntax-local-phase-level)
+  top-level-symbol? : any/c = #f ~ ~
 
-Returns one of three kinds of values, depending on the binding of id-stx
-at the phase level indicated by phase-level (where a #f value for
+Returns one of three (if top-level-symbol? is #f) or four (if
+top-level-symbol? is true) kinds of values, depending on the binding of
+id-stx at the phase level indicated by phase-level (where a #f value for
 phase-level corresponds to the label phase level):
 
-* The result is 'lexical if id-stx has a local binding. If 'lexical is
-  produced for any phase-level value, then it is produced for all
-  phase-level values.
+* The result is 'lexical if id-stx has a local binding.
 
 * The result is a list of seven items when id-stx has a module binding:
   (list source-mod source-id nominal-source-mod nominal-source-id
@@ -161,15 +162,24 @@ phase-level corresponds to the label phase level):
   * nominal-export-phase is the phase level of the export from
     nominal-source-mod.
 
-* The result is #f if id-stx has a top-level binding (or, equivalently,
-  if it is unbound).
+* The result is (list source-id) if id-stx has a top-level binding and
+  top-level-symbol? is true.
+
+* The result is #f if id-stx has a top-level binding and
+  top-level-symbol? is #f or if id-stx is unbound. An unbound identifier
+  is typically treated the same as an identifier whose top-level binding
+  is a variable.
 
 If id-stx is bound to a rename-transformer, the result from
 identifier-binding is for the identifier in the transformer, so that
 identifier-binding is consistent with free-identifier=?.
 
+Changed in version 6.6.0.4: Added the top-level-symbol? argument to
+report information on top-level bindings.
+
                                         *identifier-transformer-binding*
-(identifier-transformer-binding id-stx) ~
+(identifier-transformer-binding  id-stx            ~
+                                [rt-phase-level]) 
  -> (or/c 'lexical
           #f
           (listof module-path-index?
@@ -179,9 +189,12 @@ identifier-binding is consistent with free-identifier=?.
                   exact-nonnegative-integer?
                   (or/c exact-integer? #f)
                   (or/c exact-integer? #f)))
-  id-stx : identifier? ~
+  id-stx : identifier? ~ ~
+  rt-phase-level : (or/c exact-integer? #f) ~ ~
+                 = (syntax-local-phase-level)
 
-Same as (identifier-binding id-stx (add1 (syntax-local-phase-level))).
+Same as (identifier-binding id-stx (and rt-phase-level (add1
+rt-phase-level))).
 
                                         *identifier-template-binding*
 (identifier-template-binding id-stx) ~
@@ -194,7 +207,7 @@ Same as (identifier-binding id-stx (add1 (syntax-local-phase-level))).
                   exact-nonnegative-integer?
                   (or/c exact-integer? #f)
                   (or/c exact-integer? #f)))
-  id-stx : identifier? ~
+  id-stx : identifier? ~ ~
 
 Same as (identifier-binding id-stx (sub1 (syntax-local-phase-level))).
 
@@ -209,15 +222,15 @@ Same as (identifier-binding id-stx (sub1 (syntax-local-phase-level))).
                   exact-nonnegative-integer?
                   (or/c exact-integer? #f)
                   (or/c exact-integer? #f)))
-  id-stx : identifier? ~
+  id-stx : identifier? ~ ~
 
 Same as (identifier-binding id-stx #f).
 
                                         *identifier-binding-symbol*
 (identifier-binding-symbol  id-stx             ~
                            [phase-level]) -> symbol?
-  id-stx : identifier? ~
-  phase-level : (or/c exact-integer? #f) ~
+  id-stx : identifier? ~ ~
+  phase-level : (or/c exact-integer? #f) ~ ~
               = (syntax-local-phase-level)
 
 Like identifier-binding, but produces a symbol that corresponds to the

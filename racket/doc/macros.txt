@@ -47,12 +47,13 @@ macros, and [missing] describes how macro transformers are called.
       clause = [pattern result-expr]
              | [pattern fender-expr result-expr]
                 
-     pattern = _
-             | id
+     pattern = np-pattern
              | (pattern ...)
-             | (pattern ...+ . pattern)
-             | (pattern ... pattern ellipsis pattern ...)
-             | (pattern ... pattern ellipsis pattern ... . pattern)
+             | (pattern ...+ . np-pattern)
+             | (pattern ... pattern ellipsis pattern ... . np-pattern)
+                
+  np-pattern = _
+             | id
              | #(pattern ...)
              | #(pattern ... pattern ellipsis pattern ...)
              | #&pattern
@@ -106,14 +107,11 @@ Any pattern variables bound by the sub-patterns are bound by the
 complete pattern; the bindings must all be distinct.
 
                                         *pattern*
-(pattern ...+ . pattern) ~
-The last pattern must not be a (pattern ...), (pattern ...+ . pattern),
-(pattern ... pattern ellipsis pattern ...), or (pattern ... pattern
-ellipsis pattern ... . pattern) form.
+(pattern ...+ . np-pattern) ~
 Like the previous kind of pattern, but matches syntax objects that are
-not necessarily lists; for n sub-patterns before the last sub-pattern,
+not necessarily lists; for n sub-patterns before the final np-pattern,
 the syntax object’s datum must be a pair such that n-1 cdrs produce
-pairs. The last sub-pattern is matched against the syntax object
+pairs. The final np-pattern is matched against the syntax object
 corresponding to the nth cdr (or the datum->syntax coercion of the datum
 using the nearest enclosing syntax object’s lexical context and source
 location).
@@ -132,10 +130,10 @@ ellipsis, leading to a pattern variables bound to lists of lists of
 syntax objects with a depth marker of 2, and so on.)
 
                                         *pattern*
-(pattern ... pattern ellipsis pattern ... . pattern) ~
-Like the previous kind of pattern, but with a final sub-pattern as for
-(pattern ...+ . pattern).  The final pattern never matches a syntax
-object whose datum is a pair.
+(pattern ... pattern ellipsis pattern ... . np-pattern) ~
+Like the previous kind of pattern, but with a final np-pattern as for
+(pattern ...+ . np-pattern).  The final np-pattern never matches a
+syntax object whose datum is a pair.
 
 #(pattern ...)
 Like a (pattern ...) pattern, but matching a vector syntax object whose
@@ -179,28 +177,27 @@ corresponds to the whole syntax object produced by stx-expr, in which
 case it remains tainted or armed.
 
 Examples:
-  > (require (for-syntax racket/base))
 
+  > (require (for-syntax racket/base))
   > (define-syntax (swap stx)
       (syntax-case stx ()
         [(_ a b) #'(let ([t a])
                      (set! a b)
                      (set! b t))]))
-
   > (let ([x 5] [y 10])
       (swap x y)
       (list x y))
   '(10 5)
   > (syntax-case #'(ops 1 2 3 => +) (=>)
       [(_ x ... => op) #'(op x ...)])
-  #<syntax:4:0 (+ 1 2 3)>
+  #<syntax:eval:4:0 (+ 1 2 3)>
   > (syntax-case #'(let ([x 5] [y 9] [z 12])
                      (+ x y z))
                  (let)
       [(let ([var expr] ...) body ...)
        (list #'(var ...)
              #'(expr ...))])
-  '(#<syntax:5:0 (x y z)> #<syntax:5:0 (5 9 12)>)
+  '(#<syntax:eval:5:0 (x y z)> #<syntax:eval:5:0 (5 9 12)>)
 
                                         *syntax-case**
 (syntax-case* stx-expr (literal-id ...) id-compare-expr ~
@@ -240,6 +237,7 @@ it is converted to one using datum->syntax and the lexical context and
 source location of the individual stx-expr.
 
 Examples:
+
   > (define-syntax (hello stx)
       (syntax-case stx ()
         [(_ name place)
@@ -254,19 +252,15 @@ Examples:
                  (printf "From\n")
                  (for ([i (in-range 0 times)])
                       print-place))))]))
-
   > (hello jon utah)
-
   > (jon 2)
   Hello
   jon
   jon
-
   > (utah 2)
   From
   utah
   utah
-
   > (define-syntax (math stx)
       (define (make+1 expression)
         (with-syntax ([e expression])
@@ -279,7 +273,6 @@ Examples:
            #'(begin
                (printf "got ~a\n" added)
                ...))]))
-
   > (math 3 1 4 1 5 9)
   got 4
   got 2
@@ -288,35 +281,38 @@ Examples:
   got 6
   got 10
 
-
                                         *syntax*
 (syntax template) ~
  
      template = id
-              | (template-elem ...)
-              | (template-elem ...+ . template)
-              | #(template-elem ...)
+              | (head-template ...)
+              | (head-template ...+ . template)
+              | #(head-template ...)
               | #&template
-              | #s(key-datum template-elem ...)
+              | #s(key-datum head-template ...)
+              | (~? template template)
               | (ellipsis stat-template)
               | const
                  
-template-elem = template ellipsis ...
+head-template = template
+              | head-template ellipsis ...+
+              | (~@ . template)
+              | (~? head-template head-template)
+              | (~? head-template)
                  
-stat-template = id
-              | (stat-template ...)
-              | (stat-template ... . stat-template)
-              | #(stat-template ...)
-              | #&stat-template
-              | #s(key-datum stat-template ...)
-              | const
+stat-template = like template, but without ..., ~?, and ~@
                  
      ellipsis = ...
 
 Constructs a syntax object based on a template, which can include
 pattern variables bound by syntax-case or with-syntax.
 
-Template forms produce a syntax object as follows:
+A template produces a single syntax object. A head-template produces a
+sequence of zero or more syntax objects. A stat-template is like a
+template, except that ..., ~?, and ~@ are interpreted as constants
+instead of template forms.
+
+A template produces a syntax object as follows:
 
 id
 If id is bound as a pattern variable, then id as a template produces the
@@ -331,67 +327,115 @@ times to use each match result at least once.
 If id is not bound as a pattern variable, then id as a template produces
 (quote-syntax id).
 
-                                        *template-elem*
-(template-elem ...) ~
+                                        *head-template*
+(head-template ...) ~
 Produces a syntax object whose datum is a list, and where the elements
-of the list correspond to syntax objects produced by the template-elems.
-A template-elem is a sub-template replicated by any number of
-ellipsises:
-* If the sub-template is replicated by no ellipsises, then it generates
-  a single syntax object to incorporate into the result syntax object.
+of the list correspond to syntax objects produced by the head-templates.
 
-* If the sub-template is replicated by one ellipsis, then it generates a
-  sequence of syntax objects that is “inlined” into the resulting syntax
-  object.
-
-  The number of generated elements depends on the values of pattern
-  variables referenced within the sub-template. There must be at least
-  one pattern variable whose value has a depth marker less than the
-  number of ellipsises after the pattern variable within the
-  sub-template.
-
-  If a pattern variable is replicated by more ellipsises in a template
-  than the depth marker of its binding, then the pattern variable’s
-  result is determined normally for inner ellipsises (up to the
-  binding’s depth marker), and then the result is replicated as
-  necessary to satisfy outer ellipsises.
-
-* For each ellipsis after the first one, the preceding element (with
-  earlier replicating ellipsises) is conceptually wrapped with
-  parentheses for generating output, and then the wrapping parentheses
-  are removed in the resulting syntax object.
-
-                                        *template-elem*
-(template-elem ... . template) ~
+                                        *head-template*
+(head-template ... . template) ~
 Like the previous form, but the result is not necessarily a list;
 instead, the place of the empty list in the resulting syntax object’s
 datum is taken by the syntax object produced by template.
 
-#(template-elem ...)
-Like the (template-elem ...) form, but producing a syntax object whose
+#(head-template ...)
+Like the (head-template ...) form, but producing a syntax object whose
 datum is a vector instead of a list.
 
 #&template
 Produces a syntax object whose datum is a box holding the syntax object
 produced by template.
 
-#s(key-datum template-elem ...)
-Like the (template-elem ...) form, but producing a syntax object whose
+#s(key-datum head-template ...)
+Like the (head-template ...) form, but producing a syntax object whose
 datum is a prefab structure instead of a list. The key-datum must
 correspond to a valid first argument of make-prefab-struct.
+
+                                        *~?*
+(~? template1 template2)
+Produces the result of template1 if template1 has no pattern variables
+with “missing values”; otherwise, produces the result of template2.
+A pattern variable bound by syntax-case never has a missing value, but
+pattern variables bound by syntax-parse (for example, ~or or ~optional
+patterns) can.
+Examples:
+
+  > (syntax-parse #'(m 1 2 3)
+      [(_ (~optional (~seq #:op op:expr)) arg:expr ...) ~ ~
+       #'((~? op +) arg ...)])
+  #<syntax:eval:3:0 (+ 1 2 3)>
+  > (syntax-parse #'(m #:op max 1 2 3) ~ ~
+      [(_ (~optional (~seq #:op op:expr)) arg:expr ...) ~ ~
+       #'((~? op +) arg ...)])
+  #<syntax:eval:4:0 (max 1 2 3)>
 
                                         *ellipsis*
 (ellipsis stat-template) ~
 Produces the same result as stat-template, which is like a template, but
-... is treated like an id (with no pattern binding).
+..., ~?, and ~@ are treated like an id (with no pattern binding).
 
 const
 A const template is any form that does not match the preceding cases,
 and it produces the result (quote-syntax const).
 
+A head-template produces a sequence of syntax objects; that sequence is
+“inlined” into the result of the enclosing template. The result of a
+head-template is defined as follows:
+
+template
+Produces one syntax object, according to the rules for template above.
+
+head-template ellipsis ...+
+Generates a sequence of syntax objects by “mapping” the head-template
+over the values of its pattern variables. The number of iterations
+depends on the values of the pattern variables referenced within the
+sub-template.
+To be more precise: Let outer be inner followed by one ellipsis. A
+pattern variable is an iteration pattern variable for outer if occurs at
+a depth equal to its depth marker. There must be at least one;
+otherwise, an error is raised. If there are multiple iteration
+variables, then all of their values must be lists of the same length.
+The result for outer is produced by mapping the inner template over the
+iteration pattern variable values and decreasing their effective depth
+markers by 1 within inner. The outer result is formed by appending the
+inner results.
+Consequently, if a pattern variable occurs at a depth greater than its
+depth marker, it is used as an iteration pattern variable for the
+innermost ellipses but not the outermost. A pattern variable must not
+occur at a depth less than its depth marker; otherwise, an error is
+raised.
+
+                                        *~*
+(~@ . template)
+Produces the sequence of elements in the syntax list produced by
+template. If template does not produce a proper syntax list, an
+exception is raised.
+Examples:
+
+  > (with-syntax ([(key ...) #'('a 'b 'c)]
+                  [(val ...) #'(1 2 3)])
+      #'(hash (~@ key val) ...))
+  #<syntax:eval:2:0 (hash (quote a) 1 (quote b) 2 (quote c) 3)>
+  > (with-syntax ([xs #'(2 3 4)])
+      #'(list 1 (~@ . xs) 5))
+  #<syntax:eval:3:0 (list 1 2 3 4 5)>
+
+                                        *~?*
+(~? head-template1 head-template2)
+Produces the result of head-template1 if none of its pattern variables
+have “missing values”; otherwise produces the result of head-template2.
+
+                                        *~?*
+(~? head-template)
+Produces the result of head-template if none of its pattern variables
+have “missing values”; otherwise produces nothing.
+Equivalent to (~? head-template (~@)).
+
 A (syntax template) form is normally abbreviated as #'template; see also
 [missing]. If template contains no pattern variables, then #'template is
 equivalent to (quote-syntax template).
+
+Changed in version 6.90.0.25: Added ~@ and ~?.
 
                                         *quasisyntax*
 (quasisyntax template) ~
@@ -424,14 +468,28 @@ only with a quasisyntax template.
 
                                         *syntax/loc*
 (syntax/loc stx-expr template) ~
+ 
+  stx-expr : syntax? ~ ~
 
 Like syntax, except that the immediate resulting syntax object takes its
 source-location information from the result of stx-expr (which must
-produce a syntax object), unless the template is just a pattern
-variable, or both the source and position of stx-expr are #f.
+produce a syntax object).
+
+Only the source location of the immediate result—the “outermost” syntax
+object—is adjusted. The source location is not adjusted if both the
+source and position of stx-expr are #f. The source location is adjusted
+only if the resulting syntax object comes from the template itself
+rather than the value of a syntax pattern variable. For example, if x is
+a syntax pattern variable, then (syntax/loc stx-expr x) does not use the
+location of stx-expr.
+
+Changed in version 6.90.0.25: Previously, syntax/loc did not enforce the
+contract on stx-expr if template was just a pattern variable.
 
                                         *quasisyntax/loc*
 (quasisyntax/loc stx-expr template) ~
+ 
+  stx-expr : syntax? ~ ~
 
 Like quasisyntax, but with source-location assignment like syntax/loc.
 
@@ -482,9 +540,10 @@ but with syntax errors potentially phrased in terms of pattern.
 ...
 
 The ... transformer binding prohibits ... from being used as an
-expression. This binding is useful only in syntax patterns and
-templates, where it indicates repetitions of a pattern or template. See
-syntax-case and syntax.
+expression. This binding is useful only in syntax patterns and templates
+(or other unrelated expression forms that treat it specially like ->),
+where it indicates repetitions of a pattern or template. See syntax-case
+and syntax.
 
 _
 
@@ -492,9 +551,18 @@ The _ transformer binding prohibits _ from being used as an expression.
 This binding is useful only in syntax patterns, where it indicates a
 pattern that matches any syntax object. See syntax-case.
 
+~?
+~@
+
+The ~? and ~@ transformer bindings prohibit these forms from being used
+as an expression. The bindings are useful only in syntax templates. See
+syntax.
+
+Added in version 6.90.0.25.
+
                                         *syntax-pattern-variable?*
 (syntax-pattern-variable? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a value that, as a transformer-binding value, makes
 the bound variable as pattern variable in syntax and other forms. To
@@ -509,11 +577,12 @@ racket/base.
 
                                         *syntax?*
 (syntax? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a syntax object, #f otherwise. See also [missing].
 
 Examples:
+
   > (syntax? #'quinoa)
   #t
   > (syntax? #'(spelt triticale buckwheat))
@@ -525,11 +594,12 @@ Examples:
 
                                         *identifier?*
 (identifier? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a syntax object and (syntax-e stx) produces a symbol.
 
 Examples:
+
   > (identifier? #'linguine)
   #t
   > (identifier? #'(if wheat? udon soba))
@@ -540,79 +610,83 @@ Examples:
   #f
 
                                         *syntax-source*
-(syntax-source stx) -> any ~
-  stx : syntax? ~
+(syntax-source stx) -> any/c ~
+  stx : syntax? ~ ~
 
 Returns the source for the syntax object stx, or #f if none is known.
 The source is represented by an arbitrary value (e.g., one passed to
-read-syntax), but it is typically a file path string. Source-location
-information is dropped for a syntax object that is marshaled as part of
-compiled code; see also current-compile.
+read-syntax), but it is typically a file path string.
 
                                         *syntax-line*
 (syntax-line stx) -> (or/c exact-positive-integer? #f) ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns the line number (positive exact integer) for the start of the
 syntax object in its source, or #f if the line number or source is
 unknown. The result is #f if and only if (syntax-column stx) produces
-#f. See also [missing], and see syntax-source for information about
-marshaling compiled syntax objects.
+#f. See also [missing].
 
                                         *syntax-column*
 (syntax-column stx) -> (or/c exact-nonnegative-integer? #f) ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns the column number (non-negative exact integer) for the start of
 the syntax object in its source, or #f if the source column is unknown.
 The result is #f if and only if (syntax-line stx) produces #f. See also
-[missing], and see syntax-source for information about marshaling
-compiled syntax objects.
+[missing].
 
                                         *syntax-position*
 (syntax-position stx) -> (or/c exact-positive-integer? #f) ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns the character position (positive exact integer) for the start of
 the syntax object in its source, or #f if the source position is
-unknown. See also [missing], and see syntax-source for information about
-marshaling compiled syntax objects.
+unknown. See also [missing].
 
                                         *syntax-span*
 (syntax-span stx) -> (or/c exact-nonnegative-integer? #f) ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns the span (non-negative exact integer) in characters of the
-syntax object in its source, or #f if the span is unknown. See also
-syntax-source for information about marshaling compiled syntax objects.
+syntax object in its source, or #f if the span is unknown.
 
                                         *syntax-original?*
 (syntax-original? stx) -> boolean? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns #t if stx has the property that read-syntax attaches to the
 syntax objects that they generate (see Syntax Object Properties), and if
-stx’s lexical information does not indicate that the object was
-introduced by a syntax transformer (see [missing]). The result is #f
-otherwise. This predicate can be used to distinguish syntax objects in
-an expanded expression that were directly present in the original
-expression, as opposed to syntax objects inserted by macros.
+stx’s lexical information does not include any macro-introduction scopes
+(which indicate that the object was introduced by a syntax transformer;
+see [missing]). The result is #f otherwise.
+
+This predicate can be used to distinguish syntax objects in an expanded
+expression that were directly present in the original expression, as
+opposed to syntax objects inserted by macros.
+
+The (hidden) property to represent original syntax is dropped for a
+syntax object that is marshaled as part of compiled code; see also
+current-compile.
 
                                         *syntax-source-module*
 (syntax-source-module stx [source?]) ~
  -> (or/c module-path-index? symbol? path? resolved-module-path? #f)
-  stx : syntax? ~
-  source? : any/c = #f ~
+  stx : syntax? ~ ~
+  source? : any/c = #f ~ ~
 
 Returns an indication of the module whose source contains stx, or #f if
-stx has no source module.  If source? is #f, then result is a module
-path index or symbol (see [missing]) or a resolved module path; if
-source? is true, the result is a path or symbol corresponding to the
-loaded module’s source in the sense of current-module-declare-source.
+no source module for stx can be inferred from its lexical context.  If
+source? is #f, then result is a module path index or symbol (see
+[missing]) or a resolved module path; if source? is true, the result is
+a path or symbol corresponding to the loaded module’s source in the
+sense of current-module-declare-source.
+
+Note that syntax-source-module does not consult the source location of
+stx. The result is based on the lexical information of stx.
 
                                         *syntax-e*
-(syntax-e stx) -> any ~
-  stx : syntax? ~
+(syntax-e stx) -> any/c ~
+  stx : syntax? ~ ~
 
 Unwraps the immediate datum structure from a syntax object, leaving
 nested syntax structure (if any) in place.  The result of (syntax-e stx)
@@ -637,19 +711,22 @@ is one of the following:
   interned when datum-intern-literal would convert the value
 
 Examples:
+
   > (syntax-e #'a)
   'a
   > (syntax-e #'(x . y))
-  '(#<syntax:11:0 x> . #<syntax:11:0 y>)
+  '(#<syntax:eval:11:0 x> . #<syntax:eval:11:0 y>)
   > (syntax-e #'#(1 2 (+ 3 4)))
-  '#(#<syntax:12:0 1> #<syntax:12:0 2> #<syntax:12:0 (+ 3 4)>)
+  '#(#<syntax:eval:12:0 1> #<syntax:eval:12:0 2> #<syntax:eval:12:0 (+ 3
+  4)>)
   > (syntax-e #'#&"hello world")
-  '#&#<syntax:13:0 "hello world">
+  '#&#<syntax:eval:13:0 "hello world">
   > (syntax-e #'#hash((imperial . "yellow") (festival . "green")))
-  '#hash((imperial . #<syntax:14:0 "yellow">)
-         (festival . #<syntax:14:0 "green">)) ~
+  '#hash((festival . #<syntax:eval:14:0 "green">)
+         (imperial . #<syntax:eval:14:0 "yellow">)) ~ ~
   > (syntax-e #'#(point 3 4))
-  '#(#<syntax:15:0 point> #<syntax:15:0 3> #<syntax:15:0 4>)
+  '#(#<syntax:eval:15:0 point> #<syntax:eval:15:0 3> #<syntax:eval:15:0
+  4>)
   > (syntax-e #'3)
   3
   > (syntax-e #'"three")
@@ -673,7 +750,7 @@ multiple calls to syntax-e of stx are eq?.
 
                                         *syntax->list*
 (syntax->list stx) -> (or/c list? #f) ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns a list of syntax objects or #f. The result is a list of syntax
 objects when (syntax->datum stx) would produce a list. In other words,
@@ -683,17 +760,20 @@ If stx is tainted or armed, then any syntax object in the result of
 (syntax->list stx) is tainted.
 
 Examples:
+
   > (syntax->list #'())
   '()
   > (syntax->list #'(1 (+ 3 4) 5 6))
-  '(#<syntax:20:0 1> #<syntax:20:0 (+ 3 4)> #<syntax:20:0 5> #<syntax:20:0
-  6>)
+  '(#<syntax:eval:20:0 1>
+    #<syntax:eval:20:0 (+ 3 4)> ~ ~
+    #<syntax:eval:20:0 5> ~ ~
+    #<syntax:eval:20:0 6>) ~ ~
   > (syntax->list #'a)
   #f
 
                                         *syntax->datum*
-(syntax->datum stx) -> any ~
-  stx : syntax? ~
+(syntax->datum stx) -> any/c ~
+  stx : syntax? ~ ~
 
 Returns a datum by stripping the lexical information, source-location
 information, properties, and tamper status from stx. Inside of pairs,
@@ -706,6 +786,7 @@ vectors, boxes, hash tables, and prefab structures as needed to strip
 lexical and source-location information recursively.
 
 Examples:
+
   > (syntax->datum #'a)
   'a
   > (syntax->datum #'(x . y))
@@ -715,7 +796,7 @@ Examples:
   > (syntax->datum #'#&"hello world")
   '#&"hello world"
   > (syntax->datum #'#hash((imperial . "yellow") (festival . "green")))
-  '#hash((imperial . "yellow") (festival . "green"))
+  '#hash((festival . "green") (imperial . "yellow"))
   > (syntax->datum #'#(point 3 4))
   '#(point 3 4)
   > (syntax->datum #'3)
@@ -727,9 +808,9 @@ Examples:
 
                                         *datum->syntax*
 (datum->syntax ctxt v [srcloc prop ignored]) -> syntax? ~
-  ctxt : (or/c syntax? #f) ~
-  v : any/c ~
-  srcloc : (or/c syntax? #f ~
+  ctxt : (or/c syntax? #f) ~ ~
+  v : any/c ~ ~
+  srcloc : (or/c syntax? #f ~ ~
                  (list/c any/c
                          (or/c exact-positive-integer? #f)
                          (or/c exact-nonnegative-integer? #f)
@@ -741,8 +822,8 @@ Examples:
                           (or/c exact-positive-integer? #f)
                           (or/c exact-nonnegative-integer? #f)))
          = #f
-  prop : (or/c syntax? #f) = #f ~
-  ignored : (or/c syntax? #f) = #f ~
+  prop : (or/c syntax? #f) = #f ~ ~
+  ignored : (or/c syntax? #f) = #f ~ ~
 
 Converts the datum v to a syntax object. The contents of pairs, vectors,
 and boxes, the fields of prefab structures, and the values of immutable
@@ -762,7 +843,11 @@ that would not be visible via syntax-property-symbol-keys); if v is a
 pair, vector, box, immutable hash table, or immutable prefab structure,
 recursively converted values are not given properties. If ctxt is
 tainted or armed, then the resulting syntax object from datum->syntax is
-tainted.
+tainted. The code inspector of ctxt, if any, is compared to the code
+inspector of the module for the macro currently being transformed, if
+any; if both inspectors are available and if one is the same as or
+inferior to the other, then the result syntax has the same/inferior
+inspector, otherwise it has no code inspector.
 
 Any of ctxt, srcloc, or prop can be #f, in which case the resulting
 syntax has no lexical context, source information, and/or new
@@ -789,9 +874,56 @@ prefab structures, then the exn:fail:contract exception is raised.
 The ignored argument is allowed for backward compatibility and has no
 effect on the returned syntax object.
 
+                                        *syntax-binding-set?*
+(syntax-binding-set? v) -> boolean? ~
+  v : any/c ~ ~
+(syntax-binding-set) -> syntax-binding-set?
+(syntax-binding-set->syntax binding-set     
+                            datum)      -> syntax?
+  binding-set : syntax-binding-set? ~ ~
+  datum : any/c ~ ~
+(syntax-binding-set-extend                                                
+                            binding-set                                   
+                            symbol                                        
+                            phase                                         
+                            mpi                                           
+                           [#:source-symbol source-symbol                  ~ ~
+                            #:source-phase source-phase                    ~ ~
+                            #:nominal-module nominal-mpi                   ~ ~
+                            #:nominal-phase nominal-phase                  ~ ~
+                            #:nominal-symbol nominal-symbol                ~ ~
+                            #:nominal-require-phase nominal-require-phase  ~ ~
+                            #:inspector inspector])                        ~ ~
+ -> syntax-binding-set?
+  binding-set : syntax-binding-set? ~ ~
+  symbol : symbol? ~ ~
+  phase : (or/c exact-integer? #f) ~ ~
+  mpi : module-path-index? ~ ~
+  source-symbol : symbol? = symbol ~ ~
+  source-phase : (or/c exact-integer? #f) = phase ~ ~
+  nominal-mpi : module-path-index? = mpi ~ ~
+  nominal-phase : (or/c exact-integer? #f) = source-phase ~ ~
+  nominal-symbol : symbol? = source-symbol ~ ~
+  nominal-require-phase : (or/c exact-integer? #f) = 0 ~ ~
+  inspector : (or/c inspector? #f) = #f ~ ~
+
+A syntax binding set supports explicit construction of binding
+information for a syntax object. Start by creating an empty binding set
+with syntax-binding-set, add bindings with syntax-binding-set-extend,
+and create a syntax object that has the bindings as its lexical
+information using syntax-binding-set->syntax.
+
+The first three arguments to syntax-binding-set-extend establish a
+binding of symbol at phase to an identifier that is defined in the
+module referenced by mpi. Supply source-symbol to make the binding of
+symbol refer to a different provided variable from mpi, and so on; the
+optional arguments correspond to the results of identifier-binding.
+
+Added in version 7.0.0.12.
+
                                         *datum-intern-literal*
 (datum-intern-literal v) -> any/c ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Converts some values to be consistent with an interned result produced
 by the default reader in read-syntax mode.
@@ -818,8 +950,8 @@ unreachable, then datum-intern-literal may adopt a new representative.
 
                                         *syntax-shift-phase-level*
 (syntax-shift-phase-level stx shift) -> syntax? ~
-  stx : syntax? ~
-  shift : (or/c exact-integer? #f) ~
+  stx : syntax? ~ ~
+  shift : (or/c exact-integer? #f) ~ ~
 
 Returns a syntax object that is like stx, but with all of its top-level
 and module bindings shifted by shift phase levels. If shift is #f, then
@@ -828,7 +960,7 @@ shift is 0, then the result is stx.
 
                                         *generate-temporaries*
 (generate-temporaries stx-pair) -> (listof identifier?) ~
-  stx-pair : (or syntax? list?) ~
+  stx-pair : (or syntax? list?) ~ ~
 
 Returns a list of identifiers that are distinct from all other
 identifiers. The list contains as many identifiers as stx-pair contains
@@ -842,6 +974,7 @@ The generated identifiers are built with interned symbols (not gensyms);
 see also [missing].
 
 Examples:
+
   > (generate-temporaries '(a b c d))
   '(#<syntax a1> #<syntax b2> #<syntax c3> #<syntax d4>)
   > (generate-temporaries #'(1 2 3 4))
@@ -853,25 +986,31 @@ Examples:
            #'(let-values ([(temp ...) expr])
                (set! id temp) ... (void)))]))
 
-
                                         *identifier-prune-lexical-context*
 (identifier-prune-lexical-context  id-stx      ~
                                   [syms]) -> identifier?
-  id-stx : identifier? ~
-  syms : (listof symbol?) = (list (syntax-e id-stx)) ~
+  id-stx : identifier? ~ ~
+  syms : (listof symbol?) = (list (syntax-e id-stx)) ~ ~
 
 Returns an identifier with the same binding as id-stx, but without
-lexical information from id-stx that does not apply to the symbols in
-syms, where even further extension of the lexical information drops
-information for other symbols. In particular, transferring the lexical
-context via datum->syntax from the result of this function to a symbol
-other than one in syms produces an identifier with no binding.
+possibly lexical information from id-stx that does not apply to the
+symbols in syms, where even further extension of the lexical information
+drops information for other symbols. In particular, transferring the
+lexical context via datum->syntax from the result of this function to a
+symbol other than one in syms may produce an identifier with no binding.
+
+Currently, the result is always id-stx exactly. Pruning was intended
+primarily as a kind of optimization in a previous version of Racket, but
+it is less useful and difficult to implement efficiently in the current
+macro expander.
 
 See also quote-syntax/prune.
 
+Changed in version 6.5: Always return id-stx.
+
                                         *identifier-prune-to-source-module*
 (identifier-prune-to-source-module id-stx) -> identifier? ~
-  id-stx : identifier? ~
+  id-stx : identifier? ~ ~
 
 Returns an identifier with its lexical context minimized to that needed
 for syntax-source-module. The minimized lexical context does not include
@@ -882,18 +1021,18 @@ any bindings.
                   old-stx       
                   inspector     
                   key)      -> syntax?
-  new-stx : syntax? ~
-  old-stx : syntax? ~
-  inspector : inspector? ~
-  key : any/c ~
+  new-stx : syntax? ~ ~
+  old-stx : syntax? ~ ~
+  inspector : inspector? ~ ~
+  key : any/c ~ ~
 
 For backward compatibility only; returns new-stx.
 
                                         *syntax-debug-info*
-(syntax-debug-info stx phase [all-bindings?]) -> hash? ~
-  stx : syntax? ~
-  phase : (or/c exact-integer? #f) ~
-  all-bindings? : any/c = #f ~
+(syntax-debug-info stx [phase all-bindings?]) -> hash? ~
+  stx : syntax? ~ ~
+  phase : (or/c exact-integer? #f) = (syntax-local-phase-level) ~ ~
+  all-bindings? : any/c = #f ~ ~
 
 Produces a hash table that describes the lexical information of stx (not
 counting components when (syntax-e stx) would return a compound value).
@@ -935,11 +1074,11 @@ Added in version 6.3.
 
 3. Syntax Object Bindings
 
-                                        *bound-identifier*
+                                        *bound-identifier=?*
 (bound-identifier=? a-id b-id [phase-level]) -> boolean? ~
-  a-id : syntax? ~
-  b-id : syntax? ~
-  phase-level : (or/c exact-integer? #f) ~
+  a-id : syntax? ~ ~
+  b-id : syntax? ~ ~
+  phase-level : (or/c exact-integer? #f) ~ ~
               = (syntax-local-phase-level)
 
 Returns #t if the identifier a-id would bind b-id (or vice versa) if the
@@ -948,32 +1087,31 @@ phase level indicated by phase-level, #f otherwise. A #f value for
 phase-level corresponds to the label phase level.
 
 Examples:
+
   > (define-syntax (check stx)
       (syntax-case stx ()
         [(_ x y)
          (if (bound-identifier=? #'x #'y)
              #'(let ([y 'wrong]) (let ([x 'binds]) y))
              #'(let ([y 'no-binds]) (let ([x 'wrong]) y)))]))
-
   > (check a a)
   'binds
   > (check a b)
   'no-binds
   > (define-syntax-rule (check-a x) (check a x))
-
   > (check-a a)
   'no-binds
 
-                                        *free-identifier*
+                                        *free-identifier=?*
 (free-identifier=?  a-id                 ~
                     b-id                
                    [a-phase-level       
                     b-phase-level]) -> boolean?
-  a-id : identifier? ~
-  b-id : identifier? ~
-  a-phase-level : (or/c exact-integer? #f) ~
+  a-id : identifier? ~ ~
+  b-id : identifier? ~ ~
+  a-phase-level : (or/c exact-integer? #f) ~ ~
                 = (syntax-local-phase-level)
-  b-phase-level : (or/c exact-integer? #f) = a-phase-level ~
+  b-phase-level : (or/c exact-integer? #f) = a-phase-level ~ ~
 
 Returns #t if a-id and b-id access the same local binding, module
 binding, or top-level binding—perhaps via rename transformers—at the
@@ -988,13 +1126,13 @@ transformer binding to a rename transformer, the identifiers may return
 distinct results with syntax-e.
 
 Examples:
+
   > (define-syntax (check stx)
       (syntax-case stx ()
         [(_ x)
          (if (free-identifier=? #'car #'x)
-             #'(list 'same: x) ~
-             #'(list 'different: x))])) ~
-
+             #'(list 'same: x) ~ ~
+             #'(list 'different: x))])) ~ ~
   > (check car)
   '(same: #<procedure:car>)
   > (check mcar)
@@ -1003,34 +1141,33 @@ Examples:
       (check car))
   '(different: #<procedure:list>)
   > (require (rename-in racket/base [car kar]))
-
   > (check kar)
   '(same: #<procedure:car>)
 
-                                        *free-transformer-identifier*
+                                        *free-transformer-identifier=?*
 (free-transformer-identifier=? a-id b-id) -> boolean? ~
-  a-id : identifier? ~
-  b-id : identifier? ~
+  a-id : identifier? ~ ~
+  b-id : identifier? ~ ~
 
 Same as (free-identifier=? a-id b-id (add1 (syntax-local-phase-level))).
 
-                                        *free-template-identifier*
+                                        *free-template-identifier=?*
 (free-template-identifier=? a-id b-id) -> boolean? ~
-  a-id : identifier? ~
-  b-id : identifier? ~
+  a-id : identifier? ~ ~
+  b-id : identifier? ~ ~
 
 Same as (free-identifier=? a-id b-id (sub1 (syntax-local-phase-level))).
 
-                                        *free-label-identifier*
+                                        *free-label-identifier=?*
 (free-label-identifier=? a-id b-id) -> boolean? ~
-  a-id : identifier? ~
-  b-id : identifier? ~
+  a-id : identifier? ~ ~
+  b-id : identifier? ~ ~
 
 Same as (free-identifier=? a-id b-id #f).
 
                                         *check-duplicate-identifier*
 (check-duplicate-identifier ids) -> (or/c identifier? #f) ~
-  ids : (listof identifier?) ~
+  ids : (listof identifier?) ~ ~
 
 Compares each identifier in ids with every other identifier in the list
 with bound-identifier=?. If any comparison returns #t, one of the
@@ -1038,27 +1175,30 @@ duplicate identifiers is returned (the first one in ids that is a
 duplicate), otherwise the result is #f.
 
                                         *identifier-binding*
-(identifier-binding id-stx [phase-level]) ~
+(identifier-binding  id-stx               ~
+                    [phase-level         
+                     top-level-symbol?]) 
  -> (or/c 'lexical
           #f
-          (listof module-path-index?
+          (list/c module-path-index?
                   symbol?
                   module-path-index?
                   symbol?
                   exact-nonnegative-integer?
                   (or/c exact-integer? #f)
-                  (or/c exact-integer? #f)))
-  id-stx : identifier? ~
-  phase-level : (or/c exact-integer? #f) ~
+                  (or/c exact-integer? #f))
+          (list/c symbol?))
+  id-stx : identifier? ~ ~
+  phase-level : (or/c exact-integer? #f) ~ ~
               = (syntax-local-phase-level)
+  top-level-symbol? : any/c = #f ~ ~
 
-Returns one of three kinds of values, depending on the binding of id-stx
-at the phase level indicated by phase-level (where a #f value for
+Returns one of three (if top-level-symbol? is #f) or four (if
+top-level-symbol? is true) kinds of values, depending on the binding of
+id-stx at the phase level indicated by phase-level (where a #f value for
 phase-level corresponds to the label phase level):
 
-* The result is 'lexical if id-stx has a local binding. If 'lexical is
-  produced for any phase-level value, then it is produced for all
-  phase-level values.
+* The result is 'lexical if id-stx has a local binding.
 
 * The result is a list of seven items when id-stx has a module binding:
   (list source-mod source-id nominal-source-mod nominal-source-id
@@ -1096,15 +1236,24 @@ phase-level corresponds to the label phase level):
   * nominal-export-phase is the phase level of the export from
     nominal-source-mod.
 
-* The result is #f if id-stx has a top-level binding (or, equivalently,
-  if it is unbound).
+* The result is (list source-id) if id-stx has a top-level binding and
+  top-level-symbol? is true.
+
+* The result is #f if id-stx has a top-level binding and
+  top-level-symbol? is #f or if id-stx is unbound. An unbound identifier
+  is typically treated the same as an identifier whose top-level binding
+  is a variable.
 
 If id-stx is bound to a rename-transformer, the result from
 identifier-binding is for the identifier in the transformer, so that
 identifier-binding is consistent with free-identifier=?.
 
+Changed in version 6.6.0.4: Added the top-level-symbol? argument to
+report information on top-level bindings.
+
                                         *identifier-transformer-binding*
-(identifier-transformer-binding id-stx) ~
+(identifier-transformer-binding  id-stx            ~
+                                [rt-phase-level]) 
  -> (or/c 'lexical
           #f
           (listof module-path-index?
@@ -1114,9 +1263,12 @@ identifier-binding is consistent with free-identifier=?.
                   exact-nonnegative-integer?
                   (or/c exact-integer? #f)
                   (or/c exact-integer? #f)))
-  id-stx : identifier? ~
+  id-stx : identifier? ~ ~
+  rt-phase-level : (or/c exact-integer? #f) ~ ~
+                 = (syntax-local-phase-level)
 
-Same as (identifier-binding id-stx (add1 (syntax-local-phase-level))).
+Same as (identifier-binding id-stx (and rt-phase-level (add1
+rt-phase-level))).
 
                                         *identifier-template-binding*
 (identifier-template-binding id-stx) ~
@@ -1129,7 +1281,7 @@ Same as (identifier-binding id-stx (add1 (syntax-local-phase-level))).
                   exact-nonnegative-integer?
                   (or/c exact-integer? #f)
                   (or/c exact-integer? #f)))
-  id-stx : identifier? ~
+  id-stx : identifier? ~ ~
 
 Same as (identifier-binding id-stx (sub1 (syntax-local-phase-level))).
 
@@ -1144,15 +1296,15 @@ Same as (identifier-binding id-stx (sub1 (syntax-local-phase-level))).
                   exact-nonnegative-integer?
                   (or/c exact-integer? #f)
                   (or/c exact-integer? #f)))
-  id-stx : identifier? ~
+  id-stx : identifier? ~ ~
 
 Same as (identifier-binding id-stx #f).
 
                                         *identifier-binding-symbol*
 (identifier-binding-symbol  id-stx             ~
                            [phase-level]) -> symbol?
-  id-stx : identifier? ~
-  phase-level : (or/c exact-integer? #f) ~
+  id-stx : identifier? ~ ~
+  phase-level : (or/c exact-integer? #f) ~ ~
               = (syntax-local-phase-level)
 
 Like identifier-binding, but produces a symbol that corresponds to the
@@ -1168,7 +1320,7 @@ that list is the result that identifier-binding-symbol produces.
 
                                         *set!-transformer?*
 (set!-transformer? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a value created by make-set!-transformer or an
 instance of a structure type with the prop:set!-transformer property, #f
@@ -1176,7 +1328,7 @@ otherwise.
 
                                         *make-set!-transformer*
 (make-set!-transformer proc) -> set!-transformer? ~
-  proc : (syntax? . -> . syntax?) ~
+  proc : (syntax? . -> . syntax?) ~ ~
 
 Creates an assignment transformer that cooperates with set!. If the
 result of make-set!-transformer is bound to id as a transformer binding,
@@ -1186,6 +1338,7 @@ id expr). When the identifier appears as a set! target, the entire set!
 expression is provided to the transformer.
 
 Example:
+
   > (let ([x 1]
           [y 2])
       (let-syntax ([x (make-set!-transformer
@@ -1203,13 +1356,13 @@ Example:
                                         *set!-transformer-procedure*
 (set!-transformer-procedure transformer) ~
  -> (syntax? . -> . syntax?)
-  transformer : set!-transformer? ~
+  transformer : set!-transformer? ~ ~
 
 Returns the procedure that was passed to make-set!-transformer to create
 transformer or that is identified by the prop:set!-transformer property
 of transformer.
 
-prop:set!-transformer : struct-type-property? ~
+prop:set!-transformer : struct-type-property? ~ ~
 
 A structure type property to identify structure types that act as
 assignment transformers like the ones created by make-set!-transformer.
@@ -1242,13 +1395,14 @@ expansion.
 
                                         *rename-transformer?*
 (rename-transformer? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a value created by make-rename-transformer or an
 instance of a structure type with the prop:rename-transformer property,
 #f otherwise.
 
 Examples:
+
   > (rename-transformer? (make-rename-transformer #'values))
   #t
   > (rename-transformer? 'not-a-rename-transformer)
@@ -1256,7 +1410,7 @@ Examples:
 
                                         *make-rename-transformer*
 (make-rename-transformer id-stx) -> rename-transformer? ~
-  id-stx : syntax? ~
+  id-stx : syntax? ~ ~
 
 Creates a rename transformer that, when used as a transformer binding,
 acts as a transformer that inserts the identifier id-stx in place of
@@ -1287,38 +1441,42 @@ other syntactic forms when id is bound to the rename transformer:
   and consult their targets.
 
 Examples:
-  > (define-syntax my-or (make-rename-transformer #'or))
 
+  > (define-syntax my-or (make-rename-transformer #'or))
   > (my-or #f #t)
   #t
   > (free-identifier=? #'my-or #'or)
   #t
 
-Changed in version 6.3: Removed an optional second argument.
+Changed in version 6.3: Removed an optional second argument. Changed in
+version 7.4.0.10: Adjust rename-transformer expansion to add a
+macro-introduction scope, the same as regular macro expansion.
 
                                         *rename-transformer-target*
 (rename-transformer-target transformer) -> identifier? ~
-  transformer : rename-transformer? ~
+  transformer : rename-transformer? ~ ~
 
 Returns the identifier passed to make-rename-transformer to create
 transformer or as indicated by a prop:rename-transformer property on
 transformer.
 
 Example:
-  > (rename-transformer-target (make-rename-transformer #'or))
-  #<syntax:8:0 or>
 
-prop:rename-transformer : struct-type-property? ~
+  > (rename-transformer-target (make-rename-transformer #'or))
+  #<syntax:eval:8:0 or>
+
+prop:rename-transformer : struct-type-property? ~ ~
 
 A structure type property to identify structure types that act as rename
 transformers like the ones created by make-rename-transformer.
 
-The property value must be an exact integer or an identifier syntax
-object. In the former case, the integer designates a field within the
-structure that should contain an identifier; the integer must be between
-0 (inclusive) and the number of non-automatic fields in the structure
-type (exclusive, not counting supertype fields), and the designated
-field must also be specified as immutable.
+The property value must be an exact integer, an identifier syntax
+object, or a procedure that takes one argument. In the former case, the
+integer designates a field within the structure that should contain an
+identifier; the integer must be between 0 (inclusive) and the number of
+non-automatic fields in the structure type (exclusive, not counting
+supertype fields), and the designated field must also be specified as
+immutable.
 
 If the property value is an identifier, the identifier serves as the
 target for renaming, just like the first argument to
@@ -1327,59 +1485,124 @@ identifier is extracted from the structure instance; if the field value
 is not an identifier, then an identifier ? with an empty context is
 used, instead.
 
+If the property value is a procedure that takes one argument, then the
+procedure is called to obtain the identifier that the rename transformer
+will use as a target identifier. The returned identifier should probably
+have the 'not-free-identifier=? syntax property. If the procedure
+returns any value that is not an identifier, the exn:fail:contract
+exception is raised.
+
+Examples:
+
+  ; Example of a procedure argument for prop:rename-transformer ~ ~
+  > (define-syntax slv-1 'first-transformer-binding)
+  > (define-syntax slv-2 'second-transformer-binding)
+  > (begin-for-syntax
+      (struct slv-cooperator (redirect-to-first?)
+        #:property prop:rename-transformer ~ ~
+        (λ (inst)
+          (if (slv-cooperator-redirect-to-first? inst)
+              #'slv-1
+              #'slv-2))))
+  > (define-syntax (slv-lookup stx)
+      (syntax-case stx ()
+        [(_ id)
+         #`'#,(syntax-local-value #'id)]))
+  > (define-syntax slv-inst-1 (slv-cooperator #t))
+  > (define-syntax slv-inst-2 (slv-cooperator #f))
+  > (slv-lookup slv-inst-1)
+  'first-transformer-binding
+  > (slv-lookup slv-inst-2)
+  'second-transformer-binding
+
+Changed in version 6.3: the property now accepts a procedure of one
+argument.
+
                                         *local-expand*
 (local-expand  stx               ~
                context-v        
                stop-ids         
               [intdef-ctx]) -> syntax?
-  stx : syntax? ~
-  context-v : (or/c 'expression 'top-level 'module 'module-begin list?) ~
-  stop-ids : (or/c (listof identifier?) #f) ~
-  intdef-ctx : (or/c internal-definition-context? ~
-                     (and/c pair?
-                            (listof internal-definition-context?))
+  stx : any/c ~ ~
+  context-v : (or/c 'expression 'top-level 'module 'module-begin list?) ~ ~
+  stop-ids : (or/c (listof identifier?) empty #f) ~ ~
+  intdef-ctx : (or/c internal-definition-context?          = '() ~ ~
+                     (listof internal-definition-context?)
                      #f)
-             = #f
 
 Expands stx in the lexical context of the expression currently being
 expanded. The context-v argument is used as the result of
 syntax-local-context for immediate expansions; a list indicates an
 internal-definition context, and more information on the form of the
-list is below.
+list is below. If stx is not already a syntax object, it is coerced with
+(datum->syntax #f stx) before expansion.
 
-When an identifier in stop-ids is encountered by the expander in a
-sub-expression, expansions stops for the sub-expression. If stop-ids is
-a non-empty list and does not contain just module*, then begin, quote,
-set!, lambda, case-lambda, let-values, letrec-values, if, begin0,
-with-continuation-mark, letrec-syntaxes+values, #%app, #%expression,
-#%top, and #%variable-reference are added to stop-ids.  If #%app or
-#%datum appears in stop-ids, then application and literal data
-expressions without the respective explicit form are not wrapped with
-the explicit form, and #%top wrappers are never added (even with an
-empty stop-ids list). If stop-ids is #f instead of a list, then stx is
-expanded only as long as the outermost form of stx is a macro (i.e.,
-expansion does not proceed to sub-expressions). A fully expanded form
-can include the bindings listed in [missing] plus the
-letrec-syntaxes+values form and #%expression in any expression position.
+The stop-ids argument controls how far local-expand expands stx:
 
-When #%plain-module-begin is not itself in stop-ids and module* is in
-stop-ids, then the #%plain-module-begin transformer refrains from
-expanding module* sub-forms. Otherwise, the #%plain-module-begin
-transformer detects and expands sub-forms (such as define-values)
-independent of the corresponding identifier’s presence in stop-ids.
+* If stop-ids is an empty list, then stx is recursively expanded (i.e.
+  expansion proceeds to sub-expressions). The result is guaranteed to be
+  a fully-expanded form, which can include the bindings listed in
+  [missing], plus #%expression in any expression position.
+
+* If stop-ids is a list containing just module*, then expansion proceeds
+  as if stop-ids were an empty list, except that expansion does not
+  recur to submodules defined with module* (which are left unexpanded in
+  the result).
+
+* If stop-ids is any other list, then begin, quote, set!,
+  #%plain-lambda, case-lambda, let-values, letrec-values, if, begin0,
+  with-continuation-mark, letrec-syntaxes+values, #%plain-app,
+  #%expression, #%top, and #%variable-reference are implicitly added to
+  stop-ids. Expansion proceeds recursively, stopping when the expander
+  encounters any of the forms in stop-ids, and the result is the
+  partially-expanded form.
+
+  When the expander would normally implicitly introduce a #%app,
+  #%datum, or #%top identifier as described in [missing], it checks to
+  see if an identifier with the same binding as the one to be introduced
+  appears in stop-ids. If so, the identifier is not introduced; the
+  result of expansion is the bare application, literal data expression,
+  or unbound identifier rather than one wrapped in the respective
+  explicit form.
+
+  When #%plain-module-begin is not in stop-ids, the #%plain-module-begin
+  transformer detects and expands sub-forms (such as define-values)
+  regardless of the identifiers presence in stop-ids.
+
+  Expansion does not replace the scopes in a local-variable reference to
+  match the binding identifier.
+
+* If stop-ids is #f instead of a list, then stx is expanded only as long
+  as the outermost form of stx is a macro (i.e. expansion does not
+  proceed to sub-expressions, and it does not replace the scopes in a
+  local-variable reference to match the binding identifier). The #%app,
+  #%datum, and #%top identifiers are never introduced.
+
+Independent of stop-ids, when local-expand encounters an identifier that
+has a local binding but no binding in the current expansion context, the
+variable is left as-is (as opposed to triggering an “out of context”
+syntax error).
 
 When context-v is 'module-begin, and the result of expansion is a
 #%plain-module-begin form, then a 'submodule syntax property is added to
 each enclosed module form (but not module* forms) in the same way as by
 module expansion.
 
-The optional intdef-ctx argument must be either #f, the result of
-syntax-local-make-definition-context, or a list of such results. In the
-latter two cases, lexical information for internal definitions is added
-to stx before it is expanded (in reverse order relative to the list).
-The lexical information is also added to the expansion result (because
-the expansion might introduce bindings or references to
-internal-definition bindings).
+If the intdef-ctx argument is an internal-definition context, its
+bindings and bindings from all parent internal-definition contexts are
+added to the local binding context during the dynamic extent of the call
+to local-expand. Additionally, unless #f was provided for the add-scope?
+argument to syntax-local-make-definition-context when the
+internal-definition context was created, its scope (but not the scopes
+of any parent internal-definition contexts) is added to the lexical
+information for both stx prior to its expansion and the expansion result
+(because the expansion might introduce bindings or references to
+internal-definition bindings). If intdef-ctx is a list, all bindings
+from all of the provided internal-definition contexts and their parents
+are added to the local binding context, and the scope from each context
+for which add-scope? was not #f is added in the same way. For backwards
+compatibility, providing #f for intdef-ctx is treated the same as
+providing an empty list.
 
 For a particular internal-definition context, generate a unique value
 and put it into a list for context-v. To allow liberal expansion of
@@ -1391,18 +1614,23 @@ internal-definition context is meant to splice into an immediately
 enclosing context, then when syntax-local-context produces a list, cons
 the generated value onto that list.
 
+When expressions are expanded via local-expand with an
+internal-definition context intdef-ctx, and when the expanded
+expressions are incorporated into an overall form new-stx, then
+typically internal-definition-context-track should be applied to
+intdef-ctx and new-stx to provide expansion history to external tools.
+
 This procedure must be called during the dynamic extent of a syntax
 transformer application by the expander or while a module is visited
 (see syntax-transforming?), otherwise the exn:fail:contract exception is
 raised.
 
 Examples:
+
   > (define-syntax-rule (do-print x ...)
       (printf x ...))
-
   > (define-syntax-rule (hello x)
       (do-print "hello ~a" x))
-
   > (define-syntax (show stx)
       (syntax-case stx ()
         [(_ x)
@@ -1412,54 +1640,80 @@ Examples:
                [fully (local-expand #'(hello x)
                                     'expression
                                     #f)])
-           (printf "partly expanded: ~s\n" (syntax->datum partly)) ~
-           (printf "fully expanded: ~s\n" (syntax->datum fully)) ~
+           (printf "partly expanded: ~s\n" (syntax->datum partly)) ~ ~
+           (printf "fully expanded: ~s\n" (syntax->datum fully)) ~ ~
            fully)]))
-
   > (show 1)
   partly expanded: (do-print "hello ~a" 1)
   fully expanded: (printf "hello ~a" 1)
   hello 1
 
-
 Changed in version 6.0.1.3: Changed treatment of #%top so that it is
-never introduced as an explicit wrapper.
+never introduced as an explicit wrapper. Changed in version 6.0.90.27:
+Loosened the contract on the intdef-ctx argument to allow an empty list,
+which is treated the same way as #f.
 
                                         *syntax-local-expand-expression*
-(syntax-local-expand-expression stx) -> syntax? syntax? ~
-  stx : syntax? ~
+(syntax-local-expand-expression  stx             ~
+                                [opaque-only?]) 
+ -> (if opaque-only? #f syntax?) syntax?
+  stx : any/c ~ ~
+  opaque-only? : any/c = #f ~ ~
 
 Like local-expand given 'expression and an empty stop list, but with two
 results: a syntax object for the fully expanded expression, and a syntax
-object whose content is opaque. The latter can be used in place of the
-former (perhaps in a larger expression produced by a macro transformer),
-and when the macro expander encounters the opaque object, it substitutes
-the fully expanded expression without re-expanding it; the
-exn:fail:syntax exception is raised if the expansion context includes
-scopes that were not present for the original expansion, in which case
-re-expansion might produce different results. Consistent use of
-syntax-local-expand-expression and the opaque object thus avoids
-quadratic expansion times when local expansions are nested.
+object whose content is opaque.
+
+The latter can be used in place of the former (perhaps in a larger
+expression produced by a macro transformer), and when the macro expander
+encounters the opaque object, it substitutes the fully expanded
+expression without re-expanding it; the exn:fail:syntax exception is
+raised if the expansion context includes scopes that were not present
+for the original expansion, in which case re-expansion might produce
+different results. Consistent use of syntax-local-expand-expression and
+the opaque object thus avoids quadratic expansion times when local
+expansions are nested.
+
+If opaque-only? is true, then the first result is #f instead of the
+expanded expression. Obtaining only the second, opaque result can be
+more efficient in some expansion contexts.
+
+Unlike local-expand, syntax-local-expand-expression normally produces an
+expanded expression that contains no #%expression forms. However, if
+syntax-local-expand-expression is used within an expansion that is
+triggered by an enclosing local-expand call, then the result of
+syntax-local-expand-expression can include #%expression forms.
 
 This procedure must be called during the dynamic extent of a syntax
 transformer application by the expander or while a module is visited
 (see syntax-transforming?), otherwise the exn:fail:contract exception is
 raised.
 
+Changed in version 6.90.0.13: Added the opaque-only? argument.
+
                                         *local-transformer-expand*
 (local-transformer-expand  stx               ~
                            context-v        
                            stop-ids         
                           [intdef-ctx]) -> syntax?
-  stx : syntax? ~
-  context-v : (or/c 'expression 'top-level list?) ~
-  stop-ids : (or/c (listof identifier?) #f) ~
-  intdef-ctx : (or/c internal-definition-context? #f) = #f ~
+  stx : any/c ~ ~
+  context-v : (or/c 'expression 'top-level list?) ~ ~
+  stop-ids : (or/c (listof identifier?) #f) ~ ~
+  intdef-ctx : (or/c internal-definition-context?          = '() ~ ~
+                     (listof internal-definition-context?)
+                     #f)
 
 Like local-expand, but stx is expanded as a transformer expression
-instead of a run-time expression. For 'expression expansion, any lifted
-expressions—from calls to syntax-local-lift-expression during the
-expansion of stx—are captured into a let-values form in the result.
+instead of a run-time expression.
+
+Any lifted expressions—from calls to syntax-local-lift-expression during
+the expansion of stx—are captured in the result. If context-v is
+'top-level, then lifts are captured in a begin form, otherwise lifts are
+captured in let-values forms. If no expressions are lifted during
+expansion, then no begin or let-values wrapper is added.
+
+Changed in version 6.5.0.3: Allow and capture lifts in a 'top-level
+context.
 
                                         *local-expand/capture-lifts*
 (local-expand/capture-lifts  stx             ~
@@ -1467,11 +1721,13 @@ expansion of stx—are captured into a let-values form in the result.
                              stop-ids       
                             [intdef-ctx     
                              lift-ctx]) -> syntax?
-  stx : syntax? ~
-  context-v : (or/c 'expression 'top-level 'module 'module-begin list?) ~
-  stop-ids : (or/c (listof identifier?) #f) ~
-  intdef-ctx : (or/c internal-definition-context? #f) = #f ~
-  lift-ctx : any/c = (gensym 'lifts) ~
+  stx : any/c ~ ~
+  context-v : (or/c 'expression 'top-level 'module 'module-begin list?) ~ ~
+  stop-ids : (or/c (listof identifier?) #f) ~ ~
+  intdef-ctx : (or/c internal-definition-context?          = '() ~ ~
+                     (listof internal-definition-context?)
+                     #f)
+  lift-ctx : any/c = (gensym 'lifts) ~ ~
 
 Like local-expand, but the result is a syntax object that represents a
 begin expression. Lifted expressions—from calls to
@@ -1481,17 +1737,23 @@ the last expression in the begin. The lift-ctx value is reported by
 syntax-local-lift-context during local expansion. The lifted expressions
 are not expanded, but instead left as provided in the begin form.
 
+If context-v is 'top-level or 'module, then module forms can appear in
+the result as added via syntax-local-lift-module. If context-v is
+'module, then module* forms can appear, too.
+
                                         *local-transformer-expand/capture-lifts*
 (local-transformer-expand/capture-lifts  stx             ~
                                          context-v      
                                          stop-ids       
                                         [intdef-ctx     
                                          lift-ctx]) -> syntax?
-  stx : syntax? ~
-  context-v : (or/c 'expression 'top-level list?) ~
-  stop-ids : (or/c (listof identifier?) #f) ~
-  intdef-ctx : (or/c internal-definition-context? #f) = #f ~
-  lift-ctx : any/c = (gensym 'lifts) ~
+  stx : any/c ~ ~
+  context-v : (or/c 'expression 'top-level list?) ~ ~
+  stop-ids : (or/c (listof identifier?) #f) ~ ~
+  intdef-ctx : (or/c internal-definition-context?          = '() ~ ~
+                     (listof internal-definition-context?)
+                     #f)
+  lift-ctx : any/c = (gensym 'lifts) ~ ~
 
 Like local-expand/capture-lifts, but stx is expanded as a transformer
 expression instead of a run-time expression. Lifted expressions are
@@ -1499,16 +1761,16 @@ reported as define-values forms (in the transformer environment).
 
                                         *internal-definition-context?*
 (internal-definition-context? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an internal-definition context, #f otherwise.
 
                                         *syntax-local-make-definition-context*
-(syntax-local-make-definition-context [intdef-ctx    ~
+(syntax-local-make-definition-context [parent-ctx    ~
                                        add-scope?]) 
  -> internal-definition-context?
-  intdef-ctx : (or/c internal-definition-context? #f) = #f ~
-  add-scope? : any/c = #f ~
+  parent-ctx : (or/c internal-definition-context? #f) = #f ~ ~
+  add-scope? : any/c = #t ~ ~
 
 Creates an opaque internal-definition context value to be used with
 local-expand and other functions. A transformer should create one
@@ -1523,11 +1785,30 @@ the context. Unless add-scope? is #f, the scope is added to any form
 that is expanded within the context or that appears as the result of a
 (partial) expansion within the context.
 
-If intdef-ctx is not #f, then the new internal-definition context
-extends the given one. An extending definition context adds all scopes
-that are added by intdef-ctx, and expanding in the new
-internal-definition context can use bindings previously introduced into
-intdef-ctx.
+If parent-ctx is not #f, then parent-ctx is made the parent
+internal-definition context for the new internal-definition context.
+Whenever the new context’s bindings are added to the local binding
+context (e.g. by providing the context to local-expand,
+syntax-local-bind-syntaxes, or syntax-local-value), then the bindings
+from parent-ctx are also added as well. If parent-ctx was also created
+with a parent internal-definition context, bindings from its parent are
+also added, and so on recursively. Note that the scopes of parent
+contexts are not added implicitly, only the bindings, even when the
+scope of the child context would be implicitly added. If the scopes of
+parent definition contexts should be added, the parent contexts must be
+provided explicitly.
+
+Additionally, if the created definition context is intended to be
+spliced into a surrounding definition context, the surrounding context
+should always be provided for the parent-ctx argument to ensure the
+necessary use-site scopes are added to macros expanded in the context.
+Otherwise, expansion of nested definitions can be inconsistent with the
+expansion of definitions in the surrounding context.
+
+The scope associated with a new definition context is pruned from
+quote-syntax forms only when it is created during the dynamic extent of
+a syntax transformer application or in a begin-for-syntax form
+(potentially nested) within a module being expanded.
 
 This procedure must be called during the dynamic extent of a syntax
 transformer application by the expander or while a module is visited
@@ -1538,12 +1819,16 @@ Changed in version 6.3: Added the add-scope? argument, and made calling
 internal-definition-context-seal no longer necessary.
 
                                         *syntax-local-bind-syntaxes*
-(syntax-local-bind-syntaxes id-list          ~
-                            expr            
-                            intdef-ctx) -> void?
-  id-list : (listof identifier?) ~
-  expr : (or/c syntax? #f) ~
-  intdef-ctx : internal-definition-context? ~
+(syntax-local-bind-syntaxes  id-list                  ~
+                             expr                    
+                             intdef-ctx              
+                            [extra-intdef-ctxs]) -> void?
+  id-list : (listof identifier?) ~ ~
+  expr : (or/c syntax? #f) ~ ~
+  intdef-ctx : internal-definition-context? ~ ~
+  extra-intdef-ctxs : (or/c internal-definition-context? ~ ~
+                            (listof internal-definition-context?))
+                    = '()
 
 Binds each identifier in id-list within the internal-definition context
 represented by intdef-ctx, where intdef-ctx is the result of
@@ -1554,18 +1839,39 @@ define-syntaxes bindings; in the latter case, the number of values
 produced by the expression should match the number of identifiers,
 otherwise the exn:fail:contract:arity exception is raised.
 
+When expr is not #f, it is expanded in an expression context and
+evaluated in the current transformer environment. In this case, the
+bindings and lexical information from both intdef-ctx and
+extra-intdef-ctxs are used to enrich expr’s lexical information and
+extend the local binding context in the same way as the fourth argument
+to local-expand. If expr is #f, the value provided for extra-intdef-ctxs
+is ignored.
+
 This procedure must be called during the dynamic extent of a syntax
 transformer application by the expander or while a module is visited
 (see syntax-transforming?), otherwise the exn:fail:contract exception is
 raised.
 
+Changed in version 6.90.0.27: Added the extra-intdef-ctxs argument.
+
+                                        *internal-definition-context-binding-identifiers*
+(internal-definition-context-binding-identifiers intdef-ctx) ~
+ -> (listof identifier?)
+  intdef-ctx : internal-definition-context? ~ ~
+
+Returns a list of all binding identifiers registered for intdef-ctx
+through syntax-local-bind-syntaxes. Each identifier in the returned list
+includes the internal-definition context’s scope.
+
+Added in version 6.3.0.4.
+
                                         *internal-definition-context-introduce*
 (internal-definition-context-introduce  intdef-ctx      ~
                                         stx            
                                        [mode])     -> syntax?
-  intdef-ctx : internal-definition-context? ~
-  stx : syntax? ~
-  mode : (or/c 'flip 'add 'remove) = 'flip ~
+  intdef-ctx : internal-definition-context? ~ ~
+  stx : syntax? ~ ~
+  mode : (or/c 'flip 'add 'remove) = 'flip ~ ~
 
 Flips, adds, or removes (depending on mode) the scope for intdef-ctx for
 all parts of stx.
@@ -1574,7 +1880,7 @@ Added in version 6.3.
 
                                         *internal-definition-context-seal*
 (internal-definition-context-seal intdef-ctx) -> void? ~
-  intdef-ctx : internal-definition-context? ~
+  intdef-ctx : internal-definition-context? ~ ~
 
 For backward compatibility only; has no effect.
 
@@ -1582,8 +1888,8 @@ For backward compatibility only; has no effect.
 (identifier-remove-from-definition-context id-stx       ~
                                            intdef-ctx) 
  -> identifier?
-  id-stx : identifier? ~
-  intdef-ctx : (or/c internal-definition-context? ~
+  id-stx : identifier? ~ ~
+  intdef-ctx : (or/c internal-definition-context? ~ ~
                      (listof internal-definition-context?))
 
 Removes all of the scopes of intdef-ctx (or of each element in a list
@@ -1595,19 +1901,53 @@ internal-definition-context-introduce function is preferred.
 
 Changed in version 6.3: Simplified the operation to scope removal.
 
+prop:expansion-contexts : struct-type-property? ~ ~
+
+A structure type property to constrain the use of macro transformers and
+rename transformers. The property’s value must be a list of symbols,
+where the allowed symbols are 'expression, 'top-level, 'module,
+'module-begin, and 'definition-context. Each symbol corresponds to an
+expansion context in the same way as for local-expand or as reported by
+syntax-local-context, except that 'definition-context is used (instead
+of a list) to represent an internal-definition context.
+
+If an identifier is bound to a transformer whose list does not include a
+symbol for a particular use of the identifier, then the use is adjusted
+as follows:
+
+* In a 'module-begin context, then the use is wrapped in a begin form.
+
+* In a 'module, 'top-level, 'internal-definition or context, if
+  'expression is present in the list, then the use is wrapped in an
+  #%expression form.
+
+* Otherwise, a syntax error is reported.
+
+The prop:expansion-contexts property is most useful in combination with
+prop:rename-transformer, since a general transformer procedure can use
+syntax-local-context. Furthermore, a prop:expansion-contexts property
+makes the most sense when a rename transformer’s identifier has the
+'not-free-identifier=? property, otherwise a definition of the binding
+creates a binding alias that effectively routes around the
+prop:expansion-contexts property.
+
+Added in version 6.3.
+
                                         *syntax-local-value*
 (syntax-local-value  id-stx             ~
                     [failure-thunk     
                      intdef-ctx])  -> any
-  id-stx : syntax? ~
-  failure-thunk : (or/c (-> any) #f) = #f ~
-  intdef-ctx : (or/c internal-definition-context? = #f ~
+  id-stx : identifier? ~ ~
+  failure-thunk : (or/c (-> any) #f) = #f ~ ~
+  intdef-ctx : (or/c internal-definition-context?          = '() ~ ~
+                     (listof internal-definition-context?)
                      #f)
 
-Returns the transformer binding value of id-stx in either the context
-associated with intdef-ctx (if not #f) or the context of the expression
-being expanded (if intdef-ctx is #f).  If intdef-ctx is provided, it
-must be an extension of the context of the expression being expanded.
+Returns the transformer binding value of the identifier id-stx in the
+context of the current expansion. If intdef-ctx is not #f, bindings from
+all provided definition contexts are also considered. Unlike the fourth
+argument to local-expand, the scopes associated with the provided
+definition contexts are not used to enrich id-stx’s lexical information.
 
 If id-stx is bound to a rename transformer created with
 make-rename-transformer, syntax-local-value effectively calls itself
@@ -1625,42 +1965,43 @@ transformer application by the expander or while a module is visited
 raised.
 
 Examples:
-  > (define-syntax swiss-cheeses? #t)
 
+  > (define-syntax swiss-cheeses? #t)
   > (define-syntax (transformer stx)
       (if (syntax-local-value #'swiss-cheeses?)
           #''(gruyère emmental raclette)
           #''(roquefort camembert boursin)))
-
   > (transformer)
   '(gruyère emmental raclette)
 
 Examples:
+
   > (define-syntax (transformer-2 stx)
       (syntax-local-value #'something-else (λ () (error "no binding"))))
-
   > (transformer-2)
   no binding
 
 Examples:
+
   > (define-syntax nachos #'(printf "nachos~n"))
-
   > (define-syntax chips (make-rename-transformer #'nachos))
-
   > (define-syntax (transformer-3 stx)
       (syntax-local-value #'chips))
-
   > (transformer-3)
   nachos
 
+Changed in version 6.90.0.27: Changed intdef-ctx to accept a list of
+internal-definition contexts in addition to a single internal-definition
+context or #f.
 
                                         *syntax-local-value/immediate*
 (syntax-local-value/immediate  id-stx             ~
                               [failure-thunk     
                                intdef-ctx])  -> any
-  id-stx : syntax? ~
-  failure-thunk : (or/c (-> any) #f) = #f ~
-  intdef-ctx : (or/c internal-definition-context? = #f ~
+  id-stx : syntax? ~ ~
+  failure-thunk : (or/c (-> any) #f) = #f ~ ~
+  intdef-ctx : (or/c internal-definition-context?          = '() ~ ~
+                     (listof internal-definition-context?)
                      #f)
 
 Like syntax-local-value, but the result is normally two values. If
@@ -1675,9 +2016,20 @@ If id-stx has no transformer binding, then failure-thunk is called (and
 it can return any number of values), or an exception is raised if
 failure-thunk is #f.
 
+Examples:
+
+  > (define-syntax agent-007 (make-rename-transformer #'james-bond))
+  > (define-syntax (show-secret-identity stx)
+      (syntax-parse stx
+        [(_ name:id) ~ ~
+         (define-values [_ orig-name] (syntax-local-value/immediate #'name))
+         #`'(name #,orig-name)]))
+  > (show-secret-identity agent-007)
+  '(agent-007 james-bond)
+
                                         *syntax-local-lift-expression*
 (syntax-local-lift-expression stx) -> identifier? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns a fresh identifier, and cooperates with the module,
 letrec-syntaxes+values, define-syntaxes, begin-for-syntax, and top-level
@@ -1701,11 +2053,14 @@ transformer application by the expander or while a module is visited
 (see syntax-transforming?), otherwise the exn:fail:contract exception is
 raised.
 
+In addition, this procedure can be called only when a lift target is
+available, as indicated by syntax-transforming-with-lifts?.
+
                                         *syntax-local-lift-values-expression*
 (syntax-local-lift-values-expression n stx) ~
  -> (listof identifier?)
-  n : exact-nonnegative-integer? ~
-  stx : syntax? ~
+  n : exact-nonnegative-integer? ~ ~
+  stx : syntax? ~ ~
 
 Like syntax-local-lift-expression, but binds the result to n
 identifiers, and returns a list of the n identifiers.
@@ -1730,9 +2085,35 @@ transformer application by the expander or while a module is visited
 (see syntax-transforming?), otherwise the exn:fail:contract exception is
 raised.
 
+                                        *syntax-local-lift-module*
+(syntax-local-lift-module stx) -> void? ~
+  stx : syntax? ~ ~
+
+Cooperates with the module form or top-level expansion to add stx as a
+module declaration in the enclosing module or top-level. The stx form
+must start with module or module*, where the latter is only allowed
+within the expansion of a module.
+
+The module is not immediately declared when syntax-local-lift-module
+returns. Instead, the module declaration is recorded for processing when
+expansion returns to the enclosing module body or top-level sequence.
+
+This procedure must be called during the dynamic extent of a syntax
+transformer application by the expander or while a module is visited
+(see syntax-transforming?), otherwise the exn:fail:contract exception is
+raised.
+
+If the current expression being transformed is not within a module form
+or within a top-level expansion, then the exn:fail:contract exception is
+raised. If stx form does not start with module or module*, or if it
+starts with module* in a top-level context, the exn:fail:contract
+exception is raised.
+
+Added in version 6.3.
+
                                         *syntax-local-lift-module-end-declaration*
 (syntax-local-lift-module-end-declaration stx) -> void? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Cooperates with the module form to insert stx as a top-level declaration
 at the end of the module currently being expanded. If the current
@@ -1756,12 +2137,12 @@ exception is raised.
                                         *syntax-local-lift-require*
 (syntax-local-lift-require raw-require-spec      ~
                            stx)             -> syntax?
-  raw-require-spec : any/c ~
-  stx : syntax? ~
+  raw-require-spec : any/c ~ ~
+  stx : syntax? ~ ~
 
 Lifts a #%require form corresponding to raw-require-spec (either as a
 syntax object or datum) to the top-level or to the top of the module
-currently being expanded  or to an enclosing begin-for-syntax..
+currently being expanded  or to an enclosing begin-for-syntax.
 
 The resulting syntax object is the same as stx, except that a fresh
 scope is added. The same scope is added to the lifted #%require form, so
@@ -1781,9 +2162,13 @@ transformer application by the expander or while a module is visited
 (see syntax-transforming?), otherwise the exn:fail:contract exception is
 raised.
 
+Changed in version 6.90.0.27: Changed the scope added to inputs from a
+macro-introduction scope to one that does not affect whether or not the
+resulting syntax is considered original as reported by syntax-original?.
+
                                         *syntax-local-lift-provide*
 (syntax-local-lift-provide raw-provide-spec-stx) -> void? ~
-  raw-provide-spec-stx : syntax? ~
+  raw-provide-spec-stx : syntax? ~ ~
 
 Lifts a #%provide form corresponding to raw-provide-spec-stx to the top
 of the module currently being expanded or to an enclosing
@@ -1843,33 +2228,27 @@ expander, the result is the phase level of the form being expanded.
 Otherwise, the result is 0.
 
 Examples:
+
   ; a macro bound at phase 0
   > (define-syntax (print-phase-level stx)
-      (printf "phase level: ~a~n" (syntax-local-phase-level)) ~
+      (printf "phase level: ~a~n" (syntax-local-phase-level)) ~ ~
       #'(void))
-
   > (require (for-meta 2 racket/base))
-
   > (begin-for-syntax
       ; a macro bound at phase 1
       (define-syntax (print-phase-level stx)
-        (printf "phase level: ~a~n" (syntax-local-phase-level)) ~
+        (printf "phase level: ~a~n" (syntax-local-phase-level)) ~ ~
         #'(void)))
-
   > (print-phase-level)
   phase level: 0
-
   > (begin-for-syntax (print-phase-level))
   phase level: 1
-
 
                                         *syntax-local-module-exports*
 (syntax-local-module-exports mod-path) ~
  -> (listof (cons/c (or/c exact-integer? #f) (listof symbol?)))
-  mod-path : (or/c module-path? ~
-                   (and/c syntax?
-                          (lambda (stx)
-                            (module-path? (syntax->datum stx)))))
+  mod-path : (or/c module-path? ~ ~
+                   (syntax/c module-path?))
 
 Returns an association list from phase-level numbers (or #f for the
 label phase level) to lists of symbols, where the symbols are the names
@@ -1894,8 +2273,8 @@ raised.
                                         *syntax-local-get-shadower*
 (syntax-local-get-shadower  id-stx                 ~
                            [only-generated?]) -> identifier?
-  id-stx : identifier? ~
-  only-generated? : any/c = #f ~
+  id-stx : identifier? ~ ~
+  only-generated? : any/c = #f ~ ~
 
 Adds scopes to id-stx so that it refers to bindings in the current
 expansion context or could bind any identifier obtained via
@@ -1918,9 +2297,9 @@ for syntax-parameterize and local-require.
 
                                         *syntax-local-make-delta-introducer*
 (syntax-local-make-delta-introducer id-stx) -> procedure? ~
-  id-stx : identifier? ~
+  id-stx : identifier? ~ ~
 
-For (limited) backward compatibility only; raises exn:fail:supported.
+For (limited) backward compatibility only; raises exn:fail:unsupported.
 
 Changed in version 6.3: changed to raise exn:fail:supported.
 
@@ -1928,7 +2307,7 @@ Changed in version 6.3: changed to raise exn:fail:supported.
 (syntax-local-certifier [active?]) ~
  -> ((syntax?) (any/c (or/c procedure? #f))
      . ->* . syntax?)
-  active? : boolean? = #f ~
+  active? : boolean? = #f ~ ~
 
 For backward compatibility only; returns a procedure that returns its
 first argument.
@@ -1939,6 +2318,18 @@ first argument.
 Returns #t during the dynamic extent of a syntax transformer application
 by the expander and while a module is being visited, #f otherwise.
 
+                                        *syntax-transforming-with-lifts?*
+(syntax-transforming-with-lifts?) -> boolean? ~
+
+Returns #t if (syntax-transforming?) produces #t and a target context is
+available for lifting expressions (via syntax-local-lift-expression), #f
+otherwise.
+
+Currently, (syntax-transforming?) implies
+(syntax-transforming-with-lifts?).
+
+Added in version 6.3.0.9.
+
                                         *syntax-transforming-module-expression?*
 (syntax-transforming-module-expression?) -> boolean? ~
 
@@ -1947,7 +2338,7 @@ by the expander for an expression within a module form, #f otherwise.
 
                                         *syntax-local-identifier-as-binding*
 (syntax-local-identifier-as-binding id-stx) -> identifier? ~
-  id-stx : identifier? ~
+  id-stx : identifier? ~ ~
 
 Returns an identifier like id-stx, but without use-site scopes that were
 previously added to the identifier as part of a macro expansion in the
@@ -1969,53 +2360,108 @@ Added in version 6.3.
 
                                         *syntax-local-introduce*
 (syntax-local-introduce stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Produces a syntax object that is like stx, except that the presence of
-scopes for the current expansion—both the. See [missing] for information
-on scopes.
+scopes for the current expansion—both the macro-introduction scope and
+the use-site scope, if any—is flipped on all parts of the syntax object.
+See [missing] for information on macro-introduction and use-site scopes.
 
 This procedure must be called during the dynamic extent of a syntax
 transformer application by the expander or while a module is visited
 (see syntax-transforming?), otherwise the exn:fail:contract exception is
 raised.
 
-                                        *make-syntax-introducer*
-(make-syntax-introducer) ~
- -> ((syntax?) ((or/c 'flip 'add 'remove)) . ->* . syntax?)
+Example:
 
-Produces a procedure that behaves similar to syntax-local-introduce, but
-using a fresh scope, and where the action of the scope can be 'flip (the
-default), 'add to add the scope regardless of whether it is present
-already, or 'remove to remove the scope when it is currently present.
+  > (module example racket
+      (define-syntax (require-math stx)
+        (syntax-local-introduce #'(require racket/math)))
+      (require-math)
+      pi)
+
+                                        *make-syntax-introducer*
+(make-syntax-introducer [as-use-site?]) ~
+ -> ((syntax?) ((or/c 'flip 'add 'remove)) . ->* . syntax?)
+  as-use-site? : any/c = #f ~ ~
+
+Produces a procedure that encapsulates a fresh scope and flips, adds, or
+removes it in a given syntax object. By default, the fresh scope is a
+macro-introduction scope, but providing a true value for as-use-site?
+creates a scope that is like a use-site scope; the difference is in how
+the scopes are treated by syntax-original?.
+
+The action of the generated procedure can be 'flip (the default) to flip
+the presence of a scope in each part of a given syntax object, 'add to
+add the scope to each regardless of whether it is present already, or
+'remove to remove the scope when it is currently present in any part.
 
 Multiple applications of the same make-syntax-introducer result
 procedure use the same scope, and different result procedures use
 distinct scopes.
 
-Changed in version 6.3: Added the optional operation argument in the
-result procedure.
+Changed in version 6.3: Added the optional as-use-site? argument, and
+added the optional operation argument in the result procedure.
+
+                                        *make-interned-syntax-introducer*
+(make-interned-syntax-introducer key) ~
+ -> ((syntax?) ((or/c 'flip 'add 'remove)) . ->* . syntax?)
+  key : symbol? ~ ~
+
+Like make-syntax-introducer, but the encapsulated scope is interned.
+Multiple calls to make-interned-syntax-introducer with the same key will
+produce procedures that flip, add, or remove the same scope, even across
+phases and module instantiations. Furthermore, the scope remains
+consistent even when embedded in compiled code, so a scope created with
+make-interned-syntax-introducer will retain its identity in syntax
+objects loaded from compiled code. (In this sense, the relationship
+between make-syntax-introducer and make-interned-syntax-introducer is
+analogous to the relationship between gensym and quote.)
+
+This function is intended for the implementation of separate binding
+environments within a single phase, for which the scope associated with
+each environment must be the same across modules.
+
+Unlike make-syntax-introducer, the scope added by a procedure created
+with make-interned-syntax-introducer is always treated like a use-site
+scope, not a macro-introduction scope, so it does not affect
+originalness as reported by syntax-original?.
+
+Added in version 6.90.0.28.
 
                                         *make-syntax-delta-introducer*
 (make-syntax-delta-introducer  ext-stx        ~
                                base-stx      
                               [phase-level]) 
  -> ((syntax?) ((or/c 'flip 'add 'remove)) . ->* . syntax?)
-  ext-stx : syntax? ~
-  base-stx : (or/c syntax? #f) ~
-  phase-level : (or/c #f exact-integer?) ~
+  ext-stx : identifier? ~ ~
+  base-stx : (or/c syntax? #f) ~ ~
+  phase-level : (or/c #f exact-integer?) ~ ~
               = (syntax-local-phase-level)
 
 Produces a procedure that behaves like the result of
-make-syntax-introducer, but using the scopes of ext-stx that are not
-shared with base-stx.
+make-syntax-introducer, but using a set of scopes from ext-stx and with
+a default action of 'add.
 
-This procedure is potentially useful when m-id has a transformer binding
-that records some orig-id, and a use of m-id introduces a binding of
-orig-id. In that case, the scopes one the use of m-id added since the
-binding of m-id should be transferred to the binding instance of
-orig-id, so that it captures uses with the same lexical context as the
-use of m-id.
+* If the scopes of base-stx are a subset of the scopes of ext-stx, then
+  the result of make-syntax-delta-introducer adds, removes, or flips
+  scopes that are in the set for ext-stx and not in the set for
+  base-stx.
+
+* If the scopes of base-stx are not a subset of the scopes of ext-stx,
+  but if it has a binding, then the set of scopes associated with the
+  binding id subtracted from the set of scopes for ext-stx, and the
+  result of make-syntax-delta-introducer adds, removes, or flips that
+  difference.
+
+A #f value for base-stx is equivalent to a syntax object with no scopes.
+
+This procedure is potentially useful when some m-id has a transformer
+binding that records some orig-id, and a use of m-id introduces a
+binding of orig-id. In that case, the scopes one the use of m-id added
+since the binding of m-id should be transferred to the binding instance
+of orig-id, so that it captures uses with the same lexical context as
+the use of m-id.
 
 If ext-stx is tainted or armed, then an identifier result from the
 created procedure is tainted.
@@ -2046,10 +2492,11 @@ reported by syntax-local-phase-level.
                                         *syntax-local-module-required-identifiers*
 (syntax-local-module-required-identifiers mod-path      ~
                                           phase-level) 
- -> (listof (cons/c (or/c exact-integer? #f)
-                    (listof identifier?)))
-  mod-path : (or/c module-path? #f) ~
-  phase-level : (or/c exact-integer? #f #t) ~
+ -> (or/c (listof (cons/c (or/c exact-integer? #f)
+                          (listof identifier?)))
+          #f)
+  mod-path : (or/c module-path? #f) ~ ~
+  phase-level : (or/c exact-integer? #f #t) ~ ~
 
 Can be called only while syntax-local-transforming-module-provides?
 returns #t.
@@ -2058,7 +2505,9 @@ It returns an association list mapping phase levels to lists of
 identifiers.  Each list of identifiers includes all bindings imported
 (into the module being expanded) using the module path mod-path, or all
 modules if mod-path is #f. The association list includes all identifiers
-imported with a phase-level shift, of all shifts if phase-level is #t.
+imported with a phase-level shift, or all shifts if phase-level is #t.
+If phase-level is not #t, the result can be #f if no identifiers are
+exported at that phase.
 
 When an identifier is renamed on import, the result association list
 includes the identifier by its internal name. Use identifier-binding to
@@ -2068,9 +2517,9 @@ Beware that the phase-level keys are absolute relative to the enclosing
 module, and not relative to the current transformer phase level as
 reported by syntax-local-phase-level.
 
-prop:liberal-define-context : struct-type-property? ~
+prop:liberal-define-context : struct-type-property? ~ ~
 (liberal-define-context? v) -> boolean?
-  v : any/c ~
+  v : any/c ~ ~
 
 An instance of a structure type with a true value for the
 prop:liberal-define-context property can be used as an element of an
@@ -2087,7 +2536,7 @@ property, #f otherwise.
 
 4.1. require Transformers
 
- (require racket/require-transform) package: base ~
+ (require racket/require-transform) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/require-transform library, not racket/base or racket.
@@ -2108,8 +2557,9 @@ See also define-require-syntax, which supports macro-style require
 transformers.
 
                                         *expand-import*
-(expand-import stx) -> (listof import?) (listof import-source?) ~
-  stx : syntax? ~
+(expand-import require-spec) ~
+ -> (listof import?) (listof import-source?)
+  require-spec : syntax? ~ ~
 
 Expands the given require-spec to lists of imports and import sources.
 The latter specifies modules to be instantiated or visited, so the
@@ -2120,14 +2570,27 @@ list).
 
                                         *make-require-transformer*
 (make-require-transformer proc) -> require-transformer? ~
-  proc : (syntax? . -> . (values ~
+  proc : (syntax? . -> . (values ~ ~
                           (listof import?)
                           (listof import-source?)))
 
 Creates a require transformer using the given procedure as the
-transformer.
+transformer. Often used in combination with expand-import.
 
-prop:require-transformer : struct-type-property? ~
+Examples:
+
+  > (require (for-syntax racket/require-transform))
+  > (define-syntax printing
+      (make-require-transformer
+       (lambda (stx)
+         (syntax-case stx ()
+           [(_ path)
+            (printf "Importing: ~a~n" #'path) ~ ~
+            (expand-import #'path)]))))
+  > (require (printing racket/match))
+  Importing: #<syntax:eval:37:0 racket/match>
+
+prop:require-transformer : struct-type-property? ~ ~
 
 A property to identify require transformers. The property value must be
 a procedure that takes the structure and returns a transformer
@@ -2136,7 +2599,7 @@ returns import and import-source lists.
 
                                         *require-transformer?*
 (require-transformer? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v has the prop:require-transformer property, #f otherwise.
 
@@ -2148,17 +2611,15 @@ Returns #t if v has the prop:require-transformer property, #f otherwise.
                 req-mode
                 orig-mode
                 orig-stx)
-    #:extra-constructor-name make-import) ~
-  local-id : identifier? ~
-  src-sym : symbol? ~
-  src-mod-path : (or/c module-path? ~
-                       (and/c syntax?
-                              (lambda (stx)
-                                (module-path? (syntax->datum stx)))))
-  mode : (or/c exact-integer? #f) ~
-  req-mode : (or/c exact-integer? #f) ~
-  orig-mode : (or/c exact-integer? #f) ~
-  orig-stx : syntax? ~
+    #:extra-constructor-name make-import) ~ ~
+  local-id : identifier? ~ ~
+  src-sym : symbol? ~ ~
+  src-mod-path : (or/c module-path? ~ ~
+                       (syntax/c module-path?))
+  mode : (or/c exact-integer? #f) ~ ~
+  req-mode : (or/c exact-integer? #f) ~ ~
+  orig-mode : (or/c exact-integer? #f) ~ ~
+  orig-stx : syntax? ~ ~
 
 A structure representing a single imported identifier:
 
@@ -2170,9 +2631,6 @@ A structure representing a single imported identifier:
 * src-mod-path — a module path (relative to the importing module) for
   the source of the imported binding.
 
-* orig-stx — a syntax object for the source of the import, used for
-  error reporting.
-
 * mode — the phase level of the binding in the importing module.
 
 * req-mode — the phase level shift of the import relative to the
@@ -2181,13 +2639,14 @@ A structure representing a single imported identifier:
 * orig-mode — the phase level of the binding as exported by the
   exporting module.
 
+* orig-stx — a syntax object for the source of the import, used for
+  error reporting.
+
                                         *struct*
 (struct import-source (mod-path-stx mode) ~
-    #:extra-constructor-name make-import-source) ~
-  mod-path-stx : (and/c syntax? ~
-                        (lambda (x)
-                          (module-path? (syntax->datum x))))
-  mode : (or/c exact-integer? #f) ~
+    #:extra-constructor-name make-import-source) ~ ~
+  mod-path-stx : (syntax/c module-path?) ~ ~
+  mode : (or/c exact-integer? #f) ~ ~
 
 A structure representing an imported module, which must be instantiated
 or visited even if no binding is imported into a module.
@@ -2200,7 +2659,7 @@ or visited even if no binding is imported into a module.
                                         *current-require-module-path*
 (current-require-module-path) -> (or/c #f module-path-index?) ~
 (current-require-module-path module-path) -> void?
-  module-path : (or/c #f module-path-index?) ~
+  module-path : (or/c #f module-path-index?) ~ ~
 
 A parameter that determines how relative require-level module paths are
 expanded to #%require-level module paths by convert-relative-module-path
@@ -2217,13 +2676,9 @@ given module path.
                                         *convert-relative-module-path*
 (convert-relative-module-path module-path) ~
  -> (or/c module-path?
-          (and/c syntax?
-                 (lambda (stx)
-                   (module-path? (syntax-e stx)))))
-  module-path : (or/c module-path? ~
-                      (and/c syntax?
-                             (lambda (stx)
-                               (module-path? (syntax-e stx)))))
+          (syntax/c module-path?))
+  module-path : (or/c module-path? ~ ~
+                      (syntax/c module-path?))
 
 Converts module-path according to current-require-module-path.
 
@@ -2243,7 +2698,7 @@ first argument.
 
 4.2. provide Transformers
 
- (require racket/provide-transform) package: base ~
+ (require racket/provide-transform) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/provide-transform library, not racket/base or racket.
@@ -2282,9 +2737,9 @@ See also define-provide-syntax, which supports macro-style provide
 transformers.
 
                                         *expand-export*
-(expand-export stx modes) -> (listof export?) ~
-  stx : syntax? ~
-  modes : (listof (or/c exact-integer? #f)) ~
+(expand-export provide-spec modes) -> (listof export?) ~
+  provide-spec : syntax? ~ ~
+  modes : (listof (or/c exact-integer? #f)) ~ ~
 
 Expands the given provide-spec to a list of exports. The modes list
 controls the expansion of sub-provide-specs; for example, an identifier
@@ -2293,46 +2748,74 @@ unless the modes list specifies otherwise. Normally, modes is either
 empty or contains a single element.
 
                                         *pre-expand-export*
-(pre-expand-export stx modes) -> syntax? ~
-  stx : syntax? ~
-  modes : (listof (or/c exact-integer? #f)) ~
+(pre-expand-export provide-spec modes) -> syntax? ~
+  provide-spec : syntax? ~ ~
+  modes : (listof (or/c exact-integer? #f)) ~ ~
 
 Expands the given provide-spec at the level of provide pre-transformers.
 The modes argument is the same as for expand-export.
 
                                         *make-provide-transformer*
 (make-provide-transformer proc) -> provide-transformer? ~
-  proc : (syntax? (listof (or/c exact-integer? #f)) ~
+  proc : (syntax? (listof (or/c exact-integer? #f)) ~ ~
           . -> . (listof export?))
 (make-provide-transformer proc pre-proc)
  -> (and/c provide-transformer? provide-pre-transformer?)
-  proc : (syntax? (listof (or/c exact-integer? #f)) ~
+  proc : (syntax? (listof (or/c exact-integer? #f)) ~ ~
           . -> . (listof export?))
-  pre-proc : (syntax? (listof (or/c exact-integer? #f)) ~
+  pre-proc : (syntax? (listof (or/c exact-integer? #f)) ~ ~
               . -> . syntax?)
 
 Creates a provide transformer (i.e., a structure with the
 prop:provide-transformer property) using the given procedure as the
 transformer. If a pre-proc is provided, then the result is also a
-provide pre-transformer.
+provide pre-transformer. Often used in combination with expand-export
+and/or pre-expand-export.
 
                                         *make-provide-pre-transformer*
 (make-provide-pre-transformer pre-proc) ~
  -> provide-pre-transformer?
-  pre-proc : (syntax? (listof (or/c exact-integer? #f)) ~
+  pre-proc : (syntax? (listof (or/c exact-integer? #f)) ~ ~
               . -> . syntax?)
 
 Like make-provide-transformer, but for a value that is a provide
-pre-transformer, only.
+pre-transformer, only. Often used in combination with pre-expand-export.
 
-prop:provide-transformer : struct-type-property? ~
+Examples:
+
+  > (module m racket
+      (require
+        (for-syntax racket/provide-transform syntax/parse syntax/stx))
+    
+      (define-syntax wrapped-out
+        (make-provide-pre-transformer
+         (lambda (stx modes)
+           (syntax-parse stx
+             [(_ f ...)
+              #:with (wrapped-f ...) ~ ~
+                     (stx-map
+                      syntax-local-lift-expression
+                      #'((lambda args
+                           (printf "applying ~a, args: ~a\n" 'f args) ~ ~
+                           (apply f args)) ...))
+              (pre-expand-export
+               #'(rename-out [wrapped-f f] ...) modes)]))))
+    
+      (provide (wrapped-out + -)))
+  > (require 'm)
+  > (- 1 (+ 2 3))
+  applying +, args: (2 3)
+  applying -, args: (1 5)
+  -4
+
+prop:provide-transformer : struct-type-property? ~ ~
 
 A property to identify provide transformers. The property value must be
 a procedure that takes the structure and returns a transformer
 procedure; the returned transformer procedure takes a syntax object and
 mode list and returns an export list.
 
-prop:provide-pre-transformer : struct-type-property? ~
+prop:provide-pre-transformer : struct-type-property? ~ ~
 
 A property to identify provide pre-transformers. The property value must
 be a procedure that takes the structure and returns a transformer
@@ -2341,25 +2824,25 @@ mode list and returns a syntax object.
 
                                         *provide-transformer?*
 (provide-transformer? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v has the prop:provide-transformer property, #f otherwise.
 
                                         *provide-pre-transformer?*
 (provide-pre-transformer? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v has the prop:provide-pre-transformer property, #f
 otherwise.
 
                                         *struct*
 (struct export (local-id out-sym mode protect? orig-stx) ~
-    #:extra-constructor-name make-export) ~
-  local-id : identifier? ~
-  out-sym : symbol? ~
-  mode : (or/c exact-integer? #f) ~
-  protect? : any/c ~
-  orig-stx : syntax? ~
+    #:extra-constructor-name make-export) ~ ~
+  local-id : identifier? ~ ~
+  out-sym : symbol? ~ ~
+  mode : (or/c exact-integer? #f) ~ ~
+  protect? : any/c ~ ~
+  orig-stx : syntax? ~ ~
 
 A structure representing a single imported identifier:
 
@@ -2367,13 +2850,13 @@ A structure representing a single imported identifier:
 
 * out-sym — the external name of the binding.
 
-* orig-stx — a syntax object for the source of the export, used for
-  error reporting.
+* mode — the phase level of the binding in the exporting module.
 
 * protect? — indicates whether the identifier should be protected (see
   [missing]).
 
-* mode — the phase level of the binding in the exporting module.
+* orig-stx — a syntax object for the source of the export, used for
+  error reporting.
 
                                         *syntax-local-provide-certifier*
 (syntax-local-provide-certifier) ~
@@ -2385,7 +2868,7 @@ first argument.
 
 4.3. Keyword-Argument Conversion Introspection
 
- (require racket/keyword-transform) package: base ~
+ (require racket/keyword-transform) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/keyword-transform library, not racket/base or racket.
@@ -2397,14 +2880,14 @@ racket/keyword-transform library, not racket/base or racket.
                           (or/c (cons/c identifier? identifier?)
                                 (cons/c val? val?)))])
             val?))
-  stx : syntax? ~
+  stx : syntax? ~ ~
 (syntax-procedure-converted-arguments-property stx)
  -> (or/c #f
           (letrec ([val? (recursive-contract
                           (or/c (cons/c identifier? identifier?)
                                 (cons/c val? val?)))])
             val?))
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Reports the value of a syntax property that can be attached to an
 identifier by the expansion of a keyword-application form. See lambda
@@ -2417,7 +2900,7 @@ of such values, and so on.
 
 5. Syntax Parameters
 
- (require racket/stxparam) package: base ~
+ (require racket/stxparam) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/stxparam library, not racket/base or racket.
@@ -2438,19 +2921,16 @@ macro that expands to a use of the target identifier, but
 syntax-local-value of id does not produce the target’s value.
 
 Examples:
+
   > (define-syntax-parameter current-class #f)
-
   > (define-syntax-parameter yield (make-rename-transformer #'abort))
-
   > (define-syntax-parameter define/public
       (λ (stx)
         (raise-syntax-error #f "use of a class keyword not in a
   class" stx)))
-
   >
   (begin-for-syntax (displayln (syntax-parameter-value #'current-class)))
   #f
-
   > (yield 5)
   5
 
@@ -2472,8 +2952,8 @@ expands to a use of the target identifier, but syntax-local-value of id
 does not produce the target’s value.
 
 Examples:
-  > (define-syntax-parameter abort (syntax-rules ()))
 
+  > (define-syntax-parameter abort (syntax-rules ()))
   > (define-syntax forever
       (syntax-rules ()
         [(forever body ...)
@@ -2481,9 +2961,7 @@ Examples:
            (syntax-parameterize
                ([abort (syntax-rules () [(_) (abort-k)])])
              (let loop () body ... (loop)))))]))
-
   > (define-syntax-parameter it (syntax-rules ()))
-
   > (define-syntax aif
       (syntax-rules ()
         [(aif test then else)
@@ -2491,14 +2969,43 @@ Examples:
            (syntax-parameterize ([it (syntax-id-rules () [_ t])])
              (if t then else)))]))
 
+                                        *define-rename-transformer-parameter*
+(define-rename-transformer-parameter id expr) ~
+
+Binds id as syntax to a syntax parameter that must be bound to a
+make-rename-transformer result and, unlike define-syntax-parameter,
+syntax-local-value of id does produce the target’s value, including
+inside of syntax-parameterize.
+
+Examples:
+
+  > (define-syntax (test stx)
+     (syntax-case stx ()
+       [(_ t)
+        #`#,(syntax-local-value #'t)]))
+  > (define-syntax one 1)
+  > (define-syntax two 2)
+  > (define-syntax-parameter not-num
+      (make-rename-transformer #'one))
+  > (test not-num)
+  #<procedure:syntax-parameter>
+  > (define-rename-transformer-parameter num
+      (make-rename-transformer #'one))
+  > (test num)
+  1
+  > (syntax-parameterize ([num (make-rename-transformer #'two)])
+      (test num))
+  2
+
+Added in version 6.3.0.14 of package base.
 
 5.1. Syntax Parameter Inspection
 
- (require racket/stxparam-exptime) package: base ~
+ (require racket/stxparam-exptime) package: base ~ ~
 
                                         *syntax-parameter-value*
 (syntax-parameter-value id-stx) -> any ~
-  id-stx : syntax? ~
+  id-stx : syntax? ~ ~
 
 This procedure is intended for use in a transformer environment, where
 id-stx is an identifier bound in the normal environment to a syntax
@@ -2511,7 +3018,7 @@ racket/stxparam-exptime.
 
                                         *make-parameter-rename-transformer*
 (make-parameter-rename-transformer id-stx) -> any ~
-  id-stx : syntax? ~
+  id-stx : syntax? ~ ~
 
 This procedure is intended for use in a transformer, where id-stx is an
 identifier bound to a syntax parameter. The result is a transformer that
@@ -2533,7 +3040,7 @@ racket/stxparam-exptime.
 
 6. Local Binding with Splicing Body
 
- (require racket/splicing) package: base ~
+ (require racket/splicing) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/splicing library, not racket/base or racket.
@@ -2548,36 +3055,48 @@ splicing-let-syntaxes
 splicing-letrec-syntaxes
 splicing-letrec-syntaxes+values
 splicing-local
+splicing-parameterize
 
 Like let, letrec, let-values, letrec-values, let-syntax, letrec-syntax,
-let-syntaxes, letrec-syntaxes, letrec-syntaxes+values, and local, except
-that in a definition context, the body forms are spliced into the
-enclosing definition context (in the same way as for begin).
+let-syntaxes, letrec-syntaxes, letrec-syntaxes+values, local, and
+parameterize, except that in a definition context, the body forms are
+spliced into the enclosing definition context (in the same way as for
+begin).
 
 Examples:
+
   > (splicing-let-syntax ([one (lambda (stx) #'1)])
       (define o one))
-
   > o
   1
   > one
   one: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
 
 When a splicing binding form occurs in a top-level context or module
 context, its local bindings are treated similarly to definitions. In
-particular, if a reference to one of the splicing form’s bound variables
-is evaluated before the variable is initialized, an unbound variable
-error is raised, instead of the variable evaluating to the undefined
-value.  Also, syntax bindings are evaluated every time the module is
+particular, syntax bindings are evaluated every time the module is
 visited, instead of only once during compilation as in let-syntax, etc.
 
 Example:
+
   > (splicing-letrec ([x bad]
                       [bad 1])
       x)
-  bad.3: undefined;
-   cannot reference undefined identifier
+  bad.1: undefined;
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
+
+If a definition within a splicing form is intended to be local to the
+splicing body, then the identifier should have a true value for the
+'definition-intended-as-local syntax property. For example, splicing-let
+itself adds the property to locally-bound identifiers as it expands to a
+sequence of definitions, so that nesting splicing-let within a splicing
+form works as expected (without any ambiguous bindings).
+
+Changed in version 6.12.0.2 of package base: Added
+splicing-parameterize.
 
 splicing-syntax-parameterize
 
@@ -2592,38 +3111,47 @@ be spliced into the enclosing context, derived import or export
 specifications will expand as if they had not been inside of the
 splicing-syntax-parameterize.
 
+Additionally, submodules defined with module* that specify #f in place
+of a module path are affected by syntax parameterization, but other
+submodules (those defined with module or module* with a module path) are
+not.
+
 Examples:
+
   > (define-syntax-parameter place (lambda (stx) #'"Kansas"))
-
   > (define-syntax-rule (where) `(at ,(place)))
-
   > (where)
   '(at "Kansas")
   > (splicing-syntax-parameterize ([place (lambda (stx) #'"Oz")])
       (define here (where)))
-
   > here
   '(at "Oz")
+
+Changed in version 6.11.0.1 of package base: Modified to syntax
+parameterize module* submodules that specify #f in place of a module
+path.
 
 7. Syntax Object Properties
 
 Every syntax object has an associated syntax property list, which can be
-queried or extended with syntax-property. Properties are not preserved
-for a syntax-quoted syntax object in a compiled form that is marshaled
-to a byte string.
+queried or extended with syntax-property. A property is set as preserved
+or not; a preserved property is maintained for a syntax object in a
+compiled form that is marshaled to a byte string or ".zo" file, and
+other properties are discarded when marshaling.
 
-In read-syntax, the reader attaches a 'paren-shape property to any pair
-or vector syntax object generated from parsing a pair [ and ] or { and
-}; the property value is #\[ in the former case, and #\{ in the latter
-case. The syntax form copies any 'paren-shape property from the source
-of a template to corresponding generated syntax.
+In read-syntax, the reader attaches a preserved 'paren-shape property to
+any pair or vector syntax object generated from parsing a pair [ and ]
+or { and }; the property value is #\[ in the former case, and #\{ in the
+latter case. The syntax form copies any 'paren-shape property from the
+source of a template to corresponding generated syntax.
 
 Both the syntax input to a transformer and the syntax result of a
 transformer may have associated properties. The two sets of properties
 are merged by the syntax expander: each property in the original and not
 present in the result is copied to the result, and the values of
 properties present in both are combined with cons (result value first,
-original value second).
+original value second) and the consed value is preserved if either of
+the values were preserved.
 
 Before performing the merge, however, the syntax expander automatically
 adds a property to the original syntax object using the key 'origin. If
@@ -2632,10 +3160,11 @@ Then, still before the merge, the identifier that triggered the macro
 expansion (as syntax) is consed onto the 'origin property so far.  The
 'origin property thus records (in reverse order) the sequence of macro
 expansions that produced an expanded expression. Usually, the 'origin
-value is an immutable list of identifiers. However, a transformer might
-return syntax that has already been expanded, in which case an 'origin
-list can contain other lists after a merge. The syntax-track-origin
-procedure implements this tracking.
+value is a list of identifiers. However, a transformer might return
+syntax that has already been expanded, in which case an 'origin list can
+contain other lists after a merge. The syntax-track-origin procedure
+implements this tracking. The 'origin property is added as
+non-preserved.
 
 Besides 'origin tracking for general macro expansion, Racket adds
 properties to expanded syntax (often using syntax-track-origin) to
@@ -2688,24 +3217,74 @@ procedure. See current-compile for information on properties and byte
 codes.
 
                                         *syntax-property*
-(syntax-property stx key v) -> syntax? ~
-  stx : syntax? ~
-  key : any/c ~
-  v : any/c ~
+(syntax-property stx key v [preserved?]) -> syntax? ~
+  stx : syntax? ~ ~
+  key : (if preserved? (and/c symbol? symbol-interned?) any/c) ~ ~
+  v : any/c ~ ~
+  preserved? : any/c = (eq? key 'paren-shape) ~ ~
 (syntax-property stx key) -> any
-  stx : syntax? ~
-  key : any/c ~
+  stx : syntax? ~ ~
+  key : any/c ~ ~
 
-The three-argument form extends stx by associating an arbitrary property
-value v with the key key; the result is a new syntax object with the
-association (while stx itself is unchanged).
+The three- or four-argument form extends stx by associating an arbitrary
+property value v with the key key; the result is a new syntax object
+with the association (while stx itself is unchanged). The property is
+added as preserved if preserved? is true, in which case key must be an
+interned symbol, and v should be a value as described below that can be
+saved in marshaled bytecode.
 
 The two-argument form returns an arbitrary property value associated to
 stx with the key key, or #f if no value is associated to stx for key.
 
+To support marshaling to bytecode, a value for a preserved syntax
+property must be a non-cyclic value that is either
+
+* a pair containing allowed preserved-property values;
+
+* a vector (unmarshaled as immutable) containing allowed
+  preserved-property values;
+
+* a box (unmarshaled as immutable) containing allowed preserved-property
+  values;
+
+* an immutable prefab structure containing allowed preserved-property
+  values;
+
+* an immutable hash table whose keys and values are allowed
+  preserved-property values;
+
+* a syntax object; or
+
+* an empty list, symbol, number, character, string, byte string, or
+  regexp value.
+
+Any other value for a preserved property triggers an exception at an
+attempt to marshal the owning syntax object to bytecode form.
+
+Changed in version 6.4.0.14: Added the preserved? argument.
+
+                                        *syntax-property-remove*
+(syntax-property-remove stx key) -> syntax? ~
+  stx : syntax? ~ ~
+  key : any/c ~ ~
+
+Returns a syntax object like stx, but without a property (if any) for
+key.
+
+Added in version 6.90.0.20.
+
+                                        *syntax-property-preserved?*
+(syntax-property-preserved? stx key) -> boolean? ~
+  stx : syntax? ~ ~
+  key : (and/c symbol? symbol-interned?) ~ ~
+
+Returns #t if stx has a preserved property value for key, #f otherwise.
+
+Added in version 6.4.0.14.
+
                                         *syntax-property-symbol-keys*
 (syntax-property-symbol-keys stx) -> list? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns a list of all symbols that as keys have associated properties in
 stx. Uninterned symbols (see [missing]) are not included in the result
@@ -2715,9 +3294,9 @@ list.
 (syntax-track-origin new-stx       ~
                      orig-stx     
                      id-stx)  -> any
-  new-stx : syntax? ~
-  orig-stx : syntax? ~
-  id-stx : syntax? ~
+  new-stx : syntax? ~ ~
+  orig-stx : syntax? ~ ~
+  id-stx : identifier? ~ ~
 
 Adds properties to new-stx in the same way that macro expansion adds
 properties to a transformer result. In particular, it merges the
@@ -2810,7 +3389,7 @@ obeys the following rules:
 
 * If the result has no 'taint-mode property value, but    its datum is a
   pair, and if the syntax object corresponding    to the car of the pair
-  is an identifier bound to    begin, module, or
+  is an identifier bound to    begin, begin-for-syntax, or
   #%plain-module-begin, then dye packs are propagated    as if the
   syntax object had the 'transparent    property value.
 
@@ -2828,15 +3407,15 @@ on a syntax object that is passed to a syntax transformer.
 
                                         *syntax-tainted?*
 (syntax-tainted? stx) -> boolean? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns #t if stx is tainted, #f otherwise.
 
                                         *syntax-arm*
 (syntax-arm stx [inspector use-mode?]) -> syntax? ~
-  stx : syntax? ~
-  inspector : (or/c inspector? #f) = #f ~
-  use-mode? : any/c = #f ~
+  stx : syntax? ~ ~
+  inspector : (or/c inspector? #f) = #f ~ ~
+  use-mode? : any/c = #f ~ ~
 
 Produces a syntax object like stx, but armed with a dye pack that is
 keyed by inspector.
@@ -2844,9 +3423,8 @@ keyed by inspector.
 A #f value for inspector is equivalent to an inspector that depends on
 the current dynamic context:
 
-* when applying a syntax transformer is being applied, the
-  declaration-time code inspector of the module in which a syntax
-  transformer was bound;
+* when a syntax transformer is being applied, the declaration-time code
+  inspector of the module in which a syntax transformer was bound;
 
 * when a module is being visited, the module’s declaration-time code
   inspector;
@@ -2867,14 +3445,14 @@ tainted results rather than armed results.
 
                                         *syntax-protect*
 (syntax-protect stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Equivalent to (syntax-arm stx #f #t).
 
                                         *syntax-disarm*
 (syntax-disarm stx inspector) -> syntax? ~
-  stx : syntax? ~
-  inspector : (or/c inspector? #f) ~
+  stx : syntax? ~ ~
+  inspector : (or/c inspector? #f) ~ ~
 
 Produces a disarmed version of stx, removing any immediate dye packs
 that match inspector. An inspector matches when it is either the same as
@@ -2884,9 +3462,9 @@ syntax-arm.
 
                                         *syntax-rearm*
 (syntax-rearm stx from-stx [use-mode?]) -> syntax? ~
-  stx : syntax? ~
-  from-stx : syntax? ~
-  use-mode? : any/c = #f ~
+  stx : syntax? ~ ~
+  from-stx : syntax? ~ ~
+  use-mode? : any/c = #f ~ ~
 
 Produces a rearmed or tainted version of stx by adding all immediate
 taints and dye packs of from-stx.
@@ -2897,7 +3475,7 @@ objects in the same way as for syntax-arm or rearming by the expander.
 
                                         *syntax-taint*
 (syntax-taint stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Returns tainted version of stx—equivalent to (datum->syntax (syntax-arm
 stx) (syntax-e stx) stx stx)—or stx if it is already tainted.
@@ -2906,7 +3484,7 @@ stx) (syntax-e stx) stx stx)—or stx if it is already tainted.
 
                                         *expand*
 (expand top-level-form) -> syntax? ~
-  top-level-form : any/c ~
+  top-level-form : any/c ~ ~
 
 Expands all non-primitive syntax in top-level-form, and returns a syntax
 object for the expanded form that contains only core forms, matching the
@@ -2938,14 +3516,14 @@ Here’s an example of using expand on a non-top-level form:
 
                                         *expand-syntax*
 (expand-syntax stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Like (expand stx), except that the argument must be a syntax object, and
 its lexical context is not enriched before expansion.
 
                                         *expand-once*
 (expand-once top-level-form) -> syntax? ~
-  top-level-form : any/c ~
+  top-level-form : any/c ~ ~
 
 Partially expands top-level-form and returns a syntax object for the
 partially-expanded expression. Due to limitations in the expansion
@@ -2958,14 +3536,14 @@ namespace-syntax-introduce, as for eval.
 
                                         *expand-syntax-once*
 (expand-syntax-once stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Like (expand-once stx), except that the argument must be a syntax
 object, and its lexical context is not enriched before expansion.
 
                                         *expand-to-top-form*
 (expand-to-top-form top-level-form) -> syntax? ~
-  top-level-form : any/c ~
+  top-level-form : any/c ~ ~
 
 Partially expands top-level-form to reveal the outermost syntactic form.
 This partial expansion is mainly useful for detecting top-level uses of
@@ -2978,7 +3556,7 @@ namespace-syntax-introduce, as for eval.
 
                                         *expand-syntax-to-top-form*
 (expand-syntax-to-top-form stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Like (expand-to-top-form stx), except that the argument must be a syntax
 object, and its lexical context is not enriched before expansion.
@@ -2988,17 +3566,6 @@ object, and its lexical context is not enriched before expansion.
 Information for an expanded module declaration is stored in a set of
 syntax properties (see Syntax Object Properties) attached to the syntax
 object:
-
-* 'module-direct-requires — a list of module path indexes (or symbols)
-  representing the modules explicitly imported into the module.
-
-* 'module-direct-for-syntax-requires — a list of module path indexes (or
-  symbols) representing the modules explicitly for-syntax imported into
-  the module.
-
-* 'module-direct-for-template-requires — a list of module path indexes
-  (or symbols) representing the modules explicitly for-template imported
-  into the module.
 
 * 'module-variable-provides — a list of provided items, where each item
   is one of the following:
@@ -3024,11 +3591,45 @@ object:
 * 'module-indirect-provides — a list of symbols for variables that are
   defined in the module but not exported; they may be exported
   indirectly through macro expansions.  Definitions of macro-generated
-  identifiers create uninterned symbols in this list.
+  identifiers create uninterned symbols in this list. The order of
+  identifiers in the list corresponds to an order for access from
+  bytecode.
+
+* 'module-indirect-for-meta-provides — similar to
+  'module-indirect-provides: an association list from a phase level to a
+  list of symbols for variables that are defined in the module at phases
+  higher than 0 and not exported.
+
+  Added in version 6.5.0.5.
+
+* 'module-body-context — a syntax object whose lexical information
+  corresponds to the inside of the module, so it includes the
+  expansion’s outside-edge scope and its inside-edge scope; that is, the
+  syntax object simulates an identifier that is present in the original
+  module body and inaccessible to manipulation by any macro, so that its
+  lexical information includes bindings for the module’s imports and
+  definitions.
+
+  Added in version 6.4.0.1.
+
+* 'module-body-inside-context — a syntax object whose lexical
+  information corresponds to an identifier that starts with no lexical
+  context and is moved into the macro, so that it includes only the
+  expansions’s inside-edge scope.
+
+  Added in version 6.4.0.1.
+
+* 'module-body-context-simple? — a boolean, where #t indicates that the
+  bindings of the module’s body (as recorded in the lexical information
+  of the value of the 'module-body-inside-context property) can be
+  directly reconstructed from modules directly imported into the module,
+  including imported for-syntax, for-meta, and for-template.
+
+  Added in version 6.4.0.1.
 
 10. File Inclusion
 
- (require racket/include) package: base ~
+ (require racket/include) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/include and racket libraries, but not racket/base.
@@ -3091,7 +3692,7 @@ Combines include-at/relative-to and include/reader.
 
 11. Syntax Utilities
 
- (require racket/syntax) package: base ~
+ (require racket/syntax) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/syntax library, not racket/base or racket.
@@ -3099,18 +3700,23 @@ racket/syntax library, not racket/base or racket.
 11.1. Creating formatted identifiers
 
                                         *format-id*
-(format-id  lctx                  ~
-            fmt                  
-            v ...                
-           [#:source src          ~
-            #:props props         ~
-            #:cert ignored]) -> identifier? ~
-  lctx : (or/c syntax? #f) ~
-  fmt : string? ~
-  v : (or/c string? symbol? identifier? keyword? char? number?) ~
-  src : (or/c syntax? #f) = #f ~
-  props : (or/c syntax? #f) = #f ~
-  ignored : (or/c syntax? #f) = #f ~
+(format-id  lctx                                ~
+            fmt                                
+            v ...                              
+           [#:source src                        ~ ~
+            #:props props                       ~ ~
+            #:cert ignored                      ~ ~
+            #:subs? subs?                       ~ ~
+            #:subs-intro subs-introducer]) -> identifier? ~ ~
+  lctx : (or/c syntax? #f) ~ ~
+  fmt : string? ~ ~
+  v : (or/c string? symbol? identifier? keyword? char? number?) ~ ~
+  src : (or/c syntax? #f) = #f ~ ~
+  props : (or/c syntax? #f) = #f ~ ~
+  ignored : (or/c syntax? #f) = #f ~ ~
+  subs? : boolean? = #f ~ ~
+  subs-introducer : (-> syntax? syntax?) ~ ~
+                  = (if (syntax-transforming?) syntax-local-introduce values)
 
 Like format, but produces an identifier using lctx for the lexical
 context, src for the source location, and props for the properties. An
@@ -3120,40 +3726,60 @@ The format string must use only ~a placeholders. Identifiers in the
 argument list are automatically converted to symbols.
 
 Examples:
+
   > (define-syntax (make-pred stx)
       (syntax-case stx ()
         [(make-pred name)
          (format-id #'name "~a?" (syntax-e #'name))]))
-
   > (make-pred pair)
   #<procedure:pair?>
   > (make-pred none-such)
   none-such?: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
   > (define-syntax (better-make-pred stx)
       (syntax-case stx ()
         [(better-make-pred name)
-         (format-id #'name #:source #'name ~
+         (format-id #'name #:source #'name ~ ~
                     "~a?" (syntax-e #'name))]))
-
   > (better-make-pred none-such)
   none-such?: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
 
                                         *Scribble*
 (Scribble doesn’t show it, but the DrRacket pinpoints the location of ~
 the second error but not of the first.)
 
+If subs? is #t, then a 'sub-range-binders syntax property is added to
+the result that records the position of each identifier in the vs. The
+subs-intro procedure is applied to each identifier, and its result is
+included in the sub-range binder record. This property value overrides a
+'sub-range-binders property copied from props.
+
+Example:
+
+  >
+  (syntax-property (format-id #'here "~a/~a-~a" #'point 2 #'y #:subs? #t) ~ ~
+                     'sub-range-binders)
+  '(#(#<syntax point/2-y> 8 1 0.5 0.5 #<syntax:eval:8:0 y> 0 1 0.5 0.5)
+    #(#<syntax point/2-y> 0 5 0.5 0.5 #<syntax:eval:8:0 point> 0 5 0.5 ~ ~
+  0.5))
+
+Changed in version 7.4.0.5 of package base: Added the #:subs? and
+#:subs-intro arguments.
+
                                         *format-symbol*
 (format-symbol fmt v ...) -> symbol? ~
-  fmt : string? ~
-  v : (or/c string? symbol? identifier? keyword? char? number?) ~
+  fmt : string? ~ ~
+  v : (or/c string? symbol? identifier? keyword? char? number?) ~ ~
 
 Like format, but produces a symbol. The format string must use only ~a
 placeholders. Identifiers in the argument list are automatically
 converted to symbols.
 
 Example:
+
   > (format-symbol "make-~a" 'triple)
   'make-triple
 
@@ -3162,30 +3788,28 @@ Example:
                                         *define/with-syntax*
 (define/with-syntax pattern stx-expr) ~
  
-  stx-expr : syntax? ~
+  stx-expr : syntax? ~ ~
 
 Definition form of with-syntax. That is, it matches the syntax object
-result of expr against pattern and creates pattern variable definitions
-for the pattern variables of pattern.
+result of stx-expr against pattern and creates pattern variable
+definitions for the pattern variables of pattern.
 
 Examples:
+
   > (define/with-syntax (px ...) #'(a b c))
-
   > (define/with-syntax (tmp ...) (generate-temporaries #'(px ...)))
-
   > #'([tmp px] ...)
-  #<syntax:11:0 ((a9 a) (b10 b) (c11 c))>
+  #<syntax:eval:12:0 ((a9 a) (b10 b) (c11 c))>
   > (define/with-syntax name #'Alice)
-
   > #'(hello name)
-  #<syntax:13:0 (hello Alice)>
+  #<syntax:eval:14:0 (hello Alice)>
 
 11.3. Error reporting
 
                                         *current-syntax-context*
 (current-syntax-context) -> (or/c syntax? false/c) ~
 (current-syntax-context stx) -> void?
-  stx : (or/c syntax? false/c) ~
+  stx : (or/c syntax? false/c) ~ ~
 
 The current contextual syntax object, defaulting to #f.  It determines
 the special form name that prefixes syntax errors created by
@@ -3193,9 +3817,9 @@ wrong-syntax.
 
                                         *wrong-syntax*
 (wrong-syntax stx format-string v ...) -> any ~
-  stx : syntax? ~
-  format-string : string? ~
-  v : any/c ~
+  stx : syntax? ~ ~
+  format-string : string? ~ ~
+  v : any/c ~ ~
 
 Raises a syntax error using the result of (current-syntax-context) as
 the “major” syntax object and the provided stx as the specific syntax
@@ -3205,13 +3829,15 @@ and it is prefixed with the special form name as described under
 current-syntax-context.
 
 Examples:
+
   > (wrong-syntax #'here "expected ~s" 'there)
-  ?: expected there
+  eval:15:0: ?: expected there
+    at: here ~ ~
   > (parameterize ([current-syntax-context #'(look over here)])
       (wrong-syntax #'here "expected ~s" 'there))
-  eval:15:0: look: expected there
-    at: here ~
-    in: (look over here) ~
+  eval:16:0: look: expected there
+    at: here ~ ~
+    in: (look over here) ~ ~
 
 A macro using wrong-syntax might set the syntax context at the very
 beginning of its transformation as follows:
@@ -3232,25 +3858,29 @@ prefixing, etc).
 (current-recorded-disappeared-uses) ~
  -> (or/c (listof identifier?) false/c)
 (current-recorded-disappeared-uses ids) -> void?
-  ids : (or/c (listof identifier?) false/c) ~
+  ids : (or/c (listof identifier?) false/c) ~ ~
 
 Parameter for tracking disappeared uses. Tracking is “enabled” when the
 parameter has a non-false value. This is done automatically by forms
 like with-disappeared-uses.
 
                                         *with-disappeared-uses*
-(with-disappeared-uses stx-expr) ~
+(with-disappeared-uses body-expr ... stx-expr) ~
  
-  stx-expr : syntax? ~
+  stx-expr : syntax? ~ ~
 
-Evaluates the stx-expr, catching identifiers looked up using
-syntax-local-value/record. Adds the caught identifiers to the
-'disappeared-uses syntax property of the resulting syntax object.
+Evaluates the body-exprs and stx-expr, catching identifiers looked up
+using syntax-local-value/record. Adds the caught identifiers to the
+'disappeared-use syntax property of the syntax object produced by
+stx-expr.
+
+Changed in version 6.5.0.7 of package base: Added the option to include
+body-exprs.
 
                                         *syntax-local-value/record*
 (syntax-local-value/record id predicate) -> any/c ~
-  id : identifier? ~
-  predicate : (-> any/c boolean?) ~
+  id : identifier? ~ ~
+  predicate : (-> any/c boolean?) ~ ~
 
 Looks up id in the syntactic environment (as syntax-local-value). If the
 lookup succeeds and returns a value satisfying the predicate, the value
@@ -3260,20 +3890,26 @@ satisfy the predicate, #f is returned and the identifier is not recorded
 as a disappeared use.
 
                                         *record-disappeared-uses*
-(record-disappeared-uses ids) -> void? ~
-  ids : (listof identifier?) ~
+(record-disappeared-uses id [intro?]) -> void? ~
+  id : (or/c identifier? (listof identifier?)) ~ ~
+  intro? : boolean? = (syntax-transforming?) ~ ~
 
-Add ids to (current-recorded-disappeared-uses) after calling
-syntax-local-introduce on each of the identifiers.
+Add id to (current-recorded-disappeared-uses). If id is a list, perform
+the same operation on all the identifiers. If intro? is true, then
+syntax-local-introduce is first called on the identifiers.
 
 If not used within the extent of a with-disappeared-uses form or
 similar, has no effect.
+
+Changed in version 6.5.0.7 of package base: Added the option to pass a
+single identifier instead of requiring a list. Changed in version
+7.2.0.11: Added the intro? argument.
 
 11.5. Miscellaneous utilities
 
                                         *generate-temporary*
 (generate-temporary [name-base]) -> identifier? ~
-  name-base : any/c = 'g ~
+  name-base : any/c = 'g ~ ~
 
 Generates one fresh identifier. Singular form of generate-temporaries.
 If name-base is supplied, it is used as the basis for the identifier’s
@@ -3282,20 +3918,29 @@ name.
                                         *internal-definition-context-apply*
 (internal-definition-context-apply intdef-ctx      ~
                                    stx)       -> syntax?
-  intdef-ctx : internal-definition-context? ~
-  stx : syntax? ~
+  intdef-ctx : internal-definition-context? ~ ~
+  stx : syntax? ~ ~
 
-Applies the renamings of intdef-ctx to stx.
+Equivalent to (internal-definition-context-introduce intdef-ctx stx
+'add). The internal-definition-context-apply function is provided for
+backwards compatibility; the more general
+internal-definition-context-introduce function is preferred.
 
                                         *syntax-local-eval*
 (syntax-local-eval stx [intdef-ctx]) -> any ~
-  stx : syntax? ~
-  intdef-ctx : (or/c internal-definition-context? #f) = #f ~
+  stx : syntax? ~ ~
+  intdef-ctx : (or/c internal-definition-context?          = '() ~ ~
+                     (listof internal-definition-context?)
+                     #f)
 
 Evaluates stx as an expression in the current transformer environment
-(that is, at phase level 1), optionally extended with intdef-ctx.
+(that is, at phase level 1). If intdef-ctx is not #f, the value provided
+for intdef-ctx is used to enrich stx’s lexical information and extend
+the local binding context in the same way as the fourth argument to
+local-expand.
 
 Examples:
+
   > (define-syntax (show-me stx)
       (syntax-case stx ()
         [(show-me expr)
@@ -3304,25 +3949,24 @@ Examples:
                    (syntax-local-eval #'expr))
            #'(printf "at run time produces ~s\n"
                      expr))]))
-
   > (show-me (+ 2 5))
   at compile time produces 7
   at run time produces 7
-
   > (define-for-syntax fruit 'apple)
-
   > (define fruit 'pear)
-
   > (show-me fruit)
   at compile time produces apple
   at run time produces pear
 
+Changed in version 6.90.0.27 of package base: Changed intdef-ctx to
+accept a list of internal-definition contexts in addition to a single
+internal-definition context or #f.
 
                                         *with-syntax**
 (with-syntax* ([pattern stx-expr] ...) ~
   body ...+)
  
-  stx-expr : syntax? ~
+  stx-expr : syntax? ~ ~
 
 Similar to with-syntax, but the pattern variables of each pattern are
 bound in the stx-exprs of subsequent clauses as well as the bodys, and
@@ -3330,7 +3974,8 @@ the patterns need not bind distinct pattern variables; later bindings
 shadow earlier bindings.
 
 Example:
+
   > (with-syntax* ([(x y) (list #'val1 #'val2)]
                    [nest #'((x) (y))])
       #'nest)
-  #<syntax:21:0 ((val1) (val2))>
+  #<syntax:eval:22:0 ((val1) (val2))>

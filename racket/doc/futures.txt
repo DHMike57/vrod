@@ -2,14 +2,14 @@ Futures
 
 +[missing] in [missing] introduces futures.
 
- (require racket/future) package: base ~
+ (require racket/future) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/future and racket libraries, but not racket/base.
 
 Currently, parallel support for future is enabled by default for
-Windows, Linux x86/x86_64, and Mac OS X x86/x86_64. To enable support
-for other platforms, use --enable-futures with configure when building
+Windows, Linux x86/x86_64, and Mac OS x86/x86_64. To enable support for
+other platforms, use --enable-futures with configure when building
 Racket.
 
 The future and touch functions from racket/future provide access to
@@ -33,9 +33,10 @@ assignment to the variable can be visible in other futures and threads.
 Furthermore, guarantees about the visibility of effects and ordering are
 determined by the operating system and hardware—which rarely support,
 for example, the guarantee of sequential consistency that is provided
-for thread-based concurrency. At the same time, operations that seem
-obviously safe may have a complex enough implementation internally that
-they cannot run in parallel. See also [missing] in [missing].
+for thread-based concurrency; see also [missing]. At the same time,
+operations that seem obviously safe may have a complex enough
+implementation internally that they cannot run in parallel. See also
+[missing] in [missing].
 
 A future never runs in parallel if all of the custodians that allow its
 creating thread to run are shut down. Such futures can execute through a
@@ -45,9 +46,9 @@ call to touch, however.
 
                                         *future*
 (future thunk) -> future? ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 (touch f) -> any
-  f : future? ~
+  f : future? ~ ~
 
 The future procedure returns a future value that encapsulates thunk.
 The touch function forces the evaluation of the thunk inside the given
@@ -59,6 +60,8 @@ values.
 Between a call to future and touch for a given future, the given thunk
 may run speculatively in parallel to other computations, as described
 above.
+
+Example:
 
   > (let ([f (future (lambda () (+ 1 2)))])
       (list (+ 3 4) (touch f)))
@@ -74,20 +77,22 @@ Racket configuration.
 (current-future) -> (or/c #f future?) ~
 
 Returns the descriptor of the future whose thunk execution is the
-current continuation.  If a future thunk itself uses touch, future-thunk
-executions can be nested, in which case the descriptor of the most
-immediately executing future is returned.  If the current continuation
-is not a future-thunk execution, the result is #f.
+current continuation; that is, if a future descriptor f is returned,
+(touch f) will produce the result of the current continuation. If a
+future thunk itself uses touch, future-thunk executions can be nested,
+in which case the descriptor of the most immediately executing future is
+returned.  If the current continuation does not return to the touch of
+any future, the result is #f.
 
                                         *future?*
 (future? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a future value, #f otherwise.
 
                                         *would-be-future*
 (would-be-future thunk) -> future? ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 Returns a future that never runs in parallel, but that consistently logs
 all potentially “unsafe” operations during the execution of the future’s
@@ -113,11 +118,18 @@ with would-be-future ensures the logging of all three calls to printf.
 Returns the number of parallel computation units (e.g., processors or
 cores) that are available on the current machine.
 
+                                        *for/async*
+(for/async (for-clause ...) body ...+) ~
+(for*/async (for-clause ...) body ...+)
+
+Like for and for*, but each iteration of the body is executed in a
+separate future, and the futures may be touched in any order.
+
 2. Future Semaphores
 
                                         *make-fsemaphore*
 (make-fsemaphore init) -> fsemaphore? ~
-  init : exact-nonnegative-integer? ~
+  init : exact-nonnegative-integer? ~ ~
 
 Creates and returns a new future semaphore with the counter initially
 set to init.
@@ -128,21 +140,28 @@ computations). In contrast, operations on plain semaphores are not safe
 to perform in parallel, and they therefore prevent a computation from
 continuing in parallel.
 
+Beware of trying to use an fsemaphore to implement a lock. A future may
+run concurrently and in parallel to other futures, but a future that is
+not demanded by a Racket thread can be suspended at any time—such as
+just after it takes a lock and before it releases the lock. If you must
+share mutable data among futures, lock-free data structures are
+generally a better fit.
+
                                         *fsemaphore?*
 (fsemaphore? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an future semaphore value, #f otherwise.
 
                                         *fsemaphore-post*
 (fsemaphore-post fsema) -> void? ~
-  fsema : fsemaphore? ~
+  fsema : fsemaphore? ~ ~
 
 Increments the future semaphore’s internal counter and returns #<void>.
 
                                         *fsemaphore-wait*
 (fsemaphore-wait fsema) -> void? ~
-  fsema : fsemaphore? ~
+  fsema : fsemaphore? ~ ~
 
 Blocks until the internal counter for fsema is non-zero. When the
 counter is non-zero, it is decremented and fsemaphore-wait returns
@@ -150,7 +169,7 @@ counter is non-zero, it is decremented and fsemaphore-wait returns
 
                                         *fsemaphore-try-wait?*
 (fsemaphore-try-wait? fsema) -> boolean? ~
-  fsema : fsemaphore? ~
+  fsema : fsemaphore? ~ ~
 
 Like fsemaphore-wait, but fsemaphore-try-wait? never blocks execution.
 If fsema’s internal counter is zero, fsemaphore-try-wait? returns #f
@@ -159,7 +178,7 @@ positive, it is decremented and #t is returned.
 
                                         *fsemaphore-count*
 (fsemaphore-count fsema) -> exact-nonnegative-integer? ~
-  fsema : fsemaphore? ~
+  fsema : fsemaphore? ~ ~
 
 Returns fsema’s current internal counter value.
 
@@ -178,7 +197,7 @@ string message, each event logged for a future has a data value that is
 an instance of a future-event prefab structure:
 
   (struct future-event (future-id proc-id action time prim-name user-data)
-    #:prefab) ~
+    #:prefab) ~ ~
 
 The future-id field is an exact integer that identifies a future, or it
 is #f when action is 'missing. The future-id field is particularly
@@ -244,10 +263,10 @@ Assuming no 'missing events, then 'start-work, 'start-0-work,
 'touch-pause is always paired with 'touch-resume.
 
 In process 0, some event pairs can be nested within other event pairs:
-'sync, 'block, or 'touch with 'result or 'abort; and 'touch-pause with
-'touch-resume.
+'sync, 'block, or 'touch with 'result or 'abort; 'touch-pause with
+'touch-resume; and 'start-work with 'end-work.
 
-An 'block in process 0 is generated when an unsafe operation is handled.
+A 'block in process 0 is generated when an unsafe operation is handled.
 This type of event will contain a symbol in the unsafe-op-name field
 that is the name of the operation.  In all other cases, this field
 contains #f.
@@ -264,12 +283,13 @@ on both the action and prim-name fields:
 * 'touch on process 0: contains the integer ID of the future  being
   touched.
 
-* 'sync and prim-name = |allocate memory|:  The size (in bytes) of the
+* 'sync and prim-name is '|allocate memory|:  The size (in bytes) of the
   requested allocation.
 
-* 'sync and prim-name = jit_on_demand:  The runtime thread is performing
-  a JIT compilation on behalf of the  future future-id.  The field
-  contains the name of the function  being JIT compiled (as a symbol).
+* 'sync and prim-name is 'jit_on_demand:  The runtime thread is
+  performing a JIT compilation on behalf of the  future future-id.  The
+  field contains the name of the function  being JIT compiled (as a
+  symbol).
 
 * 'create: A new future was created.  The field contains the integer ID
   of the newly created future.

@@ -1,6 +1,6 @@
 Sandboxed Evaluation
 
- (require racket/sandbox) package: sandbox-lib ~
+ (require racket/sandbox) package: sandbox-lib ~ ~
 
 The bindings documented in this section are provided by the
 racket/sandbox library, not racket/base or racket.
@@ -15,32 +15,32 @@ sandboxes are very limited.
                                         *make-evaluator*
 (make-evaluator  language                               ~
                  input-program ...                     
-                [#:requires requires                    ~
-                 #:allow-for-require allow-for-require  ~
-                 #:allow-for-load allow-for-load        ~
-                 #:allow-read allow-read])              ~
+                [#:requires requires                    ~ ~
+                 #:allow-for-require allow-for-require  ~ ~
+                 #:allow-for-load allow-for-load        ~ ~
+                 #:allow-read allow-read])              ~ ~
  -> (any/c . -> . any)
-  language : (or/c module-path? ~
+  language : (or/c module-path? ~ ~
                    (list/c 'special symbol?)
                    (cons/c 'begin list?))
-  input-program : any/c ~
-  requires : (listof (or/c module-path? path-string? ~
+  input-program : any/c ~ ~
+  requires : (listof (or/c module-path? path-string? ~ ~
                            (cons/c 'for-syntax (listof module-path?))))
            = null
-  allow-for-require : (listof (or/c module-path? path?)) = null ~
-  allow-for-load : (listof path-string?) = null ~
-  allow-read : (listof (or/c module-path? path-string?)) = null ~
+  allow-for-require : (listof (or/c module-path? path?)) = null ~ ~
+  allow-for-load : (listof path-string?) = null ~ ~
+  allow-read : (listof (or/c module-path? path-string?)) = null ~ ~
 (make-module-evaluator  module-decl                           
-                       [#:language lang                        ~
-                        #:allow-for-require allow-for-require  ~
-                        #:allow-for-load allow-for-load        ~
-                        #:allow-read allow-read])              ~
+                       [#:language lang                        ~ ~
+                        #:allow-for-require allow-for-require  ~ ~
+                        #:allow-for-load allow-for-load        ~ ~
+                        #:allow-read allow-read])              ~ ~
  -> (any/c . -> . any)
-  module-decl : (or/c syntax? pair? path? input-port? string? bytes?) ~
-  lang : (or/c #f module-path?) = #f ~
-  allow-for-require : (listof (or/c module-path? path?)) = null ~
-  allow-for-load : (listof path-string?) = null ~
-  allow-read : (listof (or/c module-path? path-string?)) = null ~
+  module-decl : (or/c syntax? pair? path? input-port? string? bytes?) ~ ~
+  lang : (or/c #f module-path?) = #f ~ ~
+  allow-for-require : (listof (or/c module-path? path?)) = null ~ ~
+  allow-for-load : (listof path-string?) = null ~ ~
+  allow-read : (listof (or/c module-path? path-string?)) = null ~ ~
 
 The make-evaluator function creates an evaluator with a language and
 requires specification, and starts evaluating the given input-programs.
@@ -50,13 +50,13 @@ for further evaluation.
 
 The returned evaluator operates in an isolated and limited environment.
 In particular, filesystem access is restricted, which may interfere with
-using modules from the filesystem.  See below for information on the
-allow-for-require, allow-for-load, and allow-read arguments.  When
-language is a module path or when requires is provided, the indicated
-modules are implicitly included in the allow-for-require list. (For
-backward compatibility, non-module-path? path strings are allowed in
-requires; they are implicitly converted to paths before addition to
-allow-for-require.)
+using modules from the filesystem that are not in a collection.  See
+below for information on the allow-for-require, allow-for-load, and
+allow-read arguments.  When language is a module path or when requires
+is provided, the indicated modules are implicitly included in the
+allow-for-require list. (For backward compatibility, non-module-path?
+path strings are allowed in requires; they are implicitly converted to
+paths before addition to allow-for-require.)
 
 Each input-program or module-decl argument provides a program in one of
 the following forms:
@@ -134,22 +134,19 @@ top-level namespace:
   > (define base-module-eval
       ; a module cannot have free variables...
       (make-evaluator 'racket/base '(define (f) later)))
-  program:1:0: later: unbound identifier in module
-    in: later ~
+  program:1:0: later: unbound identifier
+    in: later ~ ~
   > (define base-module-eval
       (make-evaluator 'racket/base '(define (f) later)
                                    '(define later 5)))
-
   > (base-module-eval '(f))
   5
   > (define base-top-eval
-      ; non-module code can have free variables: ~
+      ; non-module code can have free variables: ~ ~
       (make-evaluator '(begin) '(define (f) later)))
-
   > (base-top-eval '(+ 1 2))
   3
   > (base-top-eval '(define later 5))
-
   > (base-top-eval '(f))
   5
 
@@ -162,7 +159,7 @@ the optional lang argument to specify such a restriction (the default,
 a path, then the path is implicitly added to the allow-for-load list.
 
   (define base-module-eval2
-    ; equivalent to base-module-eval: ~
+    ; equivalent to base-module-eval: ~ ~
     (make-module-evaluator '(module m racket/base
                               (define (f) later)
                               (define later 5))))
@@ -194,13 +191,14 @@ memory limit exception.
 
 The allow-for-require and allow-for-load arguments adjust filesystem
 permissions to extend the set of files that are usable by the evaluator.
-The allow-for-require argument lists modules that can be required along
-with their imports (transitively). The allow-for-load argument lists
-files that can be loaded. (The precise permissions needed for require
-versus load can differ.)  The allow-read argument is for backward
-compatibility, only; each module-path? element of allow-read is
-effectively moved to allow-for-require, while other elements are moved
-to all-for-load.
+Modules that are in a collection are automatically accessible, but the
+allow-for-require argument lists additional modules that can be required
+along with their imports (transitively) through a filesystem path. The
+allow-for-load argument similarly lists files that can be loaded. (The
+precise permissions needed for require versus load can differ.)  The
+allow-read argument is for backward compatibility, only; each
+module-path? element of allow-read is effectively moved to
+allow-for-require, while other elements are moved to allow-for-load.
 
 The sandboxed environment is well isolated, and the evaluator function
 essentially sends it an expression and waits for a result.  This form of
@@ -226,53 +224,66 @@ receives #<void>.
 
 Finally, the fact that a sandboxed evaluator accept syntax objects makes
 it usable as the value for current-eval, which means that you can easily
-start a sandboxed read-eval-print-loop.  For example, here is a quick
-implementation of a networked REPL:
+start a sandboxed read-eval-print-loop:
 
   (define e (make-evaluator 'racket/base))
-  (let-values ([(i o) (tcp-accept (tcp-listen 9999))])
-    (parameterize ([current-input-port  i]
-                   [current-output-port o]
-                   [current-error-port  o]
-                   [current-eval e])
-      (read-eval-print-loop)
-      (fprintf o "\nBye...\n")
-      (close-output-port o)))
+  (parameterize ([current-eval e])
+    (read-eval-print-loop))
 
-Note that in this code it is only the REPL interactions that are going
-over the network connection; using I/O operations inside the REPL will
-still use the usual sandbox parameters (defaulting to no I/O).  In
-addition, the code works only from an existing toplevel REPL —
-specifically, read-eval-print-loop reads a syntax value and gives it the
-lexical context of the current namespace.  Here is a variation that uses
-the networked ports for user I/O, and works when used from a module (by
-using a new namespace):
+Note that in this code only the REPL interactions will be printed to the
+current output ports; using I/O operations inside the REPL will still
+use the usual sandbox parameters (defaulting to no I/O).  In addition,
+the code works only from an existing toplevel REPL — specifically,
+read-eval-print-loop reads a syntax value and gives it the lexical
+context of the current namespace.  Here is a variation that also allows
+I/O over the current input and output ports, and works when used from a
+module (by using a new namespace):
 
-  (let-values ([(i o) (tcp-accept (tcp-listen 9999))])
-    (parameterize ([current-input-port   i]
-                   [current-output-port  o]
-                   [current-error-port   o]
-                   [sandbox-input        i]
-                   [sandbox-output       o]
-                   [sandbox-error-output o]
-                   [current-namespace (make-empty-namespace)])
-      (parameterize ([current-eval
-                      (make-evaluator 'racket/base)])
-        (read-eval-print-loop))
-      (fprintf o "\nBye...\n")
-      (close-output-port o)))
+  (parameterize ([sandbox-input        current-input-port]
+                 [sandbox-output       current-output-port]
+                 [sandbox-error-output current-error-port]
+                 [current-namespace (make-empty-namespace)])
+    (parameterize ([current-eval (make-evaluator 'racket/base)])
+      (read-eval-print-loop)))
 
                                         *exn:fail:sandbox-terminated?*
 (exn:fail:sandbox-terminated? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 (exn:fail:sandbox-terminated-reason exn) -> symbol?
-  exn : exn:fail:sandbox-terminated? ~
+  exn : exn:fail:sandbox-terminated? ~ ~
 
 A predicate and accessor for exceptions that are raised when a sandbox
 is terminated.  Once a sandbox raises such an exception, it will
 continue to raise it on further evaluation attempts.
 
-1. Customizing Evaluators
+1. Security Considerations
+
+Although the sandbox is designed to provide a safe environment for
+executing Racket programs with restricted access to system resources,
+executing untrusted programs in a sandbox still carries some risk.
+Because a malicious program can exercise arbitrary functionality from
+the Racket runtime and installed collections, an attacker who identifies
+a vulnerability in Racket or an installed collection may be able to
+escape the sandbox.
+
+To mitigate this risk, programs that use the sandbox should employ
+additional precautions when possible. Suggested measures include:
+
+* Supplying a custom module language to make-evaluator or
+  make-module-evaluator that gives untrusted code access to only the
+  language constructs it absolutely requires.
+
+* If untrusted code needs access to installed collections, installing
+  only the collections required by your program.
+
+* Using operating-system-level security features to provide
+  defense-in-depth in case the process running the sandbox is
+  compromised.
+
+* Making sure your Racket installation and installed packages are
+  up-to-date with the latest release.
+
+2. Customizing Evaluators
 
 The sandboxed evaluators that make-evaluator creates can be customized
 via many parameters.  Most of the configuration parameters affect newly
@@ -301,7 +312,7 @@ use threads.
 
                                         *call-with-trusted-sandbox-configuration*
 (call-with-trusted-sandbox-configuration thunk) -> any ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 Invokes the thunk in a context where sandbox configuration parameters
 are set for minimal restrictions.  More specifically, there are no
@@ -312,7 +323,7 @@ used.  (Note that the I/O ports settings are not included.)
                                         *sandbox-init-hook*
 (sandbox-init-hook) -> (-> any) ~
 (sandbox-init-hook thunk) -> void?
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 A parameter that determines a thunk to be called for initializing a new
 evaluator.  The hook is called just before the program is evaluated in a
@@ -325,7 +336,7 @@ initialization, so it can override settings.
                                         *sandbox-reader*
 (sandbox-reader) -> (any/c . -> . any) ~
 (sandbox-reader proc) -> void?
-  proc : (any/c . -> . any) ~
+  proc : (any/c . -> . any) ~ ~
 
 A parameter that specifies a function that reads all expressions from
 (current-input-port).  The function is used to read program source for
@@ -346,7 +357,7 @@ read-accept-lang and read-accept-reader are set to #t.
                          'pipe
                          (-> input-port?))
 (sandbox-input in) -> void?
-  in : (or/c #f ~
+  in : (or/c #f ~ ~
              string? bytes?
              input-port?
              'pipe
@@ -377,7 +388,7 @@ The following other values are allowed:
                           'string
                           (-> output-port?))
 (sandbox-output in) -> void?
-  in : (or/c #f ~
+  in : (or/c #f ~ ~
              output-port?
              'pipe
              'bytes
@@ -412,7 +423,7 @@ discards all data.  The following other values are allowed:
                                 'string
                                 (-> output-port?))
 (sandbox-error-output in) -> void?
-  in : (or/c #f ~
+  in : (or/c #f ~ ~
              output-port?
              'pipe
              'bytes
@@ -432,16 +443,18 @@ calling context’s error port.
                                         *sandbox-coverage-enabled*
 (sandbox-coverage-enabled) -> boolean? ~
 (sandbox-coverage-enabled enabled?) -> void?
-  enabled? : any/c ~
+  enabled? : any/c ~ ~
 
 A parameter that controls whether syntactic coverage information is
 collected by sandbox evaluators.  Use get-uncovered-expressions to
 retrieve coverage information.
 
+The default value is #f.
+
                                         *sandbox-propagate-breaks*
 (sandbox-propagate-breaks) -> boolean? ~
 (sandbox-propagate-breaks propagate?) -> void?
-  propagate? : any/c ~
+  propagate? : any/c ~ ~
 
 When both this boolean parameter and (break-enabled) are true, breaking
 while an evaluator is running propagates the break signal to the
@@ -458,7 +471,7 @@ further). The default is #t.
                                         *sandbox-propagate-exceptions*
 (sandbox-propagate-exceptions) -> boolean? ~
 (sandbox-propagate-exceptions propagate?) -> void?
-  propagate? : any/c ~
+  propagate? : any/c ~ ~
 
 A parameter that controls how uncaught exceptions during a sandbox
 evaluation are treated. When the parameter value is #t, then the
@@ -471,7 +484,7 @@ The default is #t.
 (sandbox-namespace-specs) -> (cons/c (-> namespace?) ~
                                      (listof module-path?))
 (sandbox-namespace-specs spec) -> void?
-  spec : (cons/c (-> namespace?) ~
+  spec : (cons/c (-> namespace?) ~ ~
                  (listof module-path?))
 
 A parameter that holds a list of values that specify how to create a
@@ -508,7 +521,7 @@ make-base-namespace otherwise.
                                         *sandbox-gui-available*
 (sandbox-gui-available) -> boolean? ~
 (sandbox-gui-available avail?) -> void?
-  avail? : any/c ~
+  avail? : any/c ~ ~
 
 Determines whether the racket/gui module can be used when a sandbox
 evaluator is created. If gui-available? produces #f during the creation
@@ -521,7 +534,7 @@ such as using a new eventspace for each evaluator.
                                         *sandbox-override-collection-paths*
 (sandbox-override-collection-paths) -> (listof path-string?) ~
 (sandbox-override-collection-paths paths) -> void?
-  paths : (listof path-string?) ~
+  paths : (listof path-string?) ~ ~
 
 A parameter that determines a list of collection directories to prefix
 current-library-collection-paths in an evaluator. This parameter is
@@ -535,7 +548,7 @@ default is null.
 (sandbox-security-guard) ~
  -> (or/c security-guard? (-> security-guard?))
 (sandbox-security-guard guard) -> void?
-  guard : (or/c security-guard? (-> security-guard?)) ~
+  guard : (or/c security-guard? (-> security-guard?)) ~ ~
 
 A parameter that determines the initial (current-security-guard) for
 sandboxed evaluations.  It can be either a security guard, or a function
@@ -550,7 +563,7 @@ sandbox-network-guard for network connections.
                           'read-bytecode 'read 'exists)
                     (or/c byte-regexp? bytes? string? path?)))
 (sandbox-path-permissions perms) -> void?
-  perms : (listof (list/c (or/c 'execute 'write 'delete ~
+  perms : (listof (list/c (or/c 'execute 'write 'delete ~ ~
                                 'read-bytecode 'read 'exists)
                           (or/c byte-regexp? bytes? string? path?)))
 
@@ -598,7 +611,7 @@ make-evaluator for more information.
      (or/c 'server 'client)
      . -> . any)
 (sandbox-network-guard proc) -> void?
-  proc : (symbol? ~
+  proc : (symbol? ~ ~
           (or/c (and/c string? immutable?) #f)
           (or/c (integer-in 1 65535) #f)
           (or/c 'server 'client)
@@ -610,7 +623,7 @@ sandbox-security-guard.  The default forbids all network connection.
                                         *sandbox-exit-handler*
 (sandbox-exit-handler) -> (any/c . -> . any) ~
 (sandbox-exit-handler handler) -> void?
-  handler : (any/c . -> . any) ~
+  handler : (any/c . -> . any) ~ ~
 
 A parameter that determines the initial (exit-handler) for sandboxed
 evaluations.  The default kills the evaluator with an appropriate error
@@ -619,7 +632,7 @@ message (see exn:fail:sandbox-terminated-reason).
                                         *sandbox-memory-limit*
 (sandbox-memory-limit) -> (or/c (>=/c 0) #f) ~
 (sandbox-memory-limit limit) -> void?
-  limit : (or/c (>=/c 0) #f) ~
+  limit : (or/c (>=/c 0) #f) ~ ~
 
 A parameter that determines the total memory limit on the sandbox in
 megabytes (it can hold a rational or a floating point number).  When
@@ -656,7 +669,7 @@ counts against the interaction limit).
                                        (or/c (>=/c 0) #f))
                                #f)
 (sandbox-eval-limits limits) -> void?
-  limits : (or/c (list/c (or/c (>=/c 0) #f) ~
+  limits : (or/c (list/c (or/c (>=/c 0) #f) ~ ~
                          (or/c (>=/c 0) #f))
                  #f)
 
@@ -693,9 +706,9 @@ individually larger than the custodian’s limit.
 The memory limit that is specified by this parameter applies to each
 individual evaluation, but not to the whole sandbox — that limit is
 specified via sandbox-memory-limit.  When the global limit is exceeded,
-the sandbox is terminated, but when the per-evaluation limit is exceeded
-the exn:fail:resource exception is raised.  For example, say that you
-evaluate an expression like
+the sandbox is terminated, but when the per-evaluation limit is
+exceeded, an exception recognizable by exn:fail:resource? is raised.
+For example, say that you evaluate an expression like
 
   (for ([i (in-range 1000)])
     (set! a (cons (make-bytes 1000000) a))
@@ -722,7 +735,7 @@ then, assuming sufficiently small limits,
  -> (list/c (or/c #f ((-> any) . -> . any))
             (or/c #f ((-> any) . -> . any)))
 (sandbox-eval-handlers handlers) -> void?
-  handlers : (list/c (or/c #f ((-> any) . -> . any)) ~
+  handlers : (list/c (or/c #f ((-> any) . -> . any)) ~ ~
                      (or/c #f ((-> any) . -> . any)))
 
 A parameter that determines two (optional) handlers that wrap sandboxed
@@ -740,7 +753,7 @@ but leaves other resources intact.
                                         *sandbox-run-submodules*
 (sandbox-run-submodules) -> (list/c symbol?) ~
 (sandbox-run-submodules submod-syms) -> void?
-  submod-syms : (list/c symbol?) ~
+  submod-syms : (list/c symbol?) ~ ~
 
 A parameter that determines submodules to run when a sandbox is created
 by make-module-evaluator. The parameter’s default value is the empty
@@ -749,7 +762,7 @@ list.
                                         *sandbox-make-inspector*
 (sandbox-make-inspector) -> (-> inspector?) ~
 (sandbox-make-inspector make) -> void?
-  make : (-> inspector?) ~
+  make : (-> inspector?) ~ ~
 
 A parameter that determines the (nullary) procedure that is used to
 create the inspector for sandboxed evaluation.  The procedure is called
@@ -759,7 +772,7 @@ when initializing an evaluator.  The default parameter value is (lambda
                                         *sandbox-make-code-inspector*
 (sandbox-make-code-inspector) -> (-> inspector?) ~
 (sandbox-make-code-inspector make) -> void?
-  make : (-> inspector?) ~
+  make : (-> inspector?) ~ ~
 
 A parameter that determines the (nullary) procedure that is used to
 create the code inspector for sandboxed evaluation.  The procedure is
@@ -774,7 +787,7 @@ which makes loading libraries possible.
                                         *sandbox-make-logger*
 (sandbox-make-logger) -> (-> logger?) ~
 (sandbox-make-logger make) -> void?
-  make : (-> logger?) ~
+  make : (-> logger?) ~ ~
 
 A parameter that determines the procedure used to create the logger for
 sandboxed evaluation.  The procedure is called when initializing an
@@ -785,7 +798,7 @@ future).
                                         *sandbox-make-plumber*
 (sandbox-make-plumber) -> (or/c (-> plumber?) 'propagate) ~
 (sandbox-make-plumber make) -> void?
-  make : (or/c (-> plumber?) 'propagate) ~
+  make : (or/c (-> plumber?) 'propagate) ~ ~
 
 A parameter that determines the procedure used to create the plumber for
 sandboxed evaluation.  The procedure is called when initializing an
@@ -802,7 +815,7 @@ Added in version 6.0.1.8 of package sandbox-lib.
 (sandbox-make-environment-variables) ~
  -> (-> environment-variables?)
 (sandbox-make-environment-variables make) -> void?
-  make : (-> environment-variables?) ~
+  make : (-> environment-variables?) ~ ~
 
 A parameter that determines the procedure used to create the environment
 variable set for sandboxed evaluation.  The procedure is called when
@@ -810,20 +823,20 @@ initializing an evaluator, and the default parameter value constructs a
 new environment variable set using (environment-variables-copy
 (current-environment-variables)).
 
-2. Interacting with Evaluators
+3. Interacting with Evaluators
 
 The following functions are used to interact with a sandboxed evaluator
 in addition to using it to evaluate code.
 
                                         *evaluator-alive?*
 (evaluator-alive? evaluator) -> boolean? ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 
 Determines whether the evaluator is still alive.
 
                                         *kill-evaluator*
 (kill-evaluator evaluator) -> void? ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 
 Releases the resources that are held by evaluator by shutting down the
 evaluator’s custodian.  Attempting to use an evaluator after killing
@@ -834,7 +847,7 @@ evaluator, except that an eof value will raise an error immediately.
 
                                         *break-evaluator*
 (break-evaluator evaluator) -> void? ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 
 Sends a break to the running evaluator.  The effect of this is as if
 Ctrl-C was typed when the evaluator is currently executing, which
@@ -842,7 +855,7 @@ propagates the break to the evaluator’s context.
 
                                         *get-user-custodian*
 (get-user-custodian evaluator) -> void? ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 
 Retrieves the evaluator’s toplevel custodian.  This returns a value that
 is different from (evaluator '(current-custodian)) or
@@ -857,9 +870,9 @@ the whole sandbox.)
 
                                         *set-eval-limits*
 (set-eval-limits evaluator secs mb) -> void? ~
-  evaluator : (any/c . -> . any) ~
-  secs : (or/c exact-nonnegative-integer? #f) ~
-  mb : (or/c exact-nonnegative-integer? #f) ~
+  evaluator : (any/c . -> . any) ~ ~
+  secs : (or/c exact-nonnegative-integer? #f) ~ ~
+  mb : (or/c exact-nonnegative-integer? #f) ~ ~
 
 Changes the per-expression limits that evaluator uses to secs seconds of
 shallow time and mb megabytes (either one can be #f, indicating no
@@ -871,8 +884,8 @@ existing evaluators. See also call-with-limits.
 
                                         *set-eval-handler*
 (set-eval-handler evaluator handler) -> void? ~
-  evaluator : (any/c . -> . any) ~
-  handler : (or/c #f ((-> any) . -> . any)) ~
+  evaluator : (any/c . -> . any) ~ ~
+  handler : (or/c #f ((-> any) . -> . any)) ~ ~
 
 Changes the per-expression handler that the evaluator uses around each
 interaction.  A #f value means no handler is used.
@@ -884,9 +897,9 @@ call-with-killing-threads for two useful handlers that are provided.
 
                                         *call-with-custodian-shutdown*
 (call-with-custodian-shutdown thunk) -> any ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 (call-with-killing-threads thunk) -> any
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 These functions are useful for use as an evaluation handler.
 call-with-custodian-shutdown will execute the thunk in a fresh
@@ -897,10 +910,10 @@ resources as is.
 
                                         *put-input*
 (put-input evaluator) -> output-port? ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 (put-input evaluator i/o) -> void?
-  evaluator : (any/c . -> . any) ~
-  i/o : (or/c bytes? string? eof-object?) ~
+  evaluator : (any/c . -> . any) ~ ~
+  i/o : (or/c bytes? string? eof-object?) ~ ~
 
 If (sandbox-input) is 'pipe when an evaluator is created, then this
 procedure can be used to retrieve the output port end of the pipe (when
@@ -909,10 +922,10 @@ pipe.  It can also be used with eof, which closes the pipe.
 
                                         *get-output*
 (get-output evaluator) -> (or/c #f input-port? bytes? string?) ~
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 (get-error-output evaluator)
  -> (or/c #f input-port? bytes? string?)
-  evaluator : (any/c . -> . any) ~
+  evaluator : (any/c . -> . any) ~ ~
 
 Returns the output or error-output of the evaluator, in a way that
 depends on the setting of (sandbox-output) or (sandbox-error-output)
@@ -933,9 +946,9 @@ when the evaluator was created:
 (get-uncovered-expressions  evaluator      ~
                            [prog?         
                             src])     -> (listof syntax?)
-  evaluator : (any/c . -> . any) ~
-  prog? : any/c = #t ~
-  src : any/c = default-src ~
+  evaluator : (any/c . -> . any) ~ ~
+  prog? : any/c = #t ~ ~
+  src : any/c = default-src ~ ~
 
 Retrieves uncovered expression from an evaluator, as longs as the
 sandbox-coverage-enabled parameter had a true value when the evaluator
@@ -977,9 +990,9 @@ expression may be assigned a single source location.
 (call-in-sandbox-context  evaluator            ~
                           thunk               
                          [unrestricted?]) -> any
-  evaluator : (any/c . -> . any) ~
-  thunk : (-> any) ~
-  unrestricted? : boolean? = #f ~
+  evaluator : (any/c . -> . any) ~ ~
+  thunk : (-> any) ~ ~
+  unrestricted? : boolean? = #f ~ ~
 
 Calls the given thunk in the context of a sandboxed evaluator.  The call
 is performed under the resource limits and evaluation handler that are
@@ -1005,9 +1018,9 @@ your own permissions, for example,
           ; can access anything you want here
           (delete-file "/some/file")))))
 
-3. Miscellaneous
+4. Miscellaneous
 
-gui? : boolean? ~
+gui? : boolean? ~ ~
 
 For backward compatibility, only: the result of gui-available? at the
 time that racket/sandbox was instantiated.
@@ -1018,17 +1031,17 @@ sandbox evaluator is created.
 
                                         *call-with-limits*
 (call-with-limits secs mb thunk) -> any ~
-  secs : (or/c exact-nonnegative-integer? #f) ~
-  mb : (or/c exact-nonnegative-integer? #f) ~
-  thunk : (-> any) ~
+  secs : (or/c exact-nonnegative-integer? #f) ~ ~
+  mb : (or/c exact-nonnegative-integer? #f) ~ ~
+  thunk : (-> any) ~ ~
 
 Executes the given thunk with memory and time restrictions: if execution
 consumes more than mb megabytes or more than secs shallow time seconds,
-then the computation is aborted and the exn:fail:resource exception is
-raised.  Otherwise the result of the thunk is returned as usual (a
-value, multiple values, or an exception).  Each of the two limits can be
-#f to indicate the absence of a limit. See also custodian-limit-memory
-for information on memory limits.
+then the computation is aborted and an exception recognizable by
+exn:fail:resource? is raised.  Otherwise, the result of the thunk is
+returned as usual (a value, multiple values, or an exception).  Each of
+the two limits can be #f to indicate the absence of a limit. See also
+custodian-limit-memory for information on memory limits.
 
 Sandboxed evaluators use call-with-limits, according to the
 sandbox-eval-limits setting and uses of set-eval-limits: each expression
@@ -1043,10 +1056,17 @@ A macro version of call-with-limits.
 
                                         *call-with-deep-time-limit*
 (call-with-deep-time-limit secs thunk) -> any ~
-  secs : exact-nonnegative-integer? ~
-  thunk : (-> any) ~
+  secs : exact-nonnegative-integer? ~ ~
+  thunk : (-> any) ~ ~
 
-Executes the given thunk with deep time restrictions.
+Executes the given thunk with deep time restrictions, and returns the
+values produced by thunk.
+
+The given thunk is run in a new thread. If it errors or if the thread
+terminates returning a value, then (values) is returned.
+
+Changed in version 1.1 of package sandbox-lib: Changed to return thunk’s
+result if it completes normally.
 
                                         *with-deep-time-limit*
 (with-deep-time-limit secs-expr body ...) ~
@@ -1055,10 +1075,10 @@ A macro version of call-with-deep-time-limit.
 
                                         *exn:fail:resource?*
 (exn:fail:resource? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 (exn:fail:resource-resource exn)
  -> (or/c 'time 'memory 'deep-time)
-  exn : exn:fail:resource? ~
+  exn : exn:fail:resource? ~ ~
 
 A predicate and accessor for exceptions that are raised by
 call-with-limits.  The resource field holds a symbol, representing the

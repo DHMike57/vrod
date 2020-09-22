@@ -11,21 +11,21 @@ The for iteration forms are based on SRFI-42 [SRFI-42].
  
    for-clause = [id seq-expr]
               | [(id ...) seq-expr]
-              | #:when guard-expr ~
-              | #:unless guard-expr ~
+              | #:when guard-expr ~ ~
+              | #:unless guard-expr ~ ~
               | break-clause
                  
- break-clause = #:break guard-expr ~
-              | #:final guard-expr ~
+ break-clause = #:break guard-expr ~ ~
+              | #:final guard-expr ~ ~
                  
 body-or-break = body
               | break-clause
  
-  seq-expr : sequence? ~
+  seq-expr : sequence? ~ ~
 
 Iteratively evaluates bodys. The for-clauses introduce bindings whose
 scope includes body and that determine the number of times that body is
-evaluated. A break-clause either among the for-clauses of bodys stops
+evaluated. A break-clause either among the for-clauses or bodys stops
 further iteration.
 
 In the simple case, each for-clause has one of its first two forms,
@@ -68,46 +68,50 @@ following bodys. Among the bodys, besides stopping the iteration and
 preventing later body evaluations, a #:break guard-expr or #:final
 guard-expr clause starts a new internal-definition context.
 
+In the case of list and stream sequences, the for form itself does not
+keep each element reachable. If a list or stream produced by a seq-expr
+is otherwise unreachable, and if the for body can no longer reference an
+id for a list element, then the element is subject to garbage
+collection. The make-do-sequence sequence constructor supports
+additional sequences that behave like lists and streams in this way.
+
 Examples:
+
   > (for ([i '(1 2 3)]
           [j "abc"]
-          #:when (odd? i) ~
+          #:when (odd? i) ~ ~
           [k #(#t #f)])
       (display (list i j k)))
   (1 a #t)(1 a #f)(3 c #t)(3 c #f)
-
   > (for ([(i j) #hash(("a" . 1) ("b" . 20))])
       (display (list i j)))
-  (a 1)(b 20)
-
+  (b 20)(a 1)
   > (for ([i '(1 2 3)]
           [j "abc"]
-          #:break (not (odd? i)) ~
+          #:break (not (odd? i)) ~ ~
           [k #(#t #f)])
       (display (list i j k)))
   (1 a #t)(1 a #f)
-
   > (for ([i '(1 2 3)]
           [j "abc"]
-          #:final (not (odd? i)) ~
+          #:final (not (odd? i)) ~ ~
           [k #(#t #f)])
       (display (list i j k)))
   (1 a #t)(1 a #f)(2 b #t)
-
   > (for ([i '(1 2 3)]
           [j "abc"]
           [k #(#t #f)])
-      #:break (not (or (odd? i) k)) ~
+      #:break (not (or (odd? i) k)) ~ ~
       (display (list i j k)))
   (1 a #t)
-
   > (for ()
       (display "here"))
   here
-
   > (for ([i '()])
       (error "doesn't get here"))
 
+Changed in version 6.7.0.4: Added support for the optional second
+result.
 
                                         *for/list*
 (for/list (for-clause ...) body-or-break ... body) ~
@@ -119,15 +123,16 @@ to a #:when or #:unless clause, the result list includes no
 corresponding element.
 
 Examples:
+
   > (for/list ([i '(1 2 3)]
                [j "abc"]
-               #:when (odd? i) ~
+               #:when (odd? i) ~ ~
                [k #(#t #f)])
       (list i j k))
   '((1 #\a #t) (1 #\a #f) (3 #\c #t) (3 #\c #f))
   > (for/list ([i '(1 2 3)]
                [j "abc"]
-               #:break (not (odd? i)) ~
+               #:break (not (odd? i)) ~ ~
                [k #(#t #f)])
       (list i j k))
   '((1 #\a #t) (1 #\a #f))
@@ -141,10 +146,10 @@ Examples:
 (for/vector maybe-length (for-clause ...) body-or-break ... body) ~
  
 maybe-length = 
-             | #:length length-expr ~
-             | #:length length-expr #:fill fill-expr ~
+             | #:length length-expr ~ ~
+             | #:length length-expr #:fill fill-expr ~ ~
  
-  length-expr : exact-nonnegative-integer? ~
+  length-expr : exact-nonnegative-integer? ~ ~
 
 Iterates like for/list, but results are accumulated into a vector
 instead of a list.
@@ -159,13 +164,14 @@ initialized to the value of fill-expr, which defaults to 0 (i.e., the
 default argument of make-vector).
 
 Examples:
+
   > (for/vector ([i '(1 2 3)]) (number->string i))
   '#("1" "2" "3")
-  > (for/vector #:length 2 ([i '(1 2 3)]) (number->string i)) ~
+  > (for/vector #:length 2 ([i '(1 2 3)]) (number->string i)) ~ ~
   '#("1" "2")
-  > (for/vector #:length 4 ([i '(1 2 3)]) (number->string i)) ~
+  > (for/vector #:length 4 ([i '(1 2 3)]) (number->string i)) ~ ~
   '#("1" "2" "3" 0)
-  > (for/vector #:length 4 #:fill "?" ([i '(1 2 3)]) (number->string i)) ~
+  > (for/vector #:length 4 #:fill "?" ([i '(1 2 3)]) (number->string i)) ~ ~
   '#("1" "2" "3" "?")
 
 The for/vector form may allocate a vector and mutate it after each
@@ -184,6 +190,7 @@ expression in the bodys must return two values: a key and a value to
 extend the hash table accumulated by the iteration.
 
 Example:
+
   > (for/hash ([i '(1 2 3)])
       (values i (number->string i)))
   '#hash((1 . "1") (2 . "2") (3 . "3"))
@@ -198,6 +205,7 @@ is #t. Otherwise, the result is the (single) result from the last
 evaluation of body.
 
 Examples:
+
   > (for/and ([i '(1 2 3 "x")])
       (i . < . 3))
   #f
@@ -205,7 +213,7 @@ Examples:
       i)
   4
   > (for/and ([i '(1 2 3 4)])
-      #:break (= i 3) ~
+      #:break (= i 3) ~ ~
       i)
   2
   > (for/and ([i '()])
@@ -222,6 +230,7 @@ then the result of the for/or expression is #f. Otherwise, the result is
 #f.
 
 Examples:
+
   > (for/or ([i '(1 2 3 "x")])
       (i . < . 3))
   #t
@@ -239,6 +248,7 @@ Iterates like for, but each result of the last body is accumulated into
 a result with +.
 
 Example:
+
   > (for/sum ([i '(1 2 3 4)]) i)
   10
 
@@ -249,22 +259,31 @@ Iterates like for, but each result of the last body is accumulated into
 a result with *.
 
 Example:
+
   > (for/product ([i '(1 2 3 4)]) i)
   24
 
                                         *for/lists*
-(for/lists (id ...) (for-clause ...) body-or-break ... body) ~
+(for/lists (id ... maybe-result) ~
+           (for-clause ...)
+  body-or-break ... body)
+ 
+maybe-result = 
+             | #:result result-expr ~ ~
 
 Similar to for/list, but the last body expression should produce as many
-values as given ids, and the result is as many lists as supplied ids.
-The ids are bound to the lists accumulated so far in the for-clauses and
-bodys.
+values as given ids. The ids are bound to the lists accumulated so far
+in the for-clauses and bodys.
+
+If a result-expr is provided, it is used as with for/fold when iteration
+terminates; otherwise, the result is as many lists as supplied ids
 
 Examples:
+
   > (for/lists (l1 l2 l3)
                ([i '(1 2 3)]
                 [j "abc"]
-                #:when (odd? i) ~
+                #:when (odd? i) ~ ~
                 [k #(#t #f)])
       (values i j k))
   '(1 1 3 3)
@@ -272,9 +291,15 @@ Examples:
   '(#t #f #t #f)
   > (for/lists (acc)
                ([x '(tvp tofu seitan tvp tofu)]
-                #:unless (member x acc)) ~
+                #:unless (member x acc)) ~ ~
       x)
   '(tvp tofu seitan)
+  > (for/lists (firsts seconds #:result (list firsts seconds)) ~ ~
+               ([pr '((1 . 2) (3 . 4) (5 . 6))])
+      (values (car pr) (cdr pr)))
+  '((1 3 5) (2 4 6))
+
+Changed in version 7.1.0.2: Added the #:result form.
 
                                         *for/first*
 (for/first (for-clause ...) body-or-break ... body) ~
@@ -285,8 +310,9 @@ body. If the body is never evaluated, then the result of the for/first
 expression is #f.
 
 Examples:
+
   > (for/first ([i '(1 2 3 "x")]
-                #:when (even? i)) ~
+                #:when (even? i)) ~ ~
        (number->string i))
   "2"
   > (for/first ([i '()])
@@ -301,8 +327,9 @@ last evaluation of body. If the body is never evaluated, then the result
 of the for/last expression is #f.
 
 Examples:
+
   > (for/last ([i '(1 2 3 4 5)]
-                #:when (even? i)) ~
+                #:when (even? i)) ~ ~
        (number->string i))
   "4"
   > (for/last ([i '()])
@@ -310,24 +337,205 @@ Examples:
   #f
 
                                         *for/fold*
-(for/fold ([accum-id init-expr] ...) (for-clause ...) ~
+(for/fold ([accum-id init-expr] ... maybe-result) (for-clause ...) ~
   body-or-break ... body)
+ 
+maybe-result = 
+             | #:result result-expr ~ ~
 
 Iterates like for. Before iteration starts, the init-exprs are evaluated
 to produce initial accumulator values. At the start of each iteration, a
 location is generated for each accum-id, and the corresponding current
 accumulator value is placed into the location. The last expression in
 body must produce as many values as accum-ids, and those values become
-the current accumulator values. When iteration terminates, the results
-of the for/fold expression are the accumulator values.
+the current accumulator values. When iteration terminates, if a
+result-expr is provided then the result of the  for/fold is the result
+of evaluating result-expr  (with accum-ids in scope and bound to their
+final values),  otherwise the results of the for/fold expression are the
+accumulator values.
 
-Example:
+An accum-id and a binding from a for-clause can be the same identifier.
+In that case, the accum-id binding shadows the one in a for-clause
+within the body-or-break and body forms (even though, syntactically, a
+for-clause is closer to the body).
+
+Examples:
+
   > (for/fold ([sum 0]
                [rev-roots null])
               ([i '(1 2 3 4)])
       (values (+ sum i) (cons (sqrt i) rev-roots)))
   10
   '(2 1.7320508075688772 1.4142135623730951 1)
+  > (for/fold ([acc '()]
+               [seen (hash)]
+               #:result (reverse acc)) ~ ~
+              ([x (in-list '(0 1 1 2 3 4 4 4))])
+      (cond
+        [(hash-ref seen x #f)
+         (values acc seen)]
+        [else (values (cons x acc)
+                      (hash-set seen x #t))]))
+  '(0 1 2 3 4)
+
+Changed in version 6.11.0.1: Added the #:result form.
+
+                                        *for/foldr*
+(for/foldr ([accum-id init-expr] ... accum-option ...) ~
+           (for-clause ...)
+  body-or-break ... body)
+ 
+accum-option = #:result result-expr ~ ~
+             | #:delay ~ ~
+             | #:delay-as delayed-id ~ ~
+             | #:delay-with delayer-id ~ ~
+
+Like for/fold, but analogous to foldr rather than foldl: the given
+sequences are still iterated in the same order, but the loop body is
+evaluated in reverse order. Evaluation of a for/foldr expression uses
+space proportional to the number of iterations it performs, and all
+elements produced by the given sequences are retained until backwards
+evaluation of the loop body begins (assuming the element is, in fact,
+referenced in the body).
+
+Examples:
+
+  > (define (in-printing seq)
+      (sequence-map (lambda (v) (println v) v) seq))
+  > (for/foldr ([acc '()])
+               ([v (in-printing (in-range 1 4))])
+      (println v)
+      (cons v acc))
+  1
+  2
+  3
+  3
+  2
+  1
+  '(1 2 3)
+
+Furthermore, unlike for/fold, the accum-ids are not bound within
+guard-exprs or body-or-break forms that appear before a break-clause.
+
+While the aforementioned limitations make for/foldr less generally
+useful than for/fold, for/foldr provides the additional capability to
+iterate lazily via the #:delay, #:delay-as, and #:delay-with options,
+which can mitigate many of for/foldr’s disadvantages. If at least one
+such option is specified, the loop body is given explicit control over
+when iteration continues: by default, each accum-id is bound to a
+promise that, when forced, produces the accum-id’s current value.
+
+In this mode, iteration does not continue until one such promise is
+forced, which triggers any additional iteration necessary to produce a
+value. If the loop body is lazy in its accum-ids—that is, it returns a
+value without forcing any of them—then the loop (or any of its
+iterations) will produce a value before iteration has completely
+finished. If a reference to at least one such promise is retained, then
+forcing it will resume iteration from the point at which it was
+suspended, even if control has left the dynamic extent of the loop body.
+
+Examples:
+
+  > (for/foldr ([acc '()] #:delay) ~ ~
+               ([v (in-range 1 4)])
+      (printf "--> ~v\n" v)
+      (begin0
+        (cons v (force acc))
+        (printf "<-- ~v\n" v)))
+  --> 1
+  --> 2
+  --> 3
+  <-- 3
+  <-- 2
+  <-- 1
+  '(1 2 3)
+  > (define resume
+      (for/foldr ([acc '()] #:delay) ~ ~
+                 ([v (in-range 1 5)])
+        (printf "--> ~v\n" v)
+        (begin0
+          (cond
+            [(= v 1) (force acc)]
+            [(= v 2) acc]
+            [else    (cons v (force acc))])
+          (printf "<-- ~v\n" v))))
+  --> 1
+  --> 2
+  <-- 2
+  <-- 1
+  > (force resume)
+  --> 3
+  --> 4
+  <-- 4
+  <-- 3
+  '(3 4)
+
+This extra control over iteration order allows for/foldr to both consume
+and construct infinite sequences, so long as it is at least sometimes
+lazy in its accumulators.
+
++See also for/stream for a more convenient (albeit less flexible) way to
+lazily transform infinite sequences. (Internally, for/stream is defined
+in terms of for/foldr.)
+
+Examples:
+
+  > (define squares (for/foldr ([s empty-stream] #:delay) ~ ~
+                               ([n (in-naturals)])
+                      (stream-cons (* n n) (force s))))
+  > (stream->list (stream-take squares 10))
+  '(0 1 4 9 16 25 36 49 64 81)
+
+The suspension introduced by the #:delay option does not ordinarily
+affect the loop’s eventual return value, but if #:delay and #:result are
+combined, the accum-ids will be delayed in the scope of the result-expr
+in the same way they are delayed within the loop body. This can be used
+to introduce an additional layer of suspension around the evaluation of
+the entire loop, if desired.
+
+Examples:
+
+  > (define evaluated-yet? #f)
+  > (for/foldr ([acc (set! evaluated-yet? #t)] #:delay) () ~ ~
+      (force acc))
+  > evaluated-yet?
+  #t
+
+  > (define evaluated-yet? #f)
+  > (define start
+      (for/foldr ([acc (set! evaluated-yet? #t)] #:delay #:result acc) () ~ ~
+        (force acc)))
+  > evaluated-yet?
+  #f
+  > (force start)
+  > evaluated-yet?
+  #t
+
+If the #:delay-as option is provided, then delayed-id is bound to an
+additional promise that returns the values of all accum-ids at once.
+When multiple accum-ids are provided, forcing this promise can be
+slightly more efficient than forcing the promises bound to the accum-ids
+individually.
+
+If the #:delay-with option is provided, the given delayer-id is used to
+suspend nested iterations (instead of the default, delay). A form of the
+shape (delayer-id recur-expr) is constructed and placed in expression
+position, where recur-expr is an expression that, when evaluated, will
+perform the next iteration and return its result (or results). Sensible
+choices for delayer-id include lazy, delay/sync, delay/thread, or any of
+the other promise constructors from racket/promise, as well as thunk
+from racket/function. However, beware that choices such as thunk or
+delay/name may evaluate their subexpression multiple times, which can
+lead to nonsensical results for sequences that have state, as the state
+will be shared between all evaluations of the recur-expr.
+
+If multiple accum-ids are given, the #:delay-with option is provided,
+and delayer-id is not bound to one of delay, lazy, delay/strict,
+delay/sync, delay/thread, or delay/idle, the accum-ids will not be bound
+at all, even within the loop body. Instead, the #:delay-as option must
+be specified to access the accumulator values via delayed-id.
+
+Added in version 7.3.0.3.
 
                                         *for**
 (for* (for-clause ...) body-or-break ... body) ~
@@ -336,15 +544,16 @@ Like for, but with an implicit #:when #t between each pair of
 for-clauses, so that all sequence iterations are nested.
 
 Example:
+
   > (for* ([i '(1 2)]
            [j "ab"])
       (display (list i j)))
   (1 a)(1 b)(2 a)(2 b)
 
-
                                         *for*/list*
 (for*/list (for-clause ...) body-or-break ... body) ~
-(for*/lists (id ...) (for-clause ...) body-or-break ... body)
+(for*/lists (id ... maybe-result) (for-clause ...)
+  body-or-break ... body)
 (for*/vector maybe-length (for-clause ...) body-or-break ... body)
 (for*/hash (for-clause ...) body-or-break ... body)
 (for*/hasheq (for-clause ...) body-or-break ... body)
@@ -355,100 +564,110 @@ Example:
 (for*/product (for-clause ...) body-or-break ... body)
 (for*/first (for-clause ...) body-or-break ... body)
 (for*/last (for-clause ...) body-or-break ... body)
-(for*/fold ([accum-id init-expr] ...) (for-clause ...)
+(for*/fold ([accum-id init-expr] ... maybe-result) (for-clause ...)
+  body-or-break ... body)
+(for*/foldr ([accum-id init-expr] ... accum-option ...)
+            (for-clause ...)
   body-or-break ... body)
 
 Like for/list, etc., but with the implicit nesting of for*.
 
 Example:
+
   > (for*/list ([i '(1 2)]
                 [j "ab"])
       (list i j))
   '((1 #\a) (1 #\b) (2 #\a) (2 #\b))
 
+Changed in version 7.3.0.3: Added the for*/foldr form.
+
 2. Deriving New Iteration Forms
 
                                         *for/fold/derived*
 (for/fold/derived orig-datum ~
-  ([accum-id init-expr] ...) (for-clause ...)
+  ([accum-id init-expr] ... maybe-result) (for-clause ...)
   body-or-break ... body)
 
 Like for/fold, but the extra orig-datum is used as the source for all
 syntax errors.
 
 Examples:
+
   > (define-syntax (for/digits stx)
       (syntax-case stx ()
-        [(_ clauses . defs+exprs)
+        [(_ clauses body ... tail-expr)
          (with-syntax ([original stx])
            #'(let-values
-               ([(n k)
-                 (for/fold/derived original ([n 0] [k 1]) clauses
-                   (define d (let () . defs+exprs))
-                   (values (+ n (* d k)) (* k 10)))])
+                 ([(n k)
+                   (for/fold/derived
+                       original ([n 0] [k 1])
+                     clauses
+                     body ...
+                     (values (+ n (* tail-expr k)) (* k 10)))])
                n))]))
-
   ; If we misuse for/digits, we can get good error reporting
-  ; because the use of orig-datum allows for source correlation: ~
+  ; because the use of orig-datum allows for source correlation: ~ ~
   > (for/digits
         [a (in-list '(1 2 3))]
         [b (in-list '(4 5 6))]
       (+ a b))
   eval:3:0: for/digits: bad sequence binding clause
-    at: a ~
-    in: (for/digits (a (in-list (quote (1 2 3)))) (b (in-list ~
+    at: a ~ ~
+    in: (for/digits (a (in-list (quote (1 2 3)))) (b (in-list ~ ~
   (quote (4 5 6)))) (+ a b))
   > (for/digits
         ([a (in-list '(1 2 3))]
          [b (in-list '(2 4 6))])
       (+ a b))
   963
-  ; Another example: compute the max during iteration: ~
+  ; Another example: compute the max during iteration: ~ ~
   > (define-syntax (for/max stx)
       (syntax-case stx ()
-         [(_ clauses . defs+exprs)
-          (with-syntax ([original stx])
-            #'(for/fold/derived original
-                                ([current-max -inf.0])
-                                clauses
-                (define maybe-new-max
-                  (let () . defs+exprs))
-                (if (> maybe-new-max current-max)
-                    maybe-new-max
-                    current-max)))]))
-
+        [(_ clauses body ... tail-expr)
+         (with-syntax ([original stx])
+           #'(for/fold/derived original
+               ([current-max -inf.0])
+               clauses
+               body ...
+               (define maybe-new-max tail-expr)
+               (if (> maybe-new-max current-max)
+                   maybe-new-max
+                   current-max)))]))
   > (for/max ([n '(3.14159 2.71828 1.61803)]
               [s '(-1      1       1)])
       (* n s))
   2.71828
 
+Changed in version 6.11.0.1: Added the #:result form.
+
                                         *for*/fold/derived*
 (for*/fold/derived orig-datum ~
-  ([accum-id init-expr] ...) (for-clause ...)
+  ([accum-id init-expr] ... maybe-result) (for-clause ...)
   body-or-break ... body)
 
 Like for*/fold, but the extra orig-datum is used as the source for all
 syntax errors.
 
 Examples:
+
   > (define-syntax (for*/digits stx)
       (syntax-case stx ()
-        [(_ clauses . defs+exprs)
+        [(_ clauses body ... tail-expr)
          (with-syntax ([original stx])
            #'(let-values
-               ([(n k)
-                 (for*/fold/derived original ([n 0] [k 1]) clauses
-                   (define d (let () . defs+exprs))
-                   (values (+ n (* d k)) (* k 10)))])
+                 ([(n k)
+                   (for*/fold/derived original ([n 0] [k 1])
+                     clauses
+                     body ...
+                     (values (+ n (* tail-expr k)) (* k 10)))])
                n))]))
-
   > (for*/digits
         [ds (in-list '((8 3) (1 1)))]
         [d (in-list ds)]
       d)
   eval:8:0: for*/digits: bad sequence binding clause
-    at: ds ~
-    in: (for*/digits (ds (in-list (quote ((8 3) (1 1))))) (d ~
+    at: ds ~ ~
+    in: (for*/digits (ds (in-list (quote ((8 3) (1 1))))) (d ~ ~
   (in-list ds)) d)
   > (for*/digits
         ([ds (in-list '((8 3) (1 1)))]
@@ -456,14 +675,30 @@ Examples:
       d)
   1138
 
+Changed in version 6.11.0.1: Added the #:result form.
+
+                                        *for/foldr/derived*
+(for/foldr/derived orig-datum ~
+  ([accum-id init-expr] ... accum-option ...) (for-clause ...)
+  body-or-break ... body)
+(for*/foldr/derived orig-datum
+  ([accum-id init-expr] ... accum-option ...) (for-clause ...)
+  body-or-break ... body)
+
+Like for/foldr and for*/foldr, but the extra orig-datum is used as the
+source for all syntax errors as in for/fold/derived and
+for*/fold/derived.
+
+Added in version 7.3.0.3.
+
                                         *define-sequence-syntax*
 (define-sequence-syntax id ~
   expr-transform-expr
   clause-transform-expr)
  
-  expr-transform-expr : (or/c (-> identifier?) ~
+  expr-transform-expr : (or/c (-> identifier?) ~ ~
                               (syntax? . -> . syntax?))
-  clause-transform-expr : (syntax? . -> . syntax?) ~
+  clause-transform-expr : (syntax? . -> . syntax?) ~ ~
 
 Defines id as syntax. An (id . rest) form is treated specially when used
 to generate a sequence in a for-clause of for (or one of its variants).
@@ -473,7 +708,7 @@ transform the clause.
 When id is used in any other expression position, the result of
 expr-transform-expr is used. If it is a procedure of zero arguments,
 then the result must be an identifier other-id, and any use of id is
-converted to a use of other-id. Otherwise,expr-transform-expr must
+converted to a use of other-id. Otherwise, expr-transform-expr must
 produce a procedure (of one argument) that is used as a macro
 transformer.
 
@@ -489,30 +724,28 @@ clause-transform-expr, use for-clause-syntax-protect instead of
 syntax-protect.
 
 Examples:
+
   > (define (check-nat n)
       (unless (exact-nonnegative-integer? n)
         (raise-argument-error 'in-digits "exact-nonnegative-integer?" n)))
-
   > (define-sequence-syntax in-digits
       (lambda () #'in-digits/proc)
       (lambda (stx)
         (syntax-case stx ()
           [[(d) (_ nat)]
            #'[(d)
-              (:do-in ~
+              (:do-in ~ ~
                 ([(n) nat])
                 (check-nat n)
                 ([i n])
                 (not (zero? i))
                 ([(j d) (quotient/remainder i 10)])
-                #true
-                #true
+                #t
+                #t
                 [j])]]
           [_ #f])))
-
   > (define (in-digits/proc n)
       (for/list ([d (in-digits n)]) d))
-
   > (for/list ([d (in-digits 1138)]) d)
   '(8 3 1 1)
   > (map in-digits (list 137 216))
@@ -559,7 +792,7 @@ For an example of :do-in, see define-sequence-syntax.
 
                                         *for-clause-syntax-protect*
 (for-clause-syntax-protect stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Provided for-syntax: Like syntax-protect, but allows the for expander to
 disarm the result syntax object, and arms the pieces of a clause instead

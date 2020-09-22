@@ -1,18 +1,28 @@
 Init Libraries
 
- (require racket/init) package: base ~
+ (require racket/init) package: base ~ ~
 
 The racket/init library is the default start-up library for Racket. It
 re-exports the racket, racket/enter and racket/help libraries, and it
 sets current-print to use pretty-print.
 
- (require racket/gui/init) package: gui-lib ~
+ (require racket/interactive) package: base ~ ~
 
-The racket/gui/init library is the default start-up library for GRacket.
-It re-exports the racket/init and racket/gui/base libraries, and it sets
-current-load to use text-editor-load-handler.
+The racket/interactive is the default start up library when the REPL
+begins. It is not run if the -q/--no-init-file is specified. The
+interactive file can be changed by modifying 'interactive-file in the
+"config.rktd" file found in (find-config-dir). Alternative, if the file
+"interactive.rkt" exists in (find-system-path 'addon-dir) it is run
+rather than the installation wide interactive module.
 
- (require racket/language-info) package: base ~
+The default interactive module starts xrepl and runs the
+(find-system-path 'init-file) file in the users home directory. A
+different interactive file can keep this behavior by requiring
+racket/interactive.
+
+Added in version 6.7.
+
+ (require racket/language-info) package: base ~ ~
 
 The racket/language-info library provides a get-info function that takes
 any value and returns another function; the returned function takes a
@@ -26,7 +36,7 @@ The vector '#(racket/language-info get-info #f) is suitable for
 attaching to a module as its language info to get the same language
 information as the racket/base language.
 
- (require racket/runtime-config) package: base ~
+ (require racket/runtime-config) package: base ~ ~
 
 The racket/runtime-config library provides a configure function that
 takes any value and sets print-as-expression to #t.

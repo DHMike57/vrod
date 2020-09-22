@@ -49,15 +49,15 @@ finally, Racket provides functions such as string->bytes/locale to
 specifically invoke a locale-specific encoding.
 
 A Unix user selects a locale by setting environment variables, such as
-LC_ALL. On Windows and Mac OS X, the operating system provides other
+LC_ALL. On Windows and Mac OS, the operating system provides other
 mechanisms for setting the locale. Within Racket, the current locale can
 be changed by setting the current-locale parameter. The locale name
 within Racket is a string, and the available locale names depend on the
 platform and its configuration, but the "" locale means the current
-user’s default locale; on Windows and Mac OS X, the encoding for "" is
+user’s default locale; on Windows and Mac OS, the encoding for "" is
 always UTF-8, and locale-sensitive operations use the operating system’s
 native interface. (In particular, setting the LC_ALL and LC_CTYPE
-environment variables does not affect the locale "" on Mac OS X. Use
+environment variables does not affect the locale "" on Mac OS. Use
 getenv and current-locale to explicitly install the
 environment-specified locale, if desired.) Setting the current locale to
 #f makes locale-sensitive operations locale-insensitive, which means
@@ -67,7 +67,7 @@ encoding.
                                         *current-locale*
 (current-locale) -> (or/c string? #f) ~
 (current-locale locale) -> void?
-  locale : (or/c string? #f) ~
+  locale : (or/c string? #f) ~ ~
 
 A parameter that determines the current locale for procedures such as
 string-locale-ci=?.

@@ -2,7 +2,7 @@ Security Guards
 
                                         *security-guard?*
 (security-guard? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a security guard value as created by
 make-security-guard, #f otherwise.
@@ -29,17 +29,17 @@ platform.
                       file-guard        
                       network-guard     
                      [link-guard])  -> security-guard?
-  parent : security-guard? ~
-  file-guard : (symbol? ~
+  parent : security-guard? ~ ~
+  file-guard : (symbol? ~ ~
                 (or/c path? #f)
                 (listof symbol?)
                 . -> . any)
-  network-guard : (symbol? ~
+  network-guard : (symbol? ~ ~
                    (or/c (and/c string? immutable?) #f)
                    (or/c (integer-in 1 65535) #f)
                    (or/c 'server 'client)
                    . -> . any)
-  link-guard : (or/c (symbol? path? path? . -> . any) #f) = #f ~
+  link-guard : (or/c (symbol? path? path? . -> . any) #f) = #f ~ ~
 
 Creates a new security guard as child of parent.
 
@@ -123,7 +123,7 @@ going into or out of the file-guard or network-guard call (see
                                         *current-security-guard*
 (current-security-guard) -> security-guard? ~
 (current-security-guard guard) -> void?
-  guard : security-guard? ~
+  guard : security-guard? ~ ~
 
 A parameter that determines the current security guard that controls
 access to the filesystem and network.

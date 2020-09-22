@@ -35,7 +35,7 @@ port-count-lines!.
 
                                         *port-count-lines!*
 (port-count-lines! port) -> void? ~
-  port : port? ~
+  port : port? ~ ~
 
 Turns on line location and column location counting for a port. Counting
 can be turned on at any time, though generally it is turned on before
@@ -51,7 +51,7 @@ port. Line counting cannot be disabled for a port after it is enabled.
 
                                         *port-counts-lines?*
 (port-counts-lines? port) -> boolean? ~
-  port : port? ~
+  port : port? ~ ~
 
 Returns #t if line location and column location counting has been
 enabled for port, #f otherwise.
@@ -61,7 +61,7 @@ enabled for port, #f otherwise.
  -> (or/c exact-positive-integer? #f)
     (or/c exact-nonnegative-integer? #f)
     (or/c exact-positive-integer? #f)
-  port : port? ~
+  port : port? ~ ~
 
 Returns three values: an integer or #f for the line number of the next
 read/written item, an integer or #f for the next item’s column, and an
@@ -86,10 +86,10 @@ somehow cannot keep track of lines, columns, or positions.
                          line          
                          column        
                          position) -> void?
-  port : port? ~
-  line : (or/c exact-positive-integer? #f) ~
-  column : (or/c exact-nonnegative-integer? #f) ~
-  position : (or/c exact-positive-integer? #f) ~
+  port : port? ~ ~
+  line : (or/c exact-positive-integer? #f) ~ ~
+  column : (or/c exact-nonnegative-integer? #f) ~ ~
+  position : (or/c exact-positive-integer? #f) ~ ~
 
 Sets the next line, column, and position for port. If line counting has
 not been enabled for port or if port is a custom port that defines its
@@ -98,7 +98,7 @@ own counting function, then set-port-next-location! has no effect.
                                         *port-count-lines-enabled*
 (port-count-lines-enabled) -> boolean? ~
 (port-count-lines-enabled on?) -> void?
-  on? : any/c ~
+  on? : any/c ~ ~
 
 A parameter that determines whether line counting is enabled
 automatically for newly created ports. The default value is #f.

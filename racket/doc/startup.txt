@@ -3,7 +3,7 @@ Running Racket or GRacket
 The core Racket run-time system is available in two main variants:
 
 * Racket, which provides the primitives libraries on which racket/base
-  is implemented. On Unix and Mac OS X, the executable is called racket.
+  is implemented. On Unix and Mac OS, the executable is called racket.
   On Windows, the executable is called Racket.exe.
 
 * GRacket, which is a GUI variant of racket to the degree that the
@@ -12,7 +12,7 @@ The core Racket run-time system is available in two main variants:
   communicated specially to the racket/gui/base library. On Windows, the
   executable is called GRacket.exe, and it is a GUI application (as
   opposed to a console application) that implements single-instance
-  support. On Mac OS X, the gracket script launches GRacket.app.
+  support. On Mac OS, the gracket script launches GRacket.app.
 
 1. Initialization
 
@@ -52,45 +52,69 @@ Run-Time Configuration.
 After running all command-line expressions, files, and modules, Racket
 or GRacket then starts a read-eval-print loop for interactive evaluation
 if no command line flags are provided other than configuration options.
-If any command-line argument is provided that is not a configuration
-option, then the read-eval-print-loop is not started, unless the
--i/--repl flag is provided on the command line to specifically re-enable
-it. In addition, just before the command line is started, Racket loads
-the file (find-system-path 'init-file) and GRacket loads the file
-(find-graphical-system-path 'init-file) is loaded, unless the
--q/--no-init-file flag is specified on the command line.
+For Racket, the read-eval-print loop is run by calling
+read-eval-print-loop from racket/repl. For GRacket, the read-eval-print
+loop is run by calling graphical-read-eval-print-loop from
+racket/gui/base. If any command-line argument is provided that is not a
+configuration option, then the read-eval-print-loop is not started,
+unless the -i/--repl flag is provided on the command line to
+specifically re-enable it.
+
+In addition, just before the read-eval-print loop is started, Racket
+runs racket/interactive and GRacket runs racket/gui/interactive, unless
+a different interactive file is specified in the the installation’s
+"config.rktd" file found in (find-config-dir), or the file
+"interactive.rkt" is found in (find-system-path 'addon-dir). If the
+-q/--no-init-file flag is specified on the command line, then no
+interactive file is run.
 
 Finally, before Racket or GRacket exits, it calls the procedure that is
 the current value of executable-yield-handler in the main thread, unless
 the -V/--no-yield command-line flag is specified. Requiring
 racket/gui/base sets this parameter call (racket 'yield).
 
+Changed in version 6.7: Run racket/interactive file rather than directly
+running (find-system-path 'init-file). Changed in version 6.90.0.30: Run
+a read-eval-print loop by using racket/repl or racket/gui/base instead
+of racket/base or racket/gui/init.
+
 2. Exit Status
 
 The default exit status for a Racket or GRacket process is non-zero if
 an error occurs during a command-line eval (via -e, etc.), load (via -f,
--r, etc.), or require (via --l, -t, etc.), but only when no
-read-eval-print loop is started. Otherwise, the default exit status is
-0.
+-r, etc.), or require (via -l, -t, etc.)—or, more generally, if the
+abort handler of the prompt surrounding those evalutions is called—but
+only when no read-eval-print loop is started. Otherwise, the default
+exit status is 0.
 
 In all cases, a call to exit (when the default exit handler is in place)
 can end the process with a specific status value.
 
 3. Init Libraries
 
- (require racket/init) package: base ~
+ (require racket/init) package: base ~ ~
 
 The racket/init library is the default start-up library for Racket. It
 re-exports the racket, racket/enter and racket/help libraries, and it
 sets current-print to use pretty-print.
 
- (require racket/gui/init) package: gui-lib ~
+ (require racket/interactive) package: base ~ ~
 
-The racket/gui/init library is the default start-up library for GRacket.
-It re-exports the racket/init and racket/gui/base libraries, and it sets
-current-load to use text-editor-load-handler.
+The racket/interactive is the default start up library when the REPL
+begins. It is not run if the -q/--no-init-file is specified. The
+interactive file can be changed by modifying 'interactive-file in the
+"config.rktd" file found in (find-config-dir). Alternative, if the file
+"interactive.rkt" exists in (find-system-path 'addon-dir) it is run
+rather than the installation wide interactive module.
 
- (require racket/language-info) package: base ~
+The default interactive module starts xrepl and runs the
+(find-system-path 'init-file) file in the users home directory. A
+different interactive file can keep this behavior by requiring
+racket/interactive.
+
+Added in version 6.7.
+
+ (require racket/language-info) package: base ~ ~
 
 The racket/language-info library provides a get-info function that takes
 any value and returns another function; the returned function takes a
@@ -104,7 +128,7 @@ The vector '#(racket/language-info get-info #f) is suitable for
 attaching to a module as its language info to get the same language
 information as the racket/base language.
 
- (require racket/runtime-config) package: base ~
+ (require racket/runtime-config) package: base ~ ~
 
 The racket/runtime-config library provides a configure function that
 takes any value and sets print-as-expression to #t.
@@ -149,8 +173,9 @@ flags:
     non-flag arguments.
 
   * -k >n< >m< >p< : Loads code embedded in the executable from file
-    position >n< to >m< and from >m< to >p<. (On Mac OS X, >n<, >m<, and
-    >p< are relative to a __PLTSCHEME segment in the executable.) The
+    position >n< to >m< and from >m< to >p<. (On Mac OS, >n<, >m<, and
+    >p< are relative to a __PLTSCHEME segment in the executable. On
+    Windows, they are relative to a resource of type 257 and ID 1.) The
     first range is loaded in every new place, and any modules declared
     in that range are considered predefined in the sense of
     module-predefined?. This option is normally embedded in a
@@ -183,7 +208,7 @@ flags:
 
   * -v or --version : Shows (banner).
 
-  * -K or --back : GRacket, Mac OS X only; leave application in the
+  * -K or --back : GRacket, Mac OS only; leave application in the
     background.
 
   * -V --no-yield : Skips final executable-yield-handler action, which
@@ -193,7 +218,7 @@ flags:
 * Configuration options:
 
   * -c or --no-compiled : Disables loading of compiled byte-code ".zo"
-    files, by initializing current-compiled-file-paths to null. Use
+    files, by initializing use-compiled-file-paths to null. Use
     judiciously: this effectively ignores the content of all "compiled"
     subdirectories, so that any used modules are compiled on the
     fly—even racket/base and its dependencies—which leads to
@@ -223,11 +248,6 @@ flags:
     -S/--dir flag is supplied multiple times, the search order is as
     supplied.
 
-  * -R >paths< or --compiled >paths< : Sets the initial value of the
-    current-compiled-file-roots parameter, overriding any
-    PLTCOMPILEDROOTS setting. The >paths< argument is parsed in the same
-    way as PLTCOMPILEDROOTS (see current-compiled-file-roots).
-
   * -G >dir< or --config >dir< : Sets the directory that is returned by
     (find-system-path 'config-dir).
 
@@ -238,6 +258,22 @@ flags:
     collections, C libraries, etc. by initializing the
     use-user-specific-search-paths parameter to #f.
 
+  * -A >dir< or --addon >dir< : Sets the directory that is returned by
+    (find-system-path 'addon-dir).
+
+  * -R >paths< or --compiled >paths< : Sets the initial value of the
+    current-compiled-file-roots parameter, overriding any
+    PLTCOMPILEDROOTS setting. The >paths< argument is parsed in the same
+    way as PLTCOMPILEDROOTS (see current-compiled-file-roots).
+
+  * -C or --cross : Select cross-platform build mode, causing
+    (system-type 'cross) to report 'force, and sets the current
+    configuration of (find-system-path 'config-dir) and
+    (find-system-path 'collects-dir) to be the results of
+    (find-system-path 'host-config-dir) and (find-system-path
+    'host-collects-dir), respectively. If -C or --cross is provided
+    multiple times, only the first instance has an effect.
+
   * -N >file< or --name >file< : sets the name of the executable as
     reported by (find-system-path 'run-file) to >file<.
 
@@ -247,6 +283,9 @@ flags:
 
   * -j or --no-jit : Disables the native-code just-in-time compiler by
     setting the eval-jit-enabled parameter to #f.
+
+  * -M or --compile-any : Enables machine-independent bytecode by
+    setting the current-compile-target-machine parameter to #f.
 
   * -d or --no-delay : Disables on-demand parsing of compiled code and
     syntax objects by setting the read-on-demand-source parameter to #f.
@@ -259,6 +298,11 @@ flags:
     events to the original error port. The possible >level< values are
     the same as for the PLTSTDERR environment variable. See [missing]
     for more information.
+
+  * -O >levels< or --stdout >levels< : Sets the logging level for
+    writing events to the original output port. The possible >level<
+    values are the same as for the PLTSTDOUT environment variable. See
+    [missing] for more information.
 
   * -L >levels< or --syslog >levels< : Sets the logging level for
     writing events to the system log. The possible >level< values are
@@ -301,8 +345,8 @@ the insertion of -u/--require-script):
   treated as filenames and sent to the existing GRacket instance via the
   application file handler (see application-file-handler).
 
-Similarly, on Mac OS X, a leading switch starting with -psn_ is treated
-as a special configuration option. It indicates that Finder started the
+Similarly, on Mac OS, a leading switch starting with -psn_ is treated as
+a special configuration option. It indicates that Finder started the
 application, so the current input, output, and error output are
 redirected to a GUI window.
 
@@ -324,6 +368,9 @@ the collapsed set.
 
 Extra arguments following the last option are available from the
 current-command-line-arguments parameter.
+
+Changed in version 6.90.0.17: Added -O/--stdout. Changed in version
+7.1.0.5: Added -M/--compile-any.
 
 5. Language Run-Time Configuration
 

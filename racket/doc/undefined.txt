@@ -1,6 +1,6 @@
 Undefined
 
- (require racket/undefined) package: base ~
+ (require racket/undefined) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/undefined library, not racket/base or racket.
@@ -13,6 +13,6 @@ The undefined value is always eq? to itself.
 
 Added in version 6.0.0.6 of package base.
 
-undefined : any/c ~
+undefined : any/c ~ ~
 
 The “undefined” constant.

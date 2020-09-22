@@ -2,7 +2,7 @@ Classes and Objects
 
 +[missing] in [missing] introduces classes and objects.
 
- (require racket/class) package: base ~
+ (require racket/class) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/class
 and racket libraries, but not racket/base.
@@ -134,16 +134,13 @@ specify inconsistent derivation requirements, the exn:fail:object
 exception is raised.
 
 Examples:
+
   (define file-interface<%>
     (interface () open close read-byte write-byte))
-
-
   (define directory-interface<%>
     (interface (file-interface<%>)
       [file-list (->m (listof (is-a?/c file-interface<%>)))]
       parent-directory))
-
-
 
                                         *interface**
 (interface* (super-interface-expr ...) ~
@@ -167,17 +164,16 @@ information about fields is accessible to the structure type property’s
 guard, if any).
 
 Example:
-  (define i<%> (interface* () ([prop:custom-write ~
+
+  (define i<%> (interface* () ([prop:custom-write ~ ~
                                 (lambda (obj port mode) (void))])
                  method1 method2 method3))
-
-
 
 2. Creating Classes
 
 +[missing] in [missing] introduces classes and objects.
 
-object% : class? ~
+object% : class? ~ ~
 
 A built-in class that has no methods fields, implements only its own
 interface (class->interface object%), and is transparent (i.e,. its
@@ -305,14 +301,13 @@ Like class*, but omits the interface-exprs, for the case that none are
 needed.
 
 Example:
+
   (define book-class%
     (class object%
       (field (pages 5))
       (define/public (letters)
         (* pages 500))
       (super-new)))
-
-
 
 this
 
@@ -321,20 +316,17 @@ object being initialized or whose method was called). Use outside the
 body of a class* form is a syntax error.
 
 Examples:
+
   (define (describe obj)
     (printf "Hello ~a\n" obj))
-
-
   (define table%
     (class object%
       (define/public (describe-self)
         (describe this))
       (super-new)))
-
-
+   
   > (send (new table%) describe-self)
   Hello #(struct:object:table% ...)
-
 
 this%
 
@@ -343,14 +335,13 @@ Within a class* form, this% refers to the class of the current object
 outside the body of a class* form is a syntax error.
 
 Examples:
+
   (define account%
     (class object%
       (super-new)
       (init-field balance)
       (define/public (add n)
         (new this% [balance (+ n balance)]))))
-
-
   (define savings%
     (class account%
       (super-new)
@@ -358,14 +349,12 @@ Examples:
       (define interest 0.04)
       (define/public (add-interest)
         (send this add (* interest balance)))))
-
-
+   
   > (let* ([acct (new savings% [balance 500])]
            [acct (send acct add 500)]
            [acct (send acct add-interest)])
-      (printf "Current balance: ~a\n" (get-field balance acct))) ~
+      (printf "Current balance: ~a\n" (get-field balance acct))) ~ ~
   Current balance: 1040.0
-
 
                                         *inspect*
 (inspect inspector-expr) ~
@@ -379,6 +368,7 @@ See class* and Initialization Variables; use outside the body of a
 class* form is a syntax error.
 
 Example:
+
   > (class object%
       (super-new)
       (init turnip
@@ -394,6 +384,7 @@ See class*, Initialization Variables, and Fields; use outside the body
 of a class* form is a syntax error.
 
 Example:
+
   > (class object%
       (super-new)
       (init-field turkey
@@ -409,6 +400,7 @@ See class* and Fields; use outside the body of a class* form is a syntax
 error.
 
 Example:
+
   > (class object%
       (super-new)
       (field [minestrone 'ready]
@@ -422,13 +414,13 @@ See class* and Fields; use outside the body of a class* form is a syntax
 error.
 
 Examples:
+
   (define cookbook%
     (class object%
       (super-new)
       (field [recipes '(caldo-verde oyakodon eggs-benedict)]
              [pages 389])))
-
-
+   
   > (class cookbook%
       (super-new)
       (inherit-field recipes
@@ -443,13 +435,13 @@ See class* and Initialization Variables; use outside the body of a
 class* form is a syntax error.
 
 Examples:
+
   (define fruit-basket%
     (class object%
       (super-new)
       (init-rest fruits)
       (displayln fruits)))
-
-
+   
   > (make-object fruit-basket% 'kiwi 'lychee 'melon)
   (kiwi lychee melon)
   (object:fruit-basket% ...)
@@ -461,14 +453,14 @@ See class* and Method Definitions; use outside the body of a class* form
 is a syntax error.
 
 Examples:
+
   (define jumper%
     (class object%
       (super-new)
       (define (skip) 'skip)
       (define (hop) 'hop)
       (public skip [hop jump])))
-
-
+   
   > (send (new jumper%) skip)
   'skip
   > (send (new jumper%) jump)
@@ -481,14 +473,14 @@ See class* and Method Definitions; use outside the body of a class* form
 is a syntax error.
 
 Examples:
+
   (define runner%
     (class object%
       (super-new)
       (define (run) 'run)
       (define (trot) 'trot)
       (pubment run [trot jog])))
-
-
+   
   > (send (new runner%) run)
   'run
   > (send (new runner%) jog)
@@ -501,15 +493,15 @@ See class* and Method Definitions; use outside the body of a class* form
 is a syntax error.
 
 Examples:
+
   (define point%
     (class object%
       (super-new)
       (init-field [x 0] [y 0])
-      (define (get-x) x)
+       (define (get-x) x)
       (define (do-get-y) y)
       (public-final get-x [do-get-y get-y])))
-
-
+   
   > (send (new point% [x 1] [y 3]) get-y)
   3
   > (class point%
@@ -517,8 +509,8 @@ Examples:
       (define (get-x) 3.14)
       (override get-x))
   class*: cannot override or augment final method
-    method name: get-x ~
-    class name: eval:25:0 ~
+    method name: get-x ~ ~
+    class name: eval:25:0 ~ ~
 
                                         *override*
 (override maybe-renamed ...) ~
@@ -527,13 +519,13 @@ See class* and Method Definitions; use outside the body of a class* form
 is a syntax error.
 
 Examples:
+
   (define sheep%
     (class object%
       (super-new)
       (define/public (bleat)
         (displayln "baaaaaaaaah"))))
-
-
+   
   (define confused-sheep%
     (class sheep%
       (super-new)
@@ -541,15 +533,12 @@ Examples:
         (super bleat)
         (displayln "???"))
       (override bleat)))
-
-
+   
   > (send (new sheep%) bleat)
   baaaaaaaaah
-
   > (send (new confused-sheep%) bleat)
   baaaaaaaaah
   ???
-
 
                                         *overment*
 (overment maybe-renamed ...) ~
@@ -558,13 +547,13 @@ See class* and Method Definitions; use outside the body of a class* form
 is a syntax error.
 
 Examples:
+
   (define turkey%
     (class object%
       (super-new)
       (define/public (gobble)
         (displayln "gobble gobble"))))
-
-
+   
   (define extra-turkey%
     (class turkey%
       (super-new)
@@ -573,24 +562,20 @@ Examples:
         (displayln "gobble gobble gobble")
         (inner (void) gobble))
       (overment gobble)))
-
-
+   
   (define cyborg-turkey%
     (class extra-turkey%
       (super-new)
       (define/augment (gobble)
         (displayln "110011111011111100010110001011011001100101"))))
-
-
+   
   > (send (new extra-turkey%) gobble)
   gobble gobble
   gobble gobble gobble
-
   > (send (new cyborg-turkey%) gobble)
   gobble gobble
   gobble gobble gobble
   110011111011111100010110001011011001100101
-
 
                                         *override-final*
 (override-final maybe-renamed ...) ~
@@ -599,13 +584,13 @@ See class* and Method Definitions; use outside the body of a class* form
 is a syntax error.
 
 Examples:
+
   (define meeper%
     (class object%
       (super-new)
       (define/public (meep)
         (displayln "meep"))))
-
-
+   
   (define final-meeper%
     (class meeper%
       (super-new)
@@ -613,15 +598,12 @@ Examples:
         (super meep)
         (displayln "This meeping ends with me"))
       (override-final meep)))
-
-
+   
   > (send (new meeper%) meep)
   meep
-
   > (send (new final-meeper%) meep)
   meep
   This meeping ends with me
-
 
                                         *augment*
 (augment maybe-renamed ...) ~
@@ -630,29 +612,26 @@ See class* and Method Definitions; use outside the body of a class* form
 is a syntax error.
 
 Examples:
+
   (define buzzer%
     (class object%
       (super-new)
       (define/pubment (buzz)
         (displayln "bzzzt")
         (inner (void) buzz))))
-
-
+   
   (define loud-buzzer%
     (class buzzer%
       (super-new)
       (define (buzz)
         (displayln "BZZZZZZZZZT"))
       (augment buzz)))
-
-
+   
   > (send (new buzzer%) buzz)
   bzzzt
-
   > (send (new loud-buzzer%) buzz)
   bzzzt
   BZZZZZZZZZT
-
 
                                         *augride*
 (augride maybe-renamed ...) ~
@@ -673,6 +652,7 @@ See class* and Method Definitions; use outside the body of a class* form
 is a syntax error.
 
 Examples:
+
   (define light%
     (class object%
       (super-new)
@@ -681,14 +661,12 @@ Examples:
       (private toggle)
       (define (flick) (toggle))
       (public flick)))
-
-
+   
   > (send (new light%) toggle)
   send: no such method
-    method name: toggle ~
-    class name: light% ~
+    method name: toggle ~ ~
+    class name: light% ~ ~
   > (send (new light%) flick)
-
 
                                         *abstract*
 (abstract id ...) ~
@@ -697,6 +675,7 @@ See class* and Method Definitions; use outside the body of a class* form
 is a syntax error.
 
 Examples:
+
   (define train%
     (class object%
       (super-new)
@@ -704,24 +683,21 @@ Examples:
       (init-field [position 0])
       (define/public (move)
         (new this% [position (+ position (get-speed))]))))
-
-
+   
   (define acela%
     (class train%
       (super-new)
       (define/override (get-speed) 241)))
-
-
+   
   (define talgo-350%
     (class train%
       (super-new)
       (define/override (get-speed) 330)))
-
-
+   
   > (new train%)
   instantiate: cannot instantiate class with abstract methods
-    class: #<class:train%> ~
-    abstract methods: ~
+    class: #<class:train%> ~ ~
+    abstract methods: ~ ~
      get-speed
   > (send (new acela%) move)
   (object:acela% ...)
@@ -733,13 +709,13 @@ See class* and Inherited and Superclass Methods; use outside the body of
 a class* form is a syntax error.
 
 Examples:
+
   (define alarm%
     (class object%
       (super-new)
       (define/public (alarm)
         (displayln "beeeeeeeep"))))
-
-
+   
   (define car-alarm%
     (class alarm%
       (super-new)
@@ -747,8 +723,7 @@ Examples:
       (inherit alarm)
       (when (< proximity 10)
         (alarm))))
-
-
+   
   > (new car-alarm% [proximity 5])
   beeeeeeeep
   (object:car-alarm% ...)
@@ -1244,6 +1219,7 @@ define-local-member-name declaration generates a distinct hidden name
 procedure does not expose hidden names.
 
 Examples:
+
   (define-values (r o)
     (let ()
       (define-local-member-name m)
@@ -1254,14 +1230,13 @@ Examples:
    
       (values (send o m)
               o)))
-
-
+   
   > r
   10
   > (send o m)
   send: no such method
-    method name: m ~
-    class name: c% ~
+    method name: m ~ ~
+    class name: c% ~ ~
 
                                         *define-member-name*
 (define-member-name id key-expr) ~
@@ -1284,43 +1259,43 @@ define-local-member-name.
 
                                         *member-name-key?*
 (member-name-key? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t for values produced by member-name-key and
 generate-member-key, #f otherwise.
 
-                                        *member-name-key*
+                                        *member-name-key=?*
 (member-name-key=? a-key b-key) -> boolean? ~
-  a-key : member-name-key? ~
-  b-key : member-name-key? ~
+  a-key : member-name-key? ~ ~
+  b-key : member-name-key? ~ ~
 
 Produces #t if member-name keys a-key and b-key represent the same
 external name, #f otherwise.
 
                                         *member-name-key-hash-code*
 (member-name-key-hash-code a-key) -> integer? ~
-  a-key : member-name-key? ~
+  a-key : member-name-key? ~ ~
 
 Produces an integer hash code consistent with member-name-key=?
 comparisons, analogous to equal-hash-code.
 
 Examples:
+
   (define (make-c% key)
     (define-member-name m key)
     (class object%
       (define/public (m) 10)
       (super-new)))
-
-
+   
   > (send (new (make-c% (member-name-key m))) m)
   10
   > (send (new (make-c% (member-name-key p))) m)
   send: no such method
-    method name: m ~
-    class name: eval:57:0 ~
+    method name: m ~ ~
+    class name: make-c% ~ ~
   > (send (new (make-c% (member-name-key p))) p)
   10
-
+   
   (define (fresh-c%)
     (let ([key (generate-member-key)])
       (values (make-c% key) key)))
@@ -1329,8 +1304,8 @@ Examples:
    
   > (send (new fc%) m)
   send: no such method
-    method name: m ~
-    class name: eval:57:0 ~
+    method name: m ~ ~
+    class name: make-c% ~ ~
   > (let ()
       (define-member-name p key)
       (send (new fc%) p))
@@ -1381,8 +1356,8 @@ objects in C++).
 
                                         *make-object*
 (make-object class init-v ...) -> object? ~
-  class : class? ~
-  init-v : any/c ~
+  class : class? ~ ~
+  init-v : any/c ~ ~
 
 Creates an instance of class. The init-vs are passed as initialization
 arguments, bound to the initialization variables of class for the newly
@@ -1480,11 +1455,11 @@ like keyword-apply.
 (dynamic-send obj                     ~
               method-name            
               v ...                  
-              #:<kw> kw-arg ...) -> any ~
-  obj : object? ~
-  method-name : symbol? ~
-  v : any/c ~
-  kw-arg : any/c ~
+              #:<kw> kw-arg ...) -> any ~ ~
+  obj : object? ~ ~
+  method-name : symbol? ~ ~
+  v : any/c ~ ~
+  kw-arg : any/c ~ ~
 
 Calls the method on obj whose name matches method-name, passing along
 all given vs and kw-args.
@@ -1527,6 +1502,7 @@ send.
 This is the functional analogue of send*.
 
 Examples:
+
   (define point%
     (class object%
       (super-new)
@@ -1535,8 +1511,7 @@ Examples:
         (new this% [x (+ x dx)]))
       (define/public (move-y dy)
         (new this% [y (+ y dy)]))))
-
-
+   
   > (send+ (new point%)
            (move-x 5)
            (move-y 7)
@@ -1582,8 +1557,8 @@ is raised.
 
                                         *dynamic-get-field*
 (dynamic-get-field field-name obj) -> any/c ~
-  field-name : symbol? ~
-  obj : object? ~
+  field-name : symbol? ~ ~
+  obj : object? ~ ~
 
 Extracts the field from obj with the (external) name that matches
 field-name. If the object has no field matching field-name, the
@@ -1601,9 +1576,9 @@ is raised.
 
                                         *dynamic-set-field!*
 (dynamic-set-field! field-name obj v) -> void? ~
-  field-name : symbol? ~
-  obj : object? ~
-  v : any/c ~
+  field-name : symbol? ~ ~
+  obj : object? ~ ~
+  v : any/c ~ ~
 
 Sets the field from obj with the (external) name that matches field-name
 to v. If the object has no field matching field-name, the
@@ -1676,8 +1651,8 @@ exception is raised.
 
                                         *make-generic*
 (make-generic type method-name) -> generic? ~
-  type : (or/c class? interface?) ~
-  method-name : symbol? ~
+  type : (or/c class? interface?) ~ ~
+  method-name : symbol? ~ ~
 
 Like the generic form, but as a procedure that accepts a symbolic method
 name.
@@ -1704,7 +1679,7 @@ with both sets of interface-exprs.
 
 6. Traits
 
- (require racket/trait) package: base ~
+ (require racket/trait) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/trait
 library, not racket/base or racket.
@@ -1755,13 +1730,13 @@ is limited to the trait form.
 
                                         *trait?*
 (trait? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a trait, #f otherwise.
 
                                         *trait->mixin*
 (trait->mixin tr) -> (class? . -> . class?) ~
-  tr : trait? ~
+  tr : trait? ~ ~
 
 Converts a trait to a mixin, which can be applied to a class to produce
 a new class. An expression of the form
@@ -1782,7 +1757,7 @@ traits before converting to a mixin.
 
                                         *trait-sum*
 (trait-sum tr ...+) -> trait? ~
-  tr : trait? ~
+  tr : trait? ~ ~
 
 Produces a trait that combines all of the methods of the given trs. For
 example,
@@ -1883,8 +1858,8 @@ otherwise the exn:fail:contract exception is raised.
 (class/c maybe-opaque member-spec ...) ~
  
 maybe-opaque = 
-             | #:opaque ~
-             | #:opaque #:ignore-local-member-names ~
+             | #:opaque ~ ~
+             | #:opaque #:ignore-local-member-names ~ ~
                 
  member-spec = method-spec
              | (field field-spec ...)
@@ -1948,33 +1923,33 @@ The external contracts are as follows:
   only that the method is present in the class.
 
   Examples:
+
     (define woody%
       (class object%
         (define/public (draw who)
           (format "reach for the sky, ~a" who))
         (super-new)))
-
-
-    > (define/contract woody+c%
-        (class/c [draw (->m symbol? string?)])
-        woody%)
-
+     
+    (define/contract woody+c%
+      (class/c [draw (->m symbol? string?)])
+      woody%)
+     
     > (send (new woody%) draw #f)
     "reach for the sky, #f"
     > (send (new woody+c%) draw 'zurg)
     "reach for the sky, zurg"
     > (send (new woody+c%) draw #f)
     draw: contract violation
-      expected: symbol? ~
-      given: #f ~
-      in: the 1st argument of ~
+      expected: symbol? ~ ~
+      given: #f ~ ~
+      in: the 1st argument of ~ ~
           the draw method in
           (class/c (draw (->m symbol? string?)))
-      contract from: (definition woody+c%) ~
-      contract on: woody+c% ~
-      blaming: top-level ~
+      contract from: (definition woody+c%) ~ ~
+      contract on: woody+c% ~ ~
+      blaming: top-level ~ ~
        (assuming the contract is correct)
-      at: eval:68.0 ~
+      at: eval:68.0 ~ ~
 
 * An external field contract, tagged with field, describes the behavior
   of the value contained in that field when accessed from outside the
@@ -1986,21 +1961,20 @@ The external contracts are as follows:
   contract any/c (but it is checked more efficiently).
 
   Examples:
+
     (define woody/hat%
       (class woody%
         (field [hat-location 'uninitialized])
         (define/public (lose-hat) (set! hat-location 'lost))
         (define/public (find-hat) (set! hat-location 'on-head))
         (super-new)))
-
-
-    > (define/contract woody/hat+c%
-        (class/c [draw (->m symbol? string?)]
-                 [lose-hat (->m void?)]
-                 [find-hat (->m void?)]
-                 (field [hat-location (or/c 'on-head 'lost)]))
-        woody/hat%)
-
+    (define/contract woody/hat+c%
+      (class/c [draw (->m symbol? string?)]
+               [lose-hat (->m void?)]
+               [find-hat (->m void?)]
+               (field [hat-location (or/c 'on-head 'lost)]))
+      woody/hat%)
+     
     > (get-field hat-location (new woody/hat%))
     'uninitialized
     > (let ([woody (new woody/hat+c%)])
@@ -2008,36 +1982,36 @@ The external contracts are as follows:
         (get-field hat-location woody))
     'lost
     > (get-field hat-location (new woody/hat+c%))
-    woody/hat+c%: broke its contract
-      promised: (or/c (quote on-head) (quote lost)) ~
-      produced: 'uninitialized ~
-      in: the hat-location field in ~
+    woody/hat+c%: broke its own contract
+      promised: (or/c (quote on-head) (quote lost)) ~ ~
+      produced: 'uninitialized ~ ~
+      in: the hat-location field in ~ ~
           (class/c
            (draw (->m symbol? string?))
            (lose-hat (->m void?))
            (find-hat (->m void?))
            (field (hat-location
                    (or/c 'on-head 'lost))))
-      contract from: (definition woody/hat+c%) ~
-      blaming: (definition woody/hat+c%) ~
+      contract from: (definition woody/hat+c%) ~ ~
+      blaming: (definition woody/hat+c%) ~ ~
        (assuming the contract is correct)
-      at: eval:73.0 ~
+      at: eval:73.0 ~ ~
     > (let ([woody (new woody/hat+c%)])
         (set-field! hat-location woody 'under-the-dresser))
     woody/hat+c%: contract violation
-      expected: (or/c (quote on-head) (quote lost)) ~
-      given: 'under-the-dresser ~
-      in: the hat-location field in ~
+      expected: (or/c (quote on-head) (quote lost)) ~ ~
+      given: 'under-the-dresser ~ ~
+      in: the hat-location field in ~ ~
           (class/c
            (draw (->m symbol? string?))
            (lose-hat (->m void?))
            (find-hat (->m void?))
            (field (hat-location
                    (or/c 'on-head 'lost))))
-      contract from: (definition woody/hat+c%) ~
-      blaming: top-level ~
+      contract from: (definition woody/hat+c%) ~ ~
+      blaming: top-level ~ ~
        (assuming the contract is correct)
-      at: eval:73.0 ~
+      at: eval:73.0 ~ ~
 
 * An initialization argument contract, tagged with init, describes the
   expected behavior of the value paired with that name during class
@@ -2051,6 +2025,7 @@ The external contracts are as follows:
   efficiently).
 
   Examples:
+
     (define woody/init-hat%
       (class woody%
         (init init-hat-location)
@@ -2058,16 +2033,14 @@ The external contracts are as follows:
         (define/public (lose-hat) (set! hat-location 'lost))
         (define/public (find-hat) (set! hat-location 'on-head))
         (super-new)))
-
-
-    > (define/contract woody/init-hat+c%
-        (class/c [draw (->m symbol? string?)]
-                 [lose-hat (->m void?)]
-                 [find-hat (->m void?)]
-                 (init [init-hat-location (or/c 'on-head 'lost)])
-                 (field [hat-location (or/c 'on-head 'lost)]))
-        woody/init-hat%)
-
+    (define/contract woody/init-hat+c%
+      (class/c [draw (->m symbol? string?)]
+               [lose-hat (->m void?)]
+               [find-hat (->m void?)]
+               (init [init-hat-location (or/c 'on-head 'lost)])
+               (field [hat-location (or/c 'on-head 'lost)]))
+      woody/init-hat%)
+     
     > (get-field hat-location
                  (new woody/init-hat+c%
                       [init-hat-location 'lost]))
@@ -2076,9 +2049,9 @@ The external contracts are as follows:
                  (new woody/init-hat+c%
                       [init-hat-location 'slinkys-mouth]))
     woody/init-hat+c%: contract violation
-      expected: (or/c (quote on-head) (quote lost)) ~
-      given: 'slinkys-mouth ~
-      in: the init-hat-location init argument in ~
+      expected: (or/c (quote on-head) (quote lost)) ~ ~
+      given: 'slinkys-mouth ~ ~
+      in: the init-hat-location init argument in ~ ~
           (class/c
            (draw (->m symbol? string?))
            (lose-hat (->m void?))
@@ -2087,11 +2060,11 @@ The external contracts are as follows:
                   (or/c 'on-head 'lost)))
            (field (hat-location
                    (or/c 'on-head 'lost))))
-      contract from: ~
+      contract from: ~ ~
           (definition woody/init-hat+c%)
-      blaming: top-level ~
+      blaming: top-level ~ ~
        (assuming the contract is correct)
-      at: eval:79.0 ~
+      at: eval:79.0 ~ ~
 
 * The contracts listed in an init-field section are treated as if each
   contract appeared in an init section and a field section.
@@ -2111,31 +2084,33 @@ presence of the corresponding field or method.
   longer the entry point for dynamic dispatch.
 
   Examples:
+
     > (new (class woody+c%
              (inherit draw)
              (super-new)
-             (printf "woody sez: “~a”\n" (draw "evil dr porkchop")))) ~
+             (printf "woody sez: “~a”\n" (draw "evil dr porkchop")))) ~ ~
     woody sez: “reach for the sky, evil dr porkchop”
     (object:eval:82:0 ...)
-    > (define/contract woody+c-inherit%
-        (class/c (inherit [draw (->m symbol? string?)]))
-        woody+c%)
-
+     
+    (define/contract woody+c-inherit%
+      (class/c (inherit [draw (->m symbol? string?)]))
+      woody+c%)
+     
     > (new (class woody+c-inherit%
              (inherit draw)
-             (printf "woody sez: ~a\n" (draw "evil dr porkchop")))) ~
+             (printf "woody sez: ~a\n" (draw "evil dr porkchop")))) ~ ~
     draw: contract violation
-      expected: symbol? ~
-      given: "evil dr porkchop" ~
-      in: the 1st argument of ~
+      expected: symbol? ~ ~
+      given: "evil dr porkchop" ~ ~
+      in: the 1st argument of ~ ~
           the draw method in
           (class/c
            (inherit (draw (->m symbol? string?))))
-      contract from: (definition woody+c-inherit%) ~
-      contract on: woody+c-inherit% ~
-      blaming: top-level ~
+      contract from: (definition woody+c-inherit%) ~ ~
+      contract on: woody+c-inherit% ~ ~
+      blaming: top-level ~ ~
        (assuming the contract is correct)
-      at: eval:83.0 ~
+      at: eval:83.0 ~ ~
 
 * A method contract tagged with super describes the behavior of
   method-id when called by the super form in a subclass.  This contract
@@ -2148,17 +2123,18 @@ presence of the corresponding field or method.
   invoked.
 
   Examples:
-    > (define/contract woody2+c%
-        (class/c (super [draw (->m symbol? string?)]))
-        (class woody%
-          (define/override draw
-            (case-lambda
-              [(a) (super draw a)]
-              [(a b) (string-append (super draw a)
-                                    " and "
-                                    (super draw b))]))
-          (super-new)))
 
+    (define/contract woody2+c%
+      (class/c (super [draw (->m symbol? string?)]))
+      (class woody%
+        (define/override draw
+          (case-lambda
+            [(a) (super draw a)]
+            [(a b) (string-append (super draw a)
+                                  " and "
+                                  (super draw b))]))
+        (super-new)))
+     
     > (send (new woody2+c%) draw 'evil-dr-porkchop  'zurg)
     "reach for the sky, evil-dr-porkchop and reach for the sky, zurg"
     > (send (new woody2+c%) draw "evil dr porkchop" "zurg")
@@ -2187,39 +2163,39 @@ presence of the corresponding field or method.
   draw2.
 
   Examples:
-    > (define/contract woody2+override/c%
-        (class/c (override [draw (->m symbol? string?)]))
-        (class woody+c%
-          (inherit draw)
-          (define/public (draw2 a b)
-            (string-append (draw a)
-                           " and "
-                           (draw b)))
-          (super-new)))
 
+    (define/contract woody2+override/c%
+      (class/c (override [draw (->m symbol? string?)]))
+      (class woody+c%
+        (inherit draw)
+        (define/public (draw2 a b)
+          (string-append (draw a)
+                         " and "
+                         (draw b)))
+        (super-new)))
+     
     (define woody2+broken-draw
       (class woody2+override/c%
         (define/override (draw x)
           'not-a-string)
         (super-new)))
-
-
+     
     > (send (new woody2+broken-draw) draw2
             'evil-dr-porkchop
             'zurg)
-    draw: broke its contract
-      promised: string? ~
-      produced: 'not-a-string ~
-      in: the range of ~
+    draw: contract violation
+      expected: string? ~ ~
+      given: 'not-a-string ~ ~
+      in: the range of ~ ~
           the draw method in
           (class/c
            (override (draw (->m symbol? string?))))
-      contract from: ~
+      contract from: ~ ~
           (definition woody2+override/c%)
-      contract on: woody2+override/c% ~
-      blaming: top-level ~
+      contract on: woody2+override/c% ~ ~
+      blaming: top-level ~ ~
        (assuming the contract is correct)
-      at: eval:88.0 ~
+      at: eval:88.0 ~ ~
 
 * A method contract tagged with either augment or augride describes the
   behavior provided by the contracted class for method-id when called
@@ -2306,7 +2282,7 @@ its class had been wrapped with the equivalent class/c contract.
 
                                         *instanceof/c*
 (instanceof/c class-contract) -> contract? ~
-  class-contract : contract? ~
+  class-contract : contract? ~ ~
 
 Produces a contract for an object, where the object is an instance of a
 class that conforms to class-contract.
@@ -2316,10 +2292,10 @@ class that conforms to class-contract.
                   method-contracts     
                   field-names          
                   field-contracts) -> contract?
-  method-names : (listof symbol?) ~
-  method-contracts : (listof contract?) ~
-  field-names : (listof symbol?) ~
-  field-contracts : (listof contract?) ~
+  method-names : (listof symbol?) ~ ~
+  method-contracts : (listof contract?) ~ ~
+  field-names : (listof symbol?) ~ ~
+  field-contracts : (listof contract?) ~ ~
 
 Produces a contract for an object, similar to object/c but where the
 names and contracts for both methods and fields can be computed
@@ -2357,7 +2333,7 @@ respectively must have the same lengths.
                         | keyword dom-expr
                            
                    rest = 
-                        | #:rest rest-expr ~
+                        | #:rest rest-expr ~ ~
                            
 mandatory-dependent-dom = [id dom-expr]
                         | keyword [id dom-expr]
@@ -2366,17 +2342,17 @@ mandatory-dependent-dom = [id dom-expr]
                         | keyword [id dom-expr]
                            
          dependent-rest = 
-                        | #:rest id rest-expr ~
+                        | #:rest id rest-expr ~ ~
                            
                pre-cond = 
-                        | #:pre-cond boolean-expr ~
+                        | #:pre-cond boolean-expr ~ ~
                            
               dep-range = any
                         | [id range-expr] post-cond
                         | (values [id range-expr] ...) post-cond
                            
               post-cond = 
-                        | #:post-cond boolean-expr ~
+                        | #:post-cond boolean-expr ~ ~
 
 Produces a contract for an object.
 
@@ -2389,7 +2365,7 @@ method contracts for class/c, the implicit this argument is not part of
 the contract.  To allow for the use of this in dependent contracts, ->d
 contracts implicitly bind this to the object itself.
 
-mixin-contract : contract? ~
+mixin-contract : contract? ~ ~
 
 A function contract that recognizes mixins. It guarantees that the input
 to the function is a class and the result of the function is a subclass
@@ -2397,7 +2373,7 @@ of the input.
 
                                         *make-mixin-contract*
 (make-mixin-contract type ...) -> contract? ~
-  type : (or/c class? interface?) ~
+  type : (or/c class? interface?) ~ ~
 
 Produces a function contract that guarantees the input to the function
 is a class that implements/subclasses each type, and that the result of
@@ -2405,24 +2381,30 @@ the function is a subclass of the input.
 
                                         *is-a?/c*
 (is-a?/c type) -> flat-contract? ~
-  type : (or/c class? interface?) ~
+  type : (or/c class? interface?) ~ ~
 
 Accepts a class or interface and returns a flat contract that recognizes
 objects that instantiate the class/interface.
 
+See is-a?.
+
                                         *implementation?/c*
 (implementation?/c interface) -> flat-contract? ~
-  interface : interface? ~
+  interface : interface? ~ ~
 
 Returns a flat contract that recognizes classes that implement
 interface.
 
+See implementation?.
+
                                         *subclass?/c*
 (subclass?/c class) -> flat-contract? ~
-  class : class? ~
+  class : class? ~ ~
 
 Returns a flat contract that recognizes classes that are subclasses of
 class.
+
+See subclass?.
 
 8. Object Equality and Hashing
 
@@ -2435,7 +2417,7 @@ inspector) are equal? when their field values are equal?.
 To customize the way that a class instance is compared to other
 instances by equal?, implement the equal<%> interface.
 
-equal<%> : interface? ~
+equal<%> : interface? ~ ~
 
 The equal<%> interface includes three methods, which are analogous to
 the functions provided for a structure type with prop:equal+hash:
@@ -2472,7 +2454,7 @@ Example:
 
   #lang racket
    
-  ;; Case insensitive words: ~
+  ;; Case insensitive words: ~ ~
   (define ci-word%
     (class* object% (equal<%>)
    
@@ -2480,7 +2462,7 @@ Example:
       (init-field word)
       (super-new)
    
-      ;; We define equality to ignore case: ~
+      ;; We define equality to ignore case: ~ ~
       (define/public (equal-to? other recur)
         (string-ci=? word (get-field word other)))
    
@@ -2492,7 +2474,7 @@ Example:
       (define/public (equal-secondary-hash-code-of hash-code)
         (hash-code (string-downcase word)))))
    
-  ;; We can create a hash with a single word: ~
+  ;; We can create a hash with a single word: ~ ~
   (define h (make-hash))
   (hash-set! h (new ci-word% [word "inconceivable!"]) 'value)
    
@@ -2501,7 +2483,7 @@ Example:
   (hash-ref h (new ci-word% [word "inconceivable!"]))
   (hash-ref h (new ci-word% [word "INCONCEIVABLE!"]))
    
-  ;; Comparison fails if we use a non-ci-word%: ~
+  ;; Comparison fails if we use a non-ci-word%: ~ ~
   (hash-ref h "inconceivable!" 'i-dont-think-it-means-what-you-think-it-means)
 
 9. Object Serialization
@@ -2564,7 +2546,7 @@ instances of non-serializable subclasses.
 Like define-serializable-class*, but without interface expressions
 (analogous to class).
 
-externalizable<%> : interface? ~
+externalizable<%> : interface? ~ ~
 
 The externalizable<%> interface includes only the externalize and
 internalize methods. See define-serializable-class* for more
@@ -2576,7 +2558,7 @@ information.
 To customize the way that a class instance is printed by print, write
 and display, implement the printable<%> interface.
 
-printable<%> : interface? ~
+printable<%> : interface? ~ ~
 
 The printable<%> interface includes only the custom-print, custom-write,
 and custom-display methods. The custom-print method accepts two
@@ -2593,7 +2575,7 @@ trigger an escape from the call.
 See prop:custom-write for more information. The printable<%> interface
 is implemented with interface* and prop:custom-write.
 
-writable<%> : interface? ~
+writable<%> : interface? ~ ~
 
 Like printable<%>, but includes only the custom-write and custom-display
 methods. A print request is directed to custom-write.
@@ -2602,11 +2584,12 @@ methods. A print request is directed to custom-write.
 
                                         *object?*
 (object? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an object, #f otherwise.
 
 Examples:
+
   > (object? (new object%))
   #t
   > (object? object%)
@@ -2616,11 +2599,12 @@ Examples:
 
                                         *class?*
 (class? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a class, #f otherwise.
 
 Examples:
+
   > (class? object%)
   #t
   > (class? (class object% (super-new)))
@@ -2632,11 +2616,12 @@ Examples:
 
                                         *interface?*
 (interface? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an interface, #f otherwise.
 
 Examples:
+
   > (interface? (interface () empty cons first rest))
   #t
   > (interface? object%)
@@ -2646,18 +2631,17 @@ Examples:
 
                                         *generic?*
 (generic? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a generic, #f otherwise.
 
 Examples:
-  (define c%
-    (class object%
-      (super-new)
-      (define/public (m x)
-        (+ 3.14 x))))
 
-
+  > (define c%
+      (class object%
+        (super-new)
+        (define/public (m x)
+          (+ 3.14 x))))
   > (generic? (generic c% m))
   #t
   > (generic? c%)
@@ -2665,10 +2649,10 @@ Examples:
   > (generic? "borscht")
   #f
 
-                                        *object*
+                                        *object=?*
 (object=? a b) -> boolean? ~
-  a : object? ~
-  b : object? ~
+  a : object? ~ ~
+  b : object? ~ ~
 
 Determines whether a and b were returned from the same call to new or
 not. If the two objects have fields, this procedure determines whether
@@ -2678,14 +2662,10 @@ This procedure is similar in spirit to eq? but also works properly with
 contracts (and has a stronger guarantee).
 
 Examples:
-  (define obj-1 (new object%))
 
-
-  (define obj-2 (new object%))
-
-
+  > (define obj-1 (new object%))
+  > (define obj-2 (new object%))
   > (define/contract obj-3 (object/c) obj-1)
-
   > (object=? obj-1 obj-1)
   #t
   > (object=? obj-1 obj-2)
@@ -2699,36 +2679,44 @@ Examples:
   > (eq? obj-1 obj-3)
   #f
 
-                                        *object-or-false*
+                                        *object-or-false=?*
 (object-or-false=? a b) -> boolean? ~
-  a : (or/c object? #f) ~
-  b : (or/c object? #f) ~
+  a : (or/c object? #f) ~ ~
+  b : (or/c object? #f) ~ ~
 
 Like object=?, but accepts #f for either argument and returns #t if both
 arguments are #f.
 
 Examples:
+
   > (object-or-false=? #f (new object%))
-  object-or-false=?: undefined;
-   cannot reference undefined identifier
+  #f
   > (object-or-false=? (new object%) #f)
-  object-or-false=?: undefined;
-   cannot reference undefined identifier
+  #f
   > (object-or-false=? #f #f)
-  object-or-false=?: undefined;
-   cannot reference undefined identifier
+  #t
 
 Added in version 6.1.1.8 of package base.
 
+                                        *object=-hash-code*
+(object=-hash-code o) -> fixnum? ~
+  o : object? ~ ~
+
+Returns the hash code for o that corresponds to  the equality relation
+object=?.
+
+Added in version 7.1.0.6 of package base.
+
                                         *object->vector*
 (object->vector object [opaque-v]) -> vector? ~
-  object : object? ~
-  opaque-v : any/c = #f ~
+  object : object? ~ ~
+  opaque-v : any/c = #f ~ ~
 
 Returns a vector representing object that shows its inspectable fields,
 analogous to struct->vector.
 
 Examples:
+
   > (object->vector (new object%))
   '#(object:object% ...)
   > (object->vector (new (class object%
@@ -2738,44 +2726,43 @@ Examples:
 
                                         *class->interface*
 (class->interface class) -> interface? ~
-  class : class? ~
+  class : class? ~ ~
 
 Returns the interface implicitly defined by class.
 
 Example:
+
   > (class->interface object%)
   #<interface:object%>
 
                                         *object-interface*
 (object-interface object) -> interface? ~
-  object : object? ~
+  object : object? ~ ~
 
 Returns the interface implicitly defined by the class of object.
 
 Example:
+
   > (object-interface (new object%))
   #<interface:object%>
 
                                         *is-a?*
 (is-a? v type) -> boolean? ~
-  v : any/c ~
-  type : (or/c interface? class?) ~
+  v : any/c ~ ~
+  type : (or/c interface? class?) ~ ~
 
 Returns #t if v is an instance of a class type or a class that
 implements an interface type, #f otherwise.
 
 Examples:
-  (define point<%> (interface () get-x get-y))
 
-
-  (define 2d-point%
-    (class* object% (point<%>)
-      (super-new)
-      (field [x 0] [y 0])
-      (define/public (get-x) x)
-      (define/public (get-y) y)))
-
-
+  > (define point<%> (interface () get-x get-y))
+  > (define 2d-point%
+      (class* object% (point<%>)
+        (super-new)
+        (field [x 0] [y 0])
+        (define/public (get-x) x)
+        (define/public (get-y) y)))
   > (is-a? (new 2d-point%) 2d-point%)
   #t
   > (is-a? (new 2d-point%) point<%>)
@@ -2787,12 +2774,13 @@ Examples:
 
                                         *subclass?*
 (subclass? v cls) -> boolean? ~
-  v : any/c ~
-  cls : class? ~
+  v : any/c ~ ~
+  cls : class? ~ ~
 
 Returns #t if v is a class derived from (or equal to) cls, #f otherwise.
 
 Examples:
+
   > (subclass? (class object% (super-new)) object%)
   #t
   > (subclass? object% (class object% (super-new)))
@@ -2802,21 +2790,18 @@ Examples:
 
                                         *implementation?*
 (implementation? v intf) -> boolean? ~
-  v : any/c ~
-  intf : interface? ~
+  v : any/c ~ ~
+  intf : interface? ~ ~
 
 Returns #t if v is a class that implements intf, #f otherwise.
 
 Examples:
-  (define i<%> (interface () go))
 
-
-  (define c%
-    (class* object% (i<%>)
-      (super-new)
-      (define/public (go) 'go)))
-
-
+  > (define i<%> (interface () go))
+  > (define c%
+      (class* object% (i<%>)
+        (super-new)
+        (define/public (go) 'go)))
   > (implementation? c% i<%>)
   #t
   > (implementation? object% i<%>)
@@ -2824,18 +2809,15 @@ Examples:
 
                                         *interface-extension?*
 (interface-extension? v intf) -> boolean? ~
-  v : any/c ~
-  intf : interface? ~
+  v : any/c ~ ~
+  intf : interface? ~ ~
 
 Returns #t if v is an interface that extends intf, #f otherwise.
 
 Examples:
-  (define point<%> (interface () get-x get-y))
 
-
-  (define colored-point<%> (interface (point<%>) color))
-
-
+  > (define point<%> (interface () get-x get-y))
+  > (define colored-point<%> (interface (point<%>) color))
   > (interface-extension? colored-point<%> point<%>)
   #t
   > (interface-extension? point<%> colored-point<%>)
@@ -2845,16 +2827,15 @@ Examples:
 
                                         *method-in-interface?*
 (method-in-interface? sym intf) -> boolean? ~
-  sym : symbol? ~
-  intf : interface? ~
+  sym : symbol? ~ ~
+  intf : interface? ~ ~
 
 Returns #t if intf (or any of its ancestor interfaces) includes a member
 with the name sym, #f otherwise.
 
 Examples:
-  (define i<%> (interface () get-x get-y))
 
-
+  > (define i<%> (interface () get-x get-y))
   > (method-in-interface? 'get-x i<%>)
   #t
   > (method-in-interface? 'get-z i<%>)
@@ -2862,38 +2843,36 @@ Examples:
 
                                         *interface->method-names*
 (interface->method-names intf) -> (listof symbol?) ~
-  intf : interface? ~
+  intf : interface? ~ ~
 
 Returns a list of symbols for the method names in intf, including
 methods inherited from superinterfaces, but not including methods whose
 names are local (i.e., declared with define-local-member-name).
 
 Examples:
-  (define i<%> (interface () get-x get-y))
 
-
+  > (define i<%> (interface () get-x get-y))
   > (interface->method-names i<%>)
-  '(get-y get-x)
+  '(get-x get-y)
 
                                         *object-method-arity-includes?*
 (object-method-arity-includes? object      ~
                                sym        
                                cnt)   -> boolean?
-  object : object? ~
-  sym : symbol? ~
-  cnt : exact-nonnegative-integer? ~
+  object : object? ~ ~
+  sym : symbol? ~ ~
+  cnt : exact-nonnegative-integer? ~ ~
 
 Returns #t if object has a method named sym that accepts cnt arguments,
 #f otherwise.
 
 Examples:
-  (define c%
-    (class object%
-      (super-new)
-      (define/public (m x [y 0])
-        (+ x y))))
 
-
+  > (define c%
+      (class object%
+        (super-new)
+        (define/public (m x [y 0])
+          (+ x y))))
   > (object-method-arity-includes? (new c%) 'm 1)
   #t
   > (object-method-arity-includes? (new c%) 'm 2)
@@ -2905,7 +2884,7 @@ Examples:
 
                                         *field-names*
 (field-names object) -> (listof symbol?) ~
-  object : object? ~
+  object : object? ~ ~
 
 Returns a list of all of the names of the fields bound in object,
 including fields inherited from superinterfaces, but not including
@@ -2913,6 +2892,7 @@ fields whose names are local (i.e., declared with
 define-local-member-name).
 
 Examples:
+
   > (field-names (new object%))
   '()
   > (field-names (new (class object% (super-new) (field [x 0] [y 0]))))
@@ -2920,7 +2900,7 @@ Examples:
 
                                         *object-info*
 (object-info object) -> (or/c class? #f) boolean? ~
-  object : object? ~
+  object : object? ~ ~
 
 Returns two values, analogous to the return values of struct-info:
 
@@ -2939,7 +2919,7 @@ Returns two values, analogous to the return values of struct-info:
     (any/c exact-nonnegative-integer? any/c . -> . any/c)
     (or/c class? #f)
     boolean?
-  class : class? ~
+  class : class? ~ ~
 
 Returns seven values, analogous to the return values of
 struct-type-info:
@@ -2970,8 +2950,8 @@ struct-type-info:
   #t otherwise.
 
                                         *struct*
-(struct exn:fail:object exn:fail () ~ ~
-    #:extra-constructor-name make-exn:fail:object) ~
+(struct exn:fail:object exn:fail () ~ ~ ~
+    #:extra-constructor-name make-exn:fail:object) ~ ~
 
 Raised for class-related failures, such as attempting to call a method
 that is not supplied by an object.
@@ -2984,13 +2964,13 @@ that is not supplied by an object.
             unsealed-methods     
             inst-proc            
             member-proc)     -> class?
-  class : class? ~
-  key : symbol? ~
-  unsealed-inits : (listof symbol?) ~
-  unsealed-fields : (listof symbol?) ~
-  unsealed-methods : (listof symbol?) ~
-  inst-proc : (-> class? any) ~
-  member-proc : (-> class? (listof symbol?) any) ~
+  class : class? ~ ~
+  key : symbol? ~ ~
+  unsealed-inits : (listof symbol?) ~ ~
+  unsealed-fields : (listof symbol?) ~ ~
+  unsealed-methods : (listof symbol?) ~ ~
+  inst-proc : (-> class? any) ~ ~
+  member-proc : (-> class? (listof symbol?) any) ~ ~
 
 Adds a seal to a given class keyed with the symbol key. The given
 unsealed-inits, unsealed-fields, and unsealed-methods list corresponding
@@ -3008,9 +2988,9 @@ list of initialization argument, field, or method names.
 
                                         *class-unseal*
 (class-unseal class key wrong-key-proc) -> class? ~
-  class : class? ~
-  key : symbol? ~
-  wrong-key-proc : (-> class? any) ~
+  class : class? ~ ~
+  key : symbol? ~ ~
+  wrong-key-proc : (-> class? any) ~ ~
 
 Removes a seal on a class that has been previously sealed with the
 class-seal function and the given key.
@@ -3022,7 +3002,7 @@ the wrong-key-proc function is called with the class value.
 
 12. Surrogates
 
- (require racket/surrogate) package: base ~
+ (require racket/surrogate) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/surrogate library, not racket/base or racket.
@@ -3035,45 +3015,62 @@ surrogate, so an object can completely change its behavior merely by
 changing the surrogate.
 
                                         *surrogate*
-(surrogate method-spec ...) ~
+(surrogate use-wrapper-proc method-spec ...) ~
  
-method-spec = (method-id arg-spec ...)
-            | (override method-id arg-spec ...)
-            | (override-final method-id (lambda () default-expr)
-                              arg-spec ...)
-               
-   arg-spec = (id ...)
-            | id
-
-If neither override nor override-final is specified for a method-id,
-then override is assumed.
+use-wrapper-proc = #:use-wrapper-proc ~ ~
+                 | 
+                    
+     method-spec = (augment default-expr method-id arg-spec ...)
+                 | (override method-id arg-spec ...)
+                    
+        arg-spec = (id ...)
+                 | id
 
 The surrogate form produces four values: a host mixin (a procedure that
 accepts and returns a class), a host interface, a surrogate class, and a
 surrogate interface.
 
-The host mixin adds one additional field, surrogate, to its argument. It
-also adds a getter method, get-surrogate, and a setter method,
-set-surrogate, for changing the field. The set-surrogate method accepts
-instances of the class returned by the surrogate form or #f, and it
-updates the field with its argument; then, set-surrogate calls the
-on-disable-surrogate on the previous value of the field and
-on-enable-surrogate for the new value of the field. The get-surrogate
-method returns the current value of the field.
+If #:use-wrapper-proc does not appear, the host mixin adds a single
+private field to its argument. It also adds getter and setter methods
+get-surrogate and set-surrogate to get and set the value of the field.
+The set-surrogate method accepts instances of the class returned by the
+surrogate form or #f, and it updates the field with its argument; then,
+set-surrogate calls the on-disable-surrogate on the previous value of
+the field and on-enable-surrogate for the new value of the field. The
+get-surrogate method returns the current value of the field.
+
+If #:use-wrapper-proc does appear, the the host mixin adds and a second
+private field and its getter and setter methods
+get-surrogate-wrapper-proc and set-surrogate-wrapper-proc. The
+additional field holds a wrapper procedure whose contract is (-> (->
+any) (-> any) any), so the procedure is invoked with two thunks. The
+first thunk is a fallback that invokes the original object’s method,
+skipping the surrogate. The second thunk invokes the surrogate. The
+default wrapper procedure is
+
+  (λ (fallback-thunk surrogate-thunk)
+    (surrogate-thunk))
+
+That is, it simply defers to the method being invoked on the surrogate.
+Note that wrapper procedure can adjust the dynamic extent of calls to
+the surrogate by, for example, changing the values of parameters. The
+wrapper procedure  is also invoked when calling the on-disable-surrogate
+and on-enable-surrogate methods of the surrogate.
 
 The host mixin has a single overriding method for each method-id in the
-surrogate form. Each of these methods is defined with a case-lambda with
-one arm for each arg-spec. Each arm has the variables as arguments in
-the arg-spec. The body of each method tests the surrogate field. If it
-is #f, the method just returns the result of invoking the super or inner
-method. If the surrogate field is not #f, the corresponding method of
-the object in the field is invoked. This method receives the same
-arguments as the original method, plus two extras. The extra arguments
-come at the beginning of the argument list. The first is the original
-object. The second is a procedure that calls the super or inner method
-(i.e., the method of the class that is passed to the mixin or an
-extension, or the method in an overriding class), with the arguments
-that the procedure receives.
+surrogate form (even the ones specified with augment). Each of these
+methods is defined with a case-lambda with one arm for each arg-spec.
+Each arm has the variables as arguments in the arg-spec. The body of
+each method tests the private surrogate field. If the field value is #f,
+the method just returns the result of invoking the super or inner
+method. If the field value is not #f, the corresponding method of the
+object in the field is invoked. This method receives the same arguments
+as the original method, plus two extras. The extra arguments come at the
+beginning of the argument list. The first is the original object. The
+second is a procedure that calls the super or inner method (i.e., the
+method of the class that is passed to the mixin or an extension, or the
+method in an overriding class), with the arguments that the procedure
+receives.
 
 For example, the host-mixin for this surrogate:
 
@@ -3106,9 +3103,9 @@ In the example above, this is the m method in the surrogate class:
   (define/public (m original-object original-super x y z)
     (original-super x y z))
 
-Note: if you derive a class from the surrogate class, do not both call
-the super argument and the super method of the surrogate class itself.
-Only call one or the other, since the default methods call the super
+If you derive a class from the surrogate class, do not both call the
+super argument and the super method of the surrogate class itself. Only
+call one or the other, since the default methods call the super
 argument.
 
 Finally, the interface contains all of the names specified in

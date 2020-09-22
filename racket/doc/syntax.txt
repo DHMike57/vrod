@@ -4,64 +4,64 @@ This section describes the core syntax forms that appear in a fully
 expanded expression, plus many closely related non-core forms. See
 [missing] for the core grammar.
 
-    1 Modules: module, module*, ... ~
+    1 Modules: module, module*, ... ~ ~
 
-    2 Importing and Exporting: require and provide ~
+    2 Importing and Exporting: require and provide ~ ~
       2.1 Additional require Forms
       2.2 Additional provide Forms
 
-    3 Literals: quote and #%datum ~
+    3 Literals: quote and #%datum ~ ~
 
-    4 Expression Wrapper: #%expression ~
+    4 Expression Wrapper: #%expression ~ ~
 
     5 Variable References and #%top
 
-    6 Locations: #%variable-reference ~
+    6 Locations: #%variable-reference ~ ~
 
     7 Procedure Applications and #%app
 
-    8 Procedure Expressions: lambda and case-lambda ~
+    8 Procedure Expressions: lambda and case-lambda ~ ~
 
-    9 Local Binding: let, let*, letrec, ... ~
+    9 Local Binding: let, let*, letrec, ... ~ ~
 
-    10 Local Definitions: local ~
+    10 Local Definitions: local ~ ~
 
-    11 Constructing Graphs: shared ~
+    11 Constructing Graphs: shared ~ ~
 
-    12 Conditionals: if, cond, and, and or ~
+    12 Conditionals: if, cond, and, and or ~ ~
 
-    13 Dispatch: case ~
+    13 Dispatch: case ~ ~
 
-    14 Definitions: define, define-syntax, ... ~
+    14 Definitions: define, define-syntax, ... ~ ~
       14.1 require Macros
       14.2 provide Macros
 
-    15 Sequencing: begin, begin0, and begin-for-syntax ~
+    15 Sequencing: begin, begin0, and begin-for-syntax ~ ~
 
-    16 Guarded Evaluation: when and unless ~
+    16 Guarded Evaluation: when and unless ~ ~
 
-    17 Assignment: set! and set!-values ~
+    17 Assignment: set! and set!-values ~ ~
 
-    18 Iterations and Comprehensions: for, for/list, ... ~
+    18 Iterations and Comprehensions: for, for/list, ... ~ ~
       18.1 Iteration and Comprehension Forms
       18.2 Deriving New Iteration Forms
       18.3 Do Loops
 
-    19 Continuation Marks: with-continuation-mark ~
+    19 Continuation Marks: with-continuation-mark ~ ~
 
-    20 Quasiquoting: quasiquote, unquote, and unquote-splicing ~
+    20 Quasiquoting: quasiquote, unquote, and unquote-splicing ~ ~
 
-    21 Syntax Quoting: quote-syntax ~
+    21 Syntax Quoting: quote-syntax ~ ~
 
-    22 Interaction Wrapper: #%top-interaction ~
+    22 Interaction Wrapper: #%top-interaction ~ ~
 
-    23 Blocks: block ~
+    23 Blocks: block ~ ~
 
-    24 Internal-Definition Limiting: #%stratified-body ~
+    24 Internal-Definition Limiting: #%stratified-body ~ ~
 
-    25 Performance Hints: begin-encourage-inline ~
+    25 Performance Hints: begin-encourage-inline ~ ~
 
-    26 Importing Modules Lazily: lazy-require ~
+    26 Importing Modules Lazily: lazy-require ~ ~
 
 Notation
 
@@ -73,7 +73,7 @@ in the following specification of a something form:
                                         *something*
 (something id thing-expr ...) ~
  
-  thing-expr : number? ~
+  thing-expr : number? ~ ~
 
 Within such specifications,
 
@@ -204,8 +204,9 @@ a nested module* with #f instead of a module-path) can define or import
 bindings that shadow the enclosing module’s bindings.
 
 The evaluation of a module form does not evaluate the expressions in the
-body of the module. Evaluation merely declares a module, whose full name
-depends both on id or (current-module-declare-name).
+body of the module (except sometimes for redeclarations; see [missing]).
+Evaluation merely declares a module, whose full name depends both on id
+or (current-module-declare-name).
 
 A module body is executed only when the module is explicitly
 instantiated via require or dynamic-require. On invocation, imported
@@ -242,9 +243,10 @@ languages attach '#(racket/language-info get-info #f) to a module form.
 See also module-compiled-language-info, module->language-info, and
 racket/language-info.
 
-See also [missing] and [missing].
+See also [missing], [missing], and [missing].
 
 Example:
+
   > (module duck racket/base
       (provide num-eggs quack)
       (define num-eggs 2)
@@ -253,10 +255,9 @@ Example:
           (printf "quack\n")
           (quack (sub1 n)))))
 
-
-Changed in version 6.2.0.4: Changed define-syntaxes and define-values to
-shadow any preceding import. Changed in version 6.3: Dropped the use of
-'submodule syntax property values on nested module or module* forms.
+Changed in version 6.3: Changed define-syntaxes and define-values to
+shadow any preceding import, and dropped the use of 'submodule syntax
+property values on nested module or module* forms.
 
                                         *module**
 (module* id module-path form ...) ~
@@ -272,7 +273,7 @@ the enclosing module are visible in the submodule. In that case,
 begin-for-syntax forms that wrap the module* form shift the phase level
 of the enclosing module’s bindings relative to the submodule. The macro
 expander handles such nesting by shifting the phase level of the module*
-form so that it’s body starts at phase level 0, expanding, and then
+form so that its body starts at phase level 0, expanding, and then
 reverting the phase level shift; beware that this process can leave
 syntax objects as 'origin syntax property values out-of-sync with the
 expanded module.
@@ -331,8 +332,8 @@ module* forms.
 
 (#%declare declaration-keyword ...)
  
-declaration-keyword = #:cross-phase-persistent ~
-                    | #:empty-namespace ~
+declaration-keyword = #:cross-phase-persistent ~ ~
+                    | #:empty-namespace ~ ~
 
 Declarations that affect run-time or reflective properties of the
 module:
@@ -445,17 +446,18 @@ identifiers to bind match id-maybe-renamed: as id or as orig-id in
 [orig-id bind-id]. If the id or orig-id of any id-maybe-renamed is not
 in the set that require-spec describes, a syntax error is reported.
 Examples:
+
   > (require (only-in racket/tcp
                       tcp-listen
                       [tcp-accept my-accept]))
-
   > tcp-listen
   #<procedure:tcp-listen>
   > my-accept
   #<procedure:tcp-accept>
   > tcp-accept
   tcp-accept: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
 
                                         *except-in*
 (except-in require-spec id ...) ~
@@ -464,14 +466,15 @@ Like require-spec, but omitting those imports for which ids are the
 identifiers to bind; if any id is not in the set that require-spec
 describes, a syntax error is reported.
 Examples:
+
   > (require (except-in racket/tcp
                         tcp-listen))
-
   > tcp-accept
   #<procedure:tcp-accept>
   > tcp-listen
   tcp-listen: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
 
                                         *prefix-in*
 (prefix-in prefix-id require-spec) ~
@@ -480,8 +483,8 @@ Like require-spec, but adjusting each identifier to be bound by
 prefixing it with prefix-id. The lexical context of the prefix-id is
 ignored, and instead preserved from the identifiers before prefixing.
 Examples:
-  > (require (prefix-in tcp: racket/tcp)) ~
 
+  > (require (prefix-in tcp: racket/tcp)) ~ ~
   > tcp:tcp-accept
   #<procedure:tcp-accept>
   > tcp:tcp-listen
@@ -494,10 +497,10 @@ Like require-spec, but replacing the identifier to bind orig-id with
 bind-id; if any orig-id is not in the set that require-spec describes, a
 syntax error is reported.
 Examples:
+
   > (require (rename-in racket/tcp
                         (tcp-accept accept)
                         (tcp-listen listen)))
-
   > accept
   #<procedure:tcp-accept>
   > listen
@@ -510,9 +513,9 @@ The union of the require-specs. If two or more imports from the
 require-specs have the same identifier name but they do not refer to the
 same original binding, a syntax error is reported.
 Examples:
+
   > (require (combine-in (only-in racket/tcp tcp-accept)
                          (only-in racket/tcp tcp-listen)))
-
   > tcp-accept
   #<procedure:tcp-accept>
   > tcp-listen
@@ -542,23 +545,19 @@ transform phase:
       (define-for-syntax meta-eggs 2)
       (define-for-syntax meta-chicks 3)
       (define num-eggs 2))
-
   > (require (only-meta-in 1 'nest))
-
   > (define-syntax (desc stx)
       (printf "~s ~s\n" meta-eggs meta-chicks)
       #'(void))
-
   > (desc)
   2 3
-
   > num-eggs
   num-eggs: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
 The following example imports only bindings at phase level 0, the normal
 phase.
   > (require (only-meta-in 0 'nest))
-
   > num-eggs
   2
 
@@ -569,19 +568,16 @@ require-spec is shifted by phase-level. The label phase level
 corresponds to #f, and a shifting combination that involves #f produces
 #f.
 Examples:
+
   > (module nest racket
       (provide num-eggs)
       (define num-eggs 2))
-
   > (require (for-meta 0 'nest))
-
   > num-eggs
   2
   > (require (for-meta 1 'nest))
-
   > (define-syntax (roost stx)
       (datum->syntax stx num-eggs))
-
   > (roost)
   2
 
@@ -620,19 +616,19 @@ Refers to a submodule previously declared with the name id or a module
 previously declared interactively with the name id. When id refers to a
 submodule, (quote id) is equivalent to (submod "." id).
 Examples:
-  ; a module declared interactively as test: ~
-  > (require 'test)
 
+  ; a module declared interactively as test: ~ ~
+  > (require 'test)
 
 rel-string
 A path relative to the containing source (as determined by
 current-load-relative-directory or current-directory).  Regardless of
 the current platform, rel-string is always parsed as a Unix-format
-relative path: / is the path delimiter (multiple adjacent /s are treated
-as a single delimiter), .. accesses the parent directory, and . accesses
-the current directory. The path cannot be empty or contain a leading or
-trailing slash, path elements before than the last one cannot include a
-file suffix (i.e., a . in an element other than . or ..), and the only
+relative path: / is the path delimiter (multiple adjacent /s are not
+allowed), .. accesses the parent directory, and . accesses the current
+directory. The path cannot be empty or contain a leading or trailing
+slash, path elements before than the last one cannot include a file
+suffix (i.e., a . in an element other than . or ..), and the only
 allowed characters are ASCII letters, ASCII digits, -, +, _, ., /, and
 %. Furthermore, a % is allowed only when followed by two lowercase
 hexadecimal digits, and the digits must form a number that is not the
@@ -645,14 +641,13 @@ If rel-string ends with a ".ss" suffix, it is converted to a ".rkt"
 suffix. The compiled-load handler may reverse that conversion if a
 ".rkt" file does not exist and a ".ss" exists.
 Examples:
+
   ; a module named "x.rkt" in the same
-  ; directory as the enclosing module's file: ~
+  ; directory as the enclosing module's file: ~ ~
   > (require "x.rkt")
-
   ; a module named "x.rkt" in the parent directory
-  ; of the enclosing module file's directory: ~
+  ; of the enclosing module file's directory: ~ ~
   > (require "../x.rkt")
-
 
                                         *lib*
 (lib rel-string ...+) ~
@@ -668,12 +663,11 @@ of the rel-strings:
   names a collection, and "main.rkt" is the library file name.
 
   Examples:
-    ; the main swindle library: ~
+
+    ; the main swindle library: ~ ~
     > (require (lib "swindle"))
-
-    ; the same: ~
+    ; the same: ~ ~
     > (require (lib "swindle/main.rkt"))
-
 
 * If a single rel-string is provided, and if it consists of multiple
   /-separated elements, then each element up to the last names a
@@ -682,15 +676,13 @@ of the rel-strings:
   suffix is converted to ".rkt".
 
   Examples:
-    ; "turbo.rkt" from the "swindle" collection: ~
+
+    ; "turbo.rkt" from the "swindle" collection: ~ ~
     > (require (lib "swindle/turbo"))
-
-    ; the same: ~
+    ; the same: ~ ~
     > (require (lib "swindle/turbo.rkt"))
-
-    ; the same: ~
+    ; the same: ~ ~
     > (require (lib "swindle/turbo.ss"))
-
 
 * If a single rel-string is provided, and if it consists of a single
   element with a file suffix (i.e, with a .), then rel-string names a
@@ -699,9 +691,9 @@ of the rel-strings:
   Racket.)
 
   Examples:
-    ; "tar.rkt" module from the "mzlib" collection: ~
-    > (require (lib "tar.ss"))
 
+    ; "tar.rkt" module from the "mzlib" collection: ~ ~
+    > (require (lib "tar.ss"))
 
 * Otherwise, when multiple rel-strings are provided, the first
   rel-string is effectively moved after the others, and all rel-strings
@@ -711,17 +703,17 @@ of the rel-strings:
   convention is for compatibility with older version of Racket.)
 
   Examples:
-    ; "tar.rkt" module from the "mzlib" collection: ~
-    > (require (lib "tar.ss" "mzlib"))
 
+    ; "tar.rkt" module from the "mzlib" collection: ~ ~
+    > (require (lib "tar.ss" "mzlib"))
 
 id
 A shorthand for a lib form with a single rel-string whose characters are
 the same as in the symbolic form of id. In addition to the constraints
 of a lib rel-string, id must not contain ..
 Example:
-  > (require racket/tcp)
 
+  > (require racket/tcp)
 
                                         *file*
 (file string) ~
@@ -730,8 +722,8 @@ Similar to the plain rel-string case, but string is a path—possibly
 absolute—using the current platform’s path conventions and
 expand-user-path. A ".ss" suffix is converted to ".rkt".
 Example:
-  > (require (file "~/tmp/x.rkt"))
 
+  > (require (file "~/tmp/x.rkt"))
 
                                         *planet*
 (planet id) ~
@@ -742,14 +734,14 @@ Example:
 Specifies a library available via the PLaneT server.
 The first form is a shorthand for the last one, where the id’s character
 sequence must match the following >spec< grammar:
- >spec<    ::= >owner< / >pkg< >lib< ~
- >owner<   ::= >elem< ~
- >pkg<     ::= >elem<  |  >elem< : >version< ~
- >version< ::= >int<  |  >int< : >minor< ~
- >minor<   ::= >int<  |  <= >int<  |  >= >int<  |  = >int< ~
+ >spec<    ::= >owner< / >pkg< >lib< ~ ~
+ >owner<   ::= >elem< ~ ~
+ >pkg<     ::= >elem<  |  >elem< : >version< ~ ~
+ >version< ::= >int<  |  >int< : >minor< ~ ~
+ >minor<   ::= >int<  |  <= >int<  |  >= >int<  |  = >int< ~ ~
             |  >int< - >int<
- >lib<     ::= >empty<  |  / >path< ~
- >path<    ::= >elem<  |  >elem< / >path< ~
+ >lib<     ::= >empty<  |  / >path< ~ ~
+ >path<    ::= >elem<  |  >elem< / >path< ~ ~
 and where an >elem< is a non-empty sequence of characters that are ASCII
 letters, ASCII digits, -, +, _, or % followed by lowercase hexadecimal
 digits (that do not encode one of the other allowed characters), and an
@@ -771,32 +763,29 @@ specifies a minimum version and is equivalent to just nat, and (- nat)
 specifies a maximum version. The =, +, and - identifiers in a
 minor-version constraint are recognized symbolically.
 Examples:
-  ; "main.rkt" in package "farm" by "mcdonald": ~
+
+  ; "main.rkt" in package "farm" by "mcdonald": ~ ~
   > (require (planet mcdonald/farm))
-
-  ; "main.rkt" in version >= 2.0 of "farm" by "mcdonald": ~
-  > (require (planet mcdonald/farm:2)) ~
-
-  ; "main.rkt" in version >= 2.5 of "farm" by "mcdonald": ~
-  > (require (planet mcdonald/farm:2:5)) ~
-
-  ; "duck.rkt" in version >= 2.5 of "farm" by "mcdonald": ~
-  > (require (planet mcdonald/farm:2:5/duck)) ~
-
+  ; "main.rkt" in version >= 2.0 of "farm" by "mcdonald": ~ ~
+  > (require (planet mcdonald/farm:2)) ~ ~
+  ; "main.rkt" in version >= 2.5 of "farm" by "mcdonald": ~ ~
+  > (require (planet mcdonald/farm:2:5)) ~ ~
+  ; "duck.rkt" in version >= 2.5 of "farm" by "mcdonald": ~ ~
+  > (require (planet mcdonald/farm:2:5/duck)) ~ ~
 
                                         *submod*
-(submod root-module submod-path-element ...) ~
+(submod root-module-path submod-path-element ...) ~
 (submod "." submod-path-element ...)
 (submod ".." submod-path-element ...)
 
-Identifies a submodule within the module specified by root-module or
-relative to the current module in the case of (submod "." ....), where
-(submod ".." submod-path-element ...) is equivalent to (submod "." ".."
-submod-path-element ...). Submodules have symbolic names, and a sequence
-of identifiers as submod-path-elements determine a path of successively
-nested submodules with the given names. A ".." as a submod-path-element
-names the enclosing module of a submodule, and it’s intended for use in
-(submod "." ....) and (submod ".." ....) forms.
+Identifies a submodule within the module specified by root-module-path
+or relative to the current module in the case of (submod "." ....),
+where  (submod ".." submod-path-element ...) is equivalent to (submod
+"." ".." submod-path-element ...). Submodules have symbolic names, and a
+sequence of identifiers as submod-path-elements determine a path of
+successively nested submodules with the given names. A ".." as a
+submod-path-element names the enclosing module of a submodule, and it’s
+intended for use in (submod "." ....) and (submod ".." ....) forms.
 
 As require prepares to handle a sequence of require-specs, it logs a
 “prefetch” message to the current logger at the 'info level, using the
@@ -816,13 +805,15 @@ just into the local context. Only bindings from phase level 0 are
 imported.
 
 Examples:
+
   > (let ()
       (local-require racket/control)
       fcontrol)
   #<procedure:fcontrol>
   > fcontrol
   fcontrol: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
 
 +[missing] in [missing] introduces provide.
 
@@ -868,12 +859,11 @@ used as the external name, and the symbolic form of the defined or
 imported identifier must match (otherwise, the external name could be
 ambiguous).
 Examples:
+
   > (module nest racket
       (provide num-eggs)
       (define num-eggs 2))
-
   > (require 'nest)
-
   > num-eggs
   2
 If id has a transformer binding to a rename transformer, then the
@@ -893,12 +883,11 @@ the (all-defined-out) form are included; that is, macro-introduced
 imports are not re-exported, unless the (all-defined-out) form was
 introduced at the same time.
 Examples:
+
   > (module nest racket
       (provide (all-defined-out))
       (define num-eggs 2))
-
   > (require 'nest)
-
   > num-eggs
   2
 
@@ -914,16 +903,14 @@ module-path. Only identifiers accessible from the lexical context of the
 module-path are included; that is, macro-introduced imports are not
 re-exported, unless the module-path was introduced at the same time.
 Examples:
+
   > (module nest racket
       (provide num-eggs)
       (define num-eggs 2))
-
   > (module hen-house racket
       (require 'nest)
       (provide (all-from-out 'nest)))
-
   > (require 'hen-house)
-
   > num-eggs
   2
 
@@ -932,19 +919,19 @@ Examples:
 
 Exports each orig-id, which must be bound within the module at the
 relevant phase level.  The symbolic name for each export is export-id
-instead orig-d.
+instead of orig-id.
 Examples:
+
   > (module nest racket
       (provide (rename-out [count num-eggs]))
       (define count 2))
-
   > (require 'nest)
-
   > num-eggs
   2
   > count
   count: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
 
                                         *except-out*
 (except-out provide-spec provide-spec ...) ~
@@ -955,19 +942,19 @@ in the initial provide-spec, a syntax error is reported. The symbolic
 export name information in the latter provide-specs is ignored; only the
 bindings are used.
 Examples:
+
   > (module nest racket
       (provide (except-out (all-defined-out)
                            num-chicks))
       (define num-eggs 2)
       (define num-chicks 3))
-
   > (require 'nest)
-
   > num-eggs
   2
   > num-chicks
   num-chicks: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
 
                                         *prefix-out*
 (prefix-out prefix-id provide-spec) ~
@@ -975,12 +962,11 @@ Examples:
 Like provide-spec, but with each symbolic export name from provide-spec
 prefixed with prefix-id.
 Examples:
+
   > (module nest racket
-      (provide (prefix-out chicken: num-eggs)) ~
+      (provide (prefix-out chicken: num-eggs)) ~ ~
       (define num-eggs 2))
-
   > (require 'nest)
-
   > chicken:num-eggs
   2
 
@@ -998,12 +984,11 @@ a transformer binding of structure-type information, the accessor and
 mutator bindings of the super-type are not included by struct-out for
 export.
 Examples:
+
   > (module nest racket
       (provide (struct-out egg))
       (struct egg (color wt)))
-
   > (require 'nest)
-
   > (egg-color (egg 'blue 10))
   'blue
 
@@ -1012,13 +997,12 @@ Examples:
 
 The union of the provide-specs.
 Examples:
+
   > (module nest racket
       (provide (combine-out num-eggs num-chicks))
       (define num-eggs 2)
       (define num-chicks 1))
-
   > (require 'nest)
-
   > num-eggs
   2
   > num-chicks
@@ -1034,13 +1018,12 @@ without access privileges. For more details, see [missing]. The
 provide-spec must specify only bindings that are defined within the
 exporting module.
 Examples:
+
   > (module nest racket
       (provide num-eggs (protect-out num-chicks))
       (define num-eggs 2)
       (define num-chicks 3))
-
   > (define weak-inspector (make-inspector (current-code-inspector)))
-
   > (define (weak-eval x)
       (parameterize ([current-code-inspector weak-inspector])
         (define weak-ns (make-base-namespace))
@@ -1050,17 +1033,16 @@ Examples:
         (parameterize ([current-namespace weak-ns])
           (namespace-require ''nest)
           (eval x))))
-
   > (require 'nest)
-
   > (list num-eggs num-chicks)
   '(2 3)
   > (weak-eval 'num-eggs)
   2
   > (weak-eval 'num-chicks)
-  num-chicks: access disallowed by code inspector to protected
-  variable from module: 'nest
-    in: num-chicks ~
+  ?: access disallowed by code inspector to protected variable
+    from module: 'nest ~ ~
+    at: num-chicks ~ ~
+See also [missing].
 
                                         *for-meta*
 (for-meta phase-level provide-spec ...) ~
@@ -1072,19 +1054,17 @@ relative to the current level, an all-defined-out exports only
 definitions at phase-level relative to the current phase level, and an
 all-from-out exports bindings imported with a shift by phase-level.
 Examples:
+
   > (module nest racket
       (begin-for-syntax
        (define eggs 2))
       (define chickens 3)
       (provide (for-syntax eggs)
                chickens))
-
   > (require 'nest)
-
   > (define-syntax (test-eggs stx)
       (printf "Eggs are ~a\n" eggs)
       #'0)
-
   > (test-eggs)
   Eggs are 2
   0
@@ -1095,22 +1075,17 @@ Examples:
       (define chickens 3)
       (provide (for-syntax eggs)
                chickens))
-  eval:7:0: module: provided identifier not defined or
-  imported for phase 1
-    at: eggs ~
-    in: (#%module-begin (do-wrapping-module-begin print-result ~
-  (module configure-runtime (quote #%kernel) (#%require
-  racket/runtime-config) (configure #f)))
-  (do-wrapping-module-begin print-result (define eggs 2))
-  (do-wrapping-module-begin print-result (define c...
+  eval:7:0: provide: provided identifier is not defined or
+  required
+    at: eggs ~ ~
+    in: (#%provide (expand (provide-trampoline (for-syntax ~ ~
+  eggs) chickens)))
   > (module nest2 racket
       (begin-for-syntax
        (define eggs 2))
       (provide (for-syntax eggs)))
-
   > (require (for-meta 2 racket/base)
              (for-syntax 'nest2))
-
   > (define-syntax (test stx)
       (define-syntax (show-eggs stx)
         (printf "Eggs are ~a\n" eggs)
@@ -1119,7 +1094,6 @@ Examples:
         (show-eggs)
         #'0))
   Eggs are 2
-
   > (test)
   0
 
@@ -1201,7 +1175,8 @@ is similar to a require-spec in a require form, except that the syntax
 is more constrained, not composable, and not extensible. Also, sub-form
 names like for-syntax and lib are recognized symbolically, instead of
 via bindings. Although not formalized in the grammar above, a just-meta
-form cannot appear within a just-meta form.
+form cannot appear within a just-meta form, but it can appear under
+for-meta,  for-syntax, for-template, or for-label.
 
 Each raw-require-spec corresponds to the obvious require-spec, but the
 rename sub-form has the identifiers in reverse order compared to
@@ -1220,10 +1195,10 @@ with otherwise take a quoted raw-module-spec.
 (#%provide raw-provide-spec ...)
  
 raw-provide-spec = phaseless-spec
-                 | (for-meta phase-level phaseless-spec)
-                 | (for-syntax phaseless-spec)
-                 | (for-label phaseless-spec)
-                 | (protect raw-provide-spec)
+                 | (for-meta phase-level phaseless-spec ...)
+                 | (for-syntax phaseless-spec ...)
+                 | (for-label phaseless-spec ...)
+                 | (protect raw-provide-spec ...)
                     
      phase-level = exact-integer
                  | #f
@@ -1272,7 +1247,7 @@ accessible from the lexical context of the phaseless-spec form.
 
 2.1. Additional require Forms
 
- (require racket/require) package: base ~
+ (require racket/require) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/require library, not racket/base or racket.
@@ -1287,6 +1262,7 @@ Like require-spec, but including only imports whose names  match regexp.
 The regexp must be a literal regular  expression (see [missing]).
 
 Examples:
+
   > (module zoo racket/base
       (provide tunafish swordfish blowfish
                monkey lizard ant)
@@ -1296,11 +1272,8 @@ Examples:
       (define monkey 4)
       (define lizard 5)
       (define ant 6))
-
   > (require racket/require)
-
   > (require (matching-identifiers-in #rx"\\w*fish" 'zoo))
-
   > tunafish
   1
   > swordfish
@@ -1309,7 +1282,8 @@ Examples:
   3
   > monkey
   monkey: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
 
                                         *subtract-in*
 (subtract-in require-spec subtracted-spec ...) ~
@@ -1318,28 +1292,25 @@ Like require-spec, but omitting those imports that would be   imported
 by one of the subtracted-specs.
 
 Examples:
+
   > (module earth racket
       (provide land sea air)
       (define land 1)
       (define sea 2)
       (define air 3))
-
   > (module mars racket
       (provide aliens)
       (define aliens 4))
-
   > (module solar-system racket
       (require 'earth 'mars)
       (provide (all-from-out 'earth)
                (all-from-out 'mars)))
-
   > (require racket/require)
-
   > (require (subtract-in 'solar-system 'earth))
-
   > land
   land: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
   > aliens
   4
 
@@ -1453,7 +1424,7 @@ Examples:
 
 2.2. Additional provide Forms
 
- (require racket/provide) package: base ~
+ (require racket/provide) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/provide library, not racket/base or racket.
@@ -1497,6 +1468,7 @@ representation of the program fragment) without its lexical information,
 source location, etc.  Quoted pairs, vectors, and boxes are immutable.
 
 Examples:
+
   > (quote x)
   'x
   > (quote (+ 1 2))
@@ -1513,13 +1485,14 @@ See also [missing] for information on how the expander introduces
 #%datum identifiers.
 
 Examples:
+
   > (#%datum . 10)
   10
   > (#%datum . x)
   'x
-  > (#%datum . #:x) ~
-  eval:6:0: #%datum: keyword used as an expression
-    in: #:x ~
+  > (#%datum . #:x) ~ ~
+  eval:6:0: #%datum: keyword misused as an expression
+    at: #:x ~ ~
 
 4. Expression Wrapper: #%expression
 
@@ -1529,11 +1502,12 @@ Produces the same result as expr. Using #%expression forces the parsing
 of a form as an expression.
 
 Examples:
+
   > (#%expression (+ 1 2))
   3
   > (#%expression (define x 10))
   eval:8:0: define: not allowed in an expression context
-    in: (define x 10) ~
+    in: (define x 10) ~ ~
 
 The #%expression form is helpful in recursive definition contexts where
 expanding a subsequent definition can provide compile-time information
@@ -1548,7 +1522,6 @@ identifier.
        #'(define-syntax id
            '(sym ...))]))
 
-
 and then a variant of case that checks to make sure the symbols used in
 the expression match those given in the earlier definition:
 
@@ -1562,7 +1535,7 @@ the expression match those given in the earlier definition:
             (λ ()
               (raise-syntax-error
                'sym-case
-               "expected an identifier bound via def-sym-case"
+               "expected an identifier bound via define-sym-case"
                stx
                #'id))))
          (define actual-ids (syntax->datum #'(sym ...)))
@@ -1574,7 +1547,6 @@ the expression match those given in the earlier definition:
             stx))
          #'(case val-expr [(sym) expr] ...))]))
 
-
 If the definition follows the use like this, then the define-sym-case
 macro does not have a chance to bind id and the sym-case macro signals
 an error:
@@ -1585,9 +1557,9 @@ an error:
                 [(fox) 2])
       (define-sym-case land-creatures bear fox))
   eval:11:0: sym-case: expected an identifier bound via
-  def-sym-case
-    at: land-creatures ~
-    in: (sym-case land-creatures (quote bear) ((bear) 1) ~
+  define-sym-case
+    at: land-creatures ~ ~
+    in: (sym-case land-creatures (quote bear) ((bear) 1) ~ ~
   ((fox) 2))
 
 But if the sym-case is wrapped in an #%expression, then the expander
@@ -1621,8 +1593,8 @@ or local binding, it converts the expression to (#%top . id) giving
 #%top. See also [missing].
 
 Examples:
-  > (define x 10)
 
+  > (define x 10)
   > x
   10
   > (let ([x 5]) x)
@@ -1647,10 +1619,10 @@ See also [missing] for information on how the expander introduces #%top
 identifiers.
 
 Examples:
-  > (define x 12)
 
+  > (define x 12)
   > (let ([x 5]) (#%top . x))
-  12
+  5
 
 Changed in version 6.3: Changed the introduction of #%top in a top-level
 context to unbound identifiers only.
@@ -1692,9 +1664,10 @@ arguments). Typically, the lexical context of the pair indicates the
 procedure-application #%app that is described next. See also [missing].
 
 Examples:
+
   > (+ 1 2)
   3
-  > ((lambda (x #:arg y) (list y x)) #:arg 2 1) ~
+  > ((lambda (x #:arg y) (list y x)) #:arg 2 1) ~ ~
   '(2 1)
 
 (#%app proc-expr arg ...)
@@ -1730,16 +1703,17 @@ See also [missing] for information on how the expander introduces #%app
 identifiers.
 
 Examples:
+
   > (#%app + 1 2)
   3
-  > (#%app (lambda (x #:arg y) (list y x)) #:arg 2 1) ~
+  > (#%app (lambda (x #:arg y) (list y x)) #:arg 2 1) ~ ~
   '(2 1)
   > (#%app cons)
   cons: arity mismatch;
    the expected number of arguments does not match the given
   number
-    expected: 2 ~
-    given: 0 ~
+    expected: 2 ~ ~
+    given: 0 ~ ~
 
 (#%plain-app proc-expr arg-expr ...)
 (#%plain-app)
@@ -1820,14 +1794,14 @@ non-keyword arguments beyond its minimum number of arguments. When more
 arguments are provided than non-keyword arguments among the args, the
 extra arguments are placed into a list that is associated to rest-id.
 
+In other words, argument bindings with default-value expressions are
+evaluated analogous to let*.
+
 The kw-formals identifiers are bound in the bodys. When the procedure is
 applied, a new location is created for each identifier, and the location
 is filled with the associated argument value. The locations are created
 and filled in order, with default-exprs evaluated as needed to fill
 locations.
-
-In other words, argument bindings with default-value expressions are
-evaluated analogous to let*.
 
 If any identifier appears in the bodys that is not one of the
 identifiers in kw-formals, then it refers to the same location that it
@@ -1846,15 +1820,16 @@ The last body expression is in tail position with respect to the
 procedure body.
 
 Examples:
+
   > ((lambda (x) x) 10)
   10
   > ((lambda (x y) (list y x)) 1 2)
   '(2 1)
   > ((lambda (x [y 5]) (list y x)) 1 2)
   '(2 1)
-  > (let ([f (lambda (x #:arg y) (list y x))]) ~
-     (list (f 1 #:arg 2) ~
-           (f #:arg 2 1))) ~
+  > (let ([f (lambda (x #:arg y) (list y x))]) ~ ~
+     (list (f 1 #:arg 2) ~ ~
+           (f #:arg 2 1))) ~ ~
   '((2 1) (2 1))
 
 When compiling a lambda or case-lambda expression, Racket looks for a
@@ -1909,6 +1884,7 @@ general kw-formals of lambda. That is, case-lambda does not directly
 support keyword and optional arguments.
 
 Example:
+
   > (let ([f (case-lambda
               [() 10]
               [(x) x]
@@ -1939,6 +1915,7 @@ expression is in tail position with respect to the let form. The ids
 must be distinct according to bound-identifier=?.
 
 Examples:
+
   > (let ([x 5]) x)
   5
   > (let ([x 5])
@@ -1952,6 +1929,7 @@ arguments in an application of a procedure (lambda (id ...) body ...+),
 where proc-id is bound within the bodys to the procedure itself.
 
 Example:
+
   > (let fac ([n 10])
       (if (zero? n)
           1
@@ -1967,6 +1945,7 @@ remaining val-exprs as well as the bodys, and the ids need not be
 distinct; later bindings shadow earlier bindings.
 
 Example:
+
   > (let* ([x 1]
            [y (+ x 1)])
       (list y x))
@@ -1988,6 +1967,7 @@ the symbol is used as the name of the variable for error reporting,
 instead of the symbolic form of id.
 
 Example:
+
   > (letrec ([is-even? (lambda (n)
                          (or (zero? n)
                              (is-odd? (sub1 n))))]
@@ -2009,6 +1989,7 @@ A separate location is created for each id, all of which are bound in
 the bodys.
 
 Example:
+
   > (let-values ([(x y) (quotient/remainder 10 3)])
       (list y x))
   '(1 3)
@@ -2021,6 +2002,7 @@ corresponding ids. A separate location is created for each id, all of
 which are bound in the later val-exprs and in the bodys.
 
 Example:
+
   > (let*-values ([(x y) (quotient/remainder 10 3)]
                   [(z) (list y x)])
       z)
@@ -2034,6 +2016,7 @@ corresponding ids. A separate location is created for each id, all of
 which are bound in all val-exprs and in the bodys.
 
 Example:
+
   > (letrec-values ([(is-even? is-odd?)
                      (values
                        (lambda (n)
@@ -2123,7 +2106,7 @@ define-syntax, and more.
 
 10. Local Definitions: local
 
- (require racket/local) package: base ~
+ (require racket/local) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/local
 and racket libraries, but not racket/base.
@@ -2140,7 +2123,7 @@ begin-wrapped sequence is spliced into the sequence of definitions.
 
 11. Constructing Graphs: shared
 
- (require racket/shared) package: base ~
+ (require racket/shared) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/shared and racket libraries, but not racket/base.
@@ -2172,7 +2155,7 @@ precedence over later variants:
                     | (mcons patchable-expr patchable-expr)
                     | (vector patchable-expr ...)
                     | (box patchable-expr)
-                    | (prefix:make-id patchable-expr ...) ~
+                    | (prefix:make-id patchable-expr ...) ~ ~
                        
   in-immutable-expr = shell-id
                     | shell-expr
@@ -2231,6 +2214,7 @@ bound, so patchable-exprs can create data cycles (but only with cycles
 that can be created via mutation).
 
 Examples:
+
   > (shared ([a (cons 1 a)])
       a)
   #0='(1 . #0#)
@@ -2281,6 +2265,7 @@ the if form. The then-expr and else-expr are in tail position with
 respect to the if form.
 
 Examples:
+
   > (if (positive? -5) (error "doesn't get here") 2)
   2
   > (if (positive? 5) 1 (error "doesn't get here"))
@@ -2329,8 +2314,8 @@ The result of the test-expr is returned as the result of the cond form.
 The test-expr is not in tail position.
 
 Examples:
-  > (cond)
 
+  > (cond)
   > (cond
       [else 5])
   5
@@ -2372,6 +2357,7 @@ expression with the remaining exprs in tail position with respect to the
 original and form.
 
 Examples:
+
   > (and)
   #t
   > (and 1)
@@ -2400,6 +2386,7 @@ result is the same as an or expression with the remaining exprs in tail
 position with respect to the original or form.
 
 Examples:
+
   > (or)
   #f
   > (or 1)
@@ -2440,6 +2427,7 @@ The case form can dispatch to a matching case-clause in O(log N) time
 for N datums.
 
 Examples:
+
   > (case (+ 7 5)
      [(1 2 3) 'small]
      [(10 11 12) 'big])
@@ -2464,7 +2452,7 @@ Examples:
      [(x) "ex"]
      [('x) "quoted ex"])
   "quoted ex"
-
+   
   (define (classify c)
     (case (char-general-category c)
      [(ll lu lt ln lo) "letter"]
@@ -2516,18 +2504,18 @@ syntax if expr is an immediate lambda form with keyword arguments or
 args include keyword arguments.
 
 Examples:
+
   (define x 10)
-
-
+   
   > x
   10
-
+   
   (define (f x)
     (+ x 1))
    
   > (f 10)
   11
-
+   
   (define ((f x) [y 20])
     (+ x y))
    
@@ -2550,12 +2538,9 @@ and the top-level mapping of each id (in the namespace linked with the
 compiled definition) is set to the binding at the same time.
 
 Examples:
-  (define-values () (values))
 
-
-  (define-values (x y z) (values 1 2 3))
-
-
+  > (define-values () (values))
+  > (define-values (x y z) (values 1 2 3))
   > z
   3
 
@@ -2582,22 +2567,19 @@ In an internal-definition context (see [missing]), a define-syntax form
 introduces a local binding.
 
 Examples:
+
   > (define-syntax foo
       (syntax-rules ()
         ((_ a ...)
          (printf "~a\n" (list a ...)))))
-
   > (foo 1 2 3 4)
   (1 2 3 4)
-
   > (define-syntax (bar syntax-object)
       (syntax-case syntax-object ()
         ((_ a ...)
          #'(printf "~a\n" (list a ...)))))
-
   > (bar 1 2 3 4)
   (1 2 3 4)
-
 
                                         *define-syntaxes*
 (define-syntaxes (id ...) expr) ~
@@ -2614,6 +2596,7 @@ In an internal-definition context (see [missing]), a define-syntaxes
 form introduces local bindings.
 
 Examples:
+
   > (define-syntaxes (foo1 foo2 foo3)
       (let ([transformer1 (lambda (syntax-object)
                             (syntax-case syntax-object ()
@@ -2627,7 +2610,6 @@ Examples:
         (values transformer1
                 transformer2
                 transformer3)))
-
   > (foo1)
   1
   > (foo2)
@@ -2652,29 +2634,27 @@ particular, mutually recursive functions bound by define-for-syntax must
 be defined by the same define-for-syntax form.
 
 Examples:
-  > (define-for-syntax helper 2)
 
+  > (define-for-syntax helper 2)
   > (define-syntax (make-two syntax-object)
       (printf "helper is ~a\n" helper)
       #'2)
-
   > (make-two)
   helper is 2
   2
   ; ‘helper' is not bound in the runtime phase
   > helper
   helper: undefined;
-   cannot reference undefined identifier
+   cannot reference an identifier before its definition
+    in module: top-level ~ ~
   > (define-for-syntax (filter-ids ids)
       (filter identifier? ids))
-
   > (define-syntax (show-variables syntax-object)
       (syntax-case syntax-object ()
         [(_ expr ...)
          (with-syntax ([(only-ids ...)
                         (filter-ids (syntax->list #'(expr ...)))])
            #'(list only-ids ...))]))
-
   > (let ([a 1] [b 2] [c 3])
       (show-variables a 5 2 b c))
   '(1 2 3)
@@ -2686,19 +2666,18 @@ Like define-for-syntax, but expr must produce as many values as supplied
 ids, and all of the ids are bound (at phase level 1).
 
 Examples:
-  > (define-values-for-syntax (foo1 foo2) (values 1 2))
 
+  > (define-values-for-syntax (foo1 foo2) (values 1 2))
   > (define-syntax (bar syntax-object)
       (printf "foo1 is ~a foo2 is ~a\n" foo1 foo2)
       #'2)
-
   > (bar)
   foo1 is 1 foo2 is 2
   2
 
 14.1. require Macros
 
- (require racket/require-syntax) package: base ~
+ (require racket/require-syntax) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/require-syntax library, not racket/base or racket.
@@ -2712,24 +2691,23 @@ proc-expr must produce a procedure that accepts and returns a syntax
 object representing a require sub-form.
 
 This form expands to define-syntax with a use of
-make-require-transformer (see [missing] for more information), and the
-syntax object passed to and from the macro transformer is adjusted via
-syntax-local-require-introduce.
+make-require-transformer (see [missing] for more information).
 
 The second form is a shorthand the same as for define-syntax; it expands
 to a definition of the first form where the proc-expr is a lambda form.
 
                                         *syntax-local-require-introduce*
 (syntax-local-require-introduce stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
-Provided for-syntax for use only during the application of a require
-sub-form macro transformer: like syntax-local-introduce, but for require
-sub-form expansion.
+For backward compatibility only; equivalent to syntax-local-introduce.
+
+Changed in version 6.90.0.29 of package base: Made equivalent to
+syntax-local-introduce.
 
 14.2. provide Macros
 
- (require racket/provide-syntax) package: base ~
+ (require racket/provide-syntax) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/provide-syntax library, not racket/base or racket.
@@ -2743,20 +2721,19 @@ proc-expr must produce a procedure that accepts and returns a syntax
 object representing a provide sub-form.
 
 This form expands to define-syntax with a use of
-make-provide-transformer (see [missing] for more information), and the
-syntax object passed to and from the macro transformer is adjusted via
-syntax-local-provide-introduce.
+make-provide-transformer (see [missing] for more information).
 
 The second form is a shorthand the same as for define-syntax; it expands
 to a definition of the first form where the expr is a lambda form.
 
                                         *syntax-local-provide-introduce*
 (syntax-local-provide-introduce stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
-Provided for-syntax for use only during the application of a provide
-sub-form macro transformer: like syntax-local-introduce, but for provide
-sub-form expansion.
+For backward compatibility only; equivalent to syntax-local-introduce.
+
+Changed in version 6.90.0.29 of package base: Made equivalent to
+syntax-local-introduce.
 
 15. Sequencing: begin, begin0, and begin-for-syntax
 
@@ -2777,6 +2754,7 @@ all but the last expr. The last expr is in tail position with respect to
 the begin form.
 
 Examples:
+
   > (begin
       (define x 10)
       x)
@@ -2792,7 +2770,7 @@ Examples:
      (list x y))
   '(1 2)
 
-                                        *begin*
+                                        *begin0*
 (begin0 expr ...+) ~
 
 Evaluates the first expr, then evaluates the other exprss in order,
@@ -2801,6 +2779,7 @@ the begin0 form; the first expr is in tail position only if no other
 exprs are present.
 
 Example:
+
   > (begin0
       (values 1 2)
       (printf "hi\n"))
@@ -2847,14 +2826,13 @@ expression is #<void>. Otherwise, the bodys are evaluated, and the last
 body is in tail position with respect to the when form.
 
 Examples:
+
   > (when (positive? -5)
       (display "hi"))
-
   > (when (positive? 5)
       (display "hi")
       (display " there"))
   hi there
-
 
                                         *unless*
 (unless test-expr body ...+) ~
@@ -2862,14 +2840,13 @@ Examples:
 Equivalent to (when (not test-expr) body ...+).
 
 Examples:
+
   > (unless (positive? 5)
       (display "hi"))
-
   > (unless (positive? -5)
       (display "hi")
       (display " there"))
   hi there
-
 
 17. Assignment: set! and set!-values
 
@@ -2899,11 +2876,9 @@ has not been defined, the exn:fail:contract exception is raised.
 See also compile-allow-set!-undefined.
 
 Examples:
-  (define x 12)
 
-
+  > (define x 12)
   > (set! x (add1 x))
-
   > x
   13
   > (let ([x 5])
@@ -2912,8 +2887,9 @@ Examples:
   6
   > (set! i-am-not-defined 10)
   set!: assignment disallowed;
-   cannot set undefined
-    variable: i-am-not-defined ~
+   cannot set variable before its definition
+    variable: i-am-not-defined ~ ~
+    in module: top-level ~ ~
 
                                         *set!-values*
 (set!-values (id ...) expr) ~
@@ -2924,6 +2900,7 @@ id is filled with the corresponding value from expr in the same way as
 for set!.
 
 Example:
+
   > (let ([a 1]
           [b 2])
       (set!-values (a b) (values b a))
@@ -2951,21 +2928,21 @@ The for iteration forms are based on SRFI-42 [SRFI-42].
  
    for-clause = [id seq-expr]
               | [(id ...) seq-expr]
-              | #:when guard-expr ~
-              | #:unless guard-expr ~
+              | #:when guard-expr ~ ~
+              | #:unless guard-expr ~ ~
               | break-clause
                  
- break-clause = #:break guard-expr ~
-              | #:final guard-expr ~
+ break-clause = #:break guard-expr ~ ~
+              | #:final guard-expr ~ ~
                  
 body-or-break = body
               | break-clause
  
-  seq-expr : sequence? ~
+  seq-expr : sequence? ~ ~
 
 Iteratively evaluates bodys. The for-clauses introduce bindings whose
 scope includes body and that determine the number of times that body is
-evaluated. A break-clause either among the for-clauses of bodys stops
+evaluated. A break-clause either among the for-clauses or bodys stops
 further iteration.
 
 In the simple case, each for-clause has one of its first two forms,
@@ -3008,46 +2985,50 @@ following bodys. Among the bodys, besides stopping the iteration and
 preventing later body evaluations, a #:break guard-expr or #:final
 guard-expr clause starts a new internal-definition context.
 
+In the case of list and stream sequences, the for form itself does not
+keep each element reachable. If a list or stream produced by a seq-expr
+is otherwise unreachable, and if the for body can no longer reference an
+id for a list element, then the element is subject to garbage
+collection. The make-do-sequence sequence constructor supports
+additional sequences that behave like lists and streams in this way.
+
 Examples:
+
   > (for ([i '(1 2 3)]
           [j "abc"]
-          #:when (odd? i) ~
+          #:when (odd? i) ~ ~
           [k #(#t #f)])
       (display (list i j k)))
   (1 a #t)(1 a #f)(3 c #t)(3 c #f)
-
   > (for ([(i j) #hash(("a" . 1) ("b" . 20))])
       (display (list i j)))
-  (a 1)(b 20)
-
+  (b 20)(a 1)
   > (for ([i '(1 2 3)]
           [j "abc"]
-          #:break (not (odd? i)) ~
+          #:break (not (odd? i)) ~ ~
           [k #(#t #f)])
       (display (list i j k)))
   (1 a #t)(1 a #f)
-
   > (for ([i '(1 2 3)]
           [j "abc"]
-          #:final (not (odd? i)) ~
+          #:final (not (odd? i)) ~ ~
           [k #(#t #f)])
       (display (list i j k)))
   (1 a #t)(1 a #f)(2 b #t)
-
   > (for ([i '(1 2 3)]
           [j "abc"]
           [k #(#t #f)])
-      #:break (not (or (odd? i) k)) ~
+      #:break (not (or (odd? i) k)) ~ ~
       (display (list i j k)))
   (1 a #t)
-
   > (for ()
       (display "here"))
   here
-
   > (for ([i '()])
       (error "doesn't get here"))
 
+Changed in version 6.7.0.4: Added support for the optional second
+result.
 
                                         *for/list*
 (for/list (for-clause ...) body-or-break ... body) ~
@@ -3059,15 +3040,16 @@ to a #:when or #:unless clause, the result list includes no
 corresponding element.
 
 Examples:
+
   > (for/list ([i '(1 2 3)]
                [j "abc"]
-               #:when (odd? i) ~
+               #:when (odd? i) ~ ~
                [k #(#t #f)])
       (list i j k))
   '((1 #\a #t) (1 #\a #f) (3 #\c #t) (3 #\c #f))
   > (for/list ([i '(1 2 3)]
                [j "abc"]
-               #:break (not (odd? i)) ~
+               #:break (not (odd? i)) ~ ~
                [k #(#t #f)])
       (list i j k))
   '((1 #\a #t) (1 #\a #f))
@@ -3081,10 +3063,10 @@ Examples:
 (for/vector maybe-length (for-clause ...) body-or-break ... body) ~
  
 maybe-length = 
-             | #:length length-expr ~
-             | #:length length-expr #:fill fill-expr ~
+             | #:length length-expr ~ ~
+             | #:length length-expr #:fill fill-expr ~ ~
  
-  length-expr : exact-nonnegative-integer? ~
+  length-expr : exact-nonnegative-integer? ~ ~
 
 Iterates like for/list, but results are accumulated into a vector
 instead of a list.
@@ -3099,13 +3081,14 @@ initialized to the value of fill-expr, which defaults to 0 (i.e., the
 default argument of make-vector).
 
 Examples:
+
   > (for/vector ([i '(1 2 3)]) (number->string i))
   '#("1" "2" "3")
-  > (for/vector #:length 2 ([i '(1 2 3)]) (number->string i)) ~
+  > (for/vector #:length 2 ([i '(1 2 3)]) (number->string i)) ~ ~
   '#("1" "2")
-  > (for/vector #:length 4 ([i '(1 2 3)]) (number->string i)) ~
+  > (for/vector #:length 4 ([i '(1 2 3)]) (number->string i)) ~ ~
   '#("1" "2" "3" 0)
-  > (for/vector #:length 4 #:fill "?" ([i '(1 2 3)]) (number->string i)) ~
+  > (for/vector #:length 4 #:fill "?" ([i '(1 2 3)]) (number->string i)) ~ ~
   '#("1" "2" "3" "?")
 
 The for/vector form may allocate a vector and mutate it after each
@@ -3124,6 +3107,7 @@ expression in the bodys must return two values: a key and a value to
 extend the hash table accumulated by the iteration.
 
 Example:
+
   > (for/hash ([i '(1 2 3)])
       (values i (number->string i)))
   '#hash((1 . "1") (2 . "2") (3 . "3"))
@@ -3138,6 +3122,7 @@ is #t. Otherwise, the result is the (single) result from the last
 evaluation of body.
 
 Examples:
+
   > (for/and ([i '(1 2 3 "x")])
       (i . < . 3))
   #f
@@ -3145,7 +3130,7 @@ Examples:
       i)
   4
   > (for/and ([i '(1 2 3 4)])
-      #:break (= i 3) ~
+      #:break (= i 3) ~ ~
       i)
   2
   > (for/and ([i '()])
@@ -3162,6 +3147,7 @@ then the result of the for/or expression is #f. Otherwise, the result is
 #f.
 
 Examples:
+
   > (for/or ([i '(1 2 3 "x")])
       (i . < . 3))
   #t
@@ -3179,6 +3165,7 @@ Iterates like for, but each result of the last body is accumulated into
 a result with +.
 
 Example:
+
   > (for/sum ([i '(1 2 3 4)]) i)
   10
 
@@ -3189,22 +3176,31 @@ Iterates like for, but each result of the last body is accumulated into
 a result with *.
 
 Example:
+
   > (for/product ([i '(1 2 3 4)]) i)
   24
 
                                         *for/lists*
-(for/lists (id ...) (for-clause ...) body-or-break ... body) ~
+(for/lists (id ... maybe-result) ~
+           (for-clause ...)
+  body-or-break ... body)
+ 
+maybe-result = 
+             | #:result result-expr ~ ~
 
 Similar to for/list, but the last body expression should produce as many
-values as given ids, and the result is as many lists as supplied ids.
-The ids are bound to the lists accumulated so far in the for-clauses and
-bodys.
+values as given ids. The ids are bound to the lists accumulated so far
+in the for-clauses and bodys.
+
+If a result-expr is provided, it is used as with for/fold when iteration
+terminates; otherwise, the result is as many lists as supplied ids
 
 Examples:
+
   > (for/lists (l1 l2 l3)
                ([i '(1 2 3)]
                 [j "abc"]
-                #:when (odd? i) ~
+                #:when (odd? i) ~ ~
                 [k #(#t #f)])
       (values i j k))
   '(1 1 3 3)
@@ -3212,9 +3208,15 @@ Examples:
   '(#t #f #t #f)
   > (for/lists (acc)
                ([x '(tvp tofu seitan tvp tofu)]
-                #:unless (member x acc)) ~
+                #:unless (member x acc)) ~ ~
       x)
   '(tvp tofu seitan)
+  > (for/lists (firsts seconds #:result (list firsts seconds)) ~ ~
+               ([pr '((1 . 2) (3 . 4) (5 . 6))])
+      (values (car pr) (cdr pr)))
+  '((1 3 5) (2 4 6))
+
+Changed in version 7.1.0.2: Added the #:result form.
 
                                         *for/first*
 (for/first (for-clause ...) body-or-break ... body) ~
@@ -3225,8 +3227,9 @@ body. If the body is never evaluated, then the result of the for/first
 expression is #f.
 
 Examples:
+
   > (for/first ([i '(1 2 3 "x")]
-                #:when (even? i)) ~
+                #:when (even? i)) ~ ~
        (number->string i))
   "2"
   > (for/first ([i '()])
@@ -3241,8 +3244,9 @@ last evaluation of body. If the body is never evaluated, then the result
 of the for/last expression is #f.
 
 Examples:
+
   > (for/last ([i '(1 2 3 4 5)]
-                #:when (even? i)) ~
+                #:when (even? i)) ~ ~
        (number->string i))
   "4"
   > (for/last ([i '()])
@@ -3250,24 +3254,205 @@ Examples:
   #f
 
                                         *for/fold*
-(for/fold ([accum-id init-expr] ...) (for-clause ...) ~
+(for/fold ([accum-id init-expr] ... maybe-result) (for-clause ...) ~
   body-or-break ... body)
+ 
+maybe-result = 
+             | #:result result-expr ~ ~
 
 Iterates like for. Before iteration starts, the init-exprs are evaluated
 to produce initial accumulator values. At the start of each iteration, a
 location is generated for each accum-id, and the corresponding current
 accumulator value is placed into the location. The last expression in
 body must produce as many values as accum-ids, and those values become
-the current accumulator values. When iteration terminates, the results
-of the for/fold expression are the accumulator values.
+the current accumulator values. When iteration terminates, if a
+result-expr is provided then the result of the  for/fold is the result
+of evaluating result-expr  (with accum-ids in scope and bound to their
+final values),  otherwise the results of the for/fold expression are the
+accumulator values.
 
-Example:
+An accum-id and a binding from a for-clause can be the same identifier.
+In that case, the accum-id binding shadows the one in a for-clause
+within the body-or-break and body forms (even though, syntactically, a
+for-clause is closer to the body).
+
+Examples:
+
   > (for/fold ([sum 0]
                [rev-roots null])
               ([i '(1 2 3 4)])
       (values (+ sum i) (cons (sqrt i) rev-roots)))
   10
   '(2 1.7320508075688772 1.4142135623730951 1)
+  > (for/fold ([acc '()]
+               [seen (hash)]
+               #:result (reverse acc)) ~ ~
+              ([x (in-list '(0 1 1 2 3 4 4 4))])
+      (cond
+        [(hash-ref seen x #f)
+         (values acc seen)]
+        [else (values (cons x acc)
+                      (hash-set seen x #t))]))
+  '(0 1 2 3 4)
+
+Changed in version 6.11.0.1: Added the #:result form.
+
+                                        *for/foldr*
+(for/foldr ([accum-id init-expr] ... accum-option ...) ~
+           (for-clause ...)
+  body-or-break ... body)
+ 
+accum-option = #:result result-expr ~ ~
+             | #:delay ~ ~
+             | #:delay-as delayed-id ~ ~
+             | #:delay-with delayer-id ~ ~
+
+Like for/fold, but analogous to foldr rather than foldl: the given
+sequences are still iterated in the same order, but the loop body is
+evaluated in reverse order. Evaluation of a for/foldr expression uses
+space proportional to the number of iterations it performs, and all
+elements produced by the given sequences are retained until backwards
+evaluation of the loop body begins (assuming the element is, in fact,
+referenced in the body).
+
+Examples:
+
+  > (define (in-printing seq)
+      (sequence-map (lambda (v) (println v) v) seq))
+  > (for/foldr ([acc '()])
+               ([v (in-printing (in-range 1 4))])
+      (println v)
+      (cons v acc))
+  1
+  2
+  3
+  3
+  2
+  1
+  '(1 2 3)
+
+Furthermore, unlike for/fold, the accum-ids are not bound within
+guard-exprs or body-or-break forms that appear before a break-clause.
+
+While the aforementioned limitations make for/foldr less generally
+useful than for/fold, for/foldr provides the additional capability to
+iterate lazily via the #:delay, #:delay-as, and #:delay-with options,
+which can mitigate many of for/foldr’s disadvantages. If at least one
+such option is specified, the loop body is given explicit control over
+when iteration continues: by default, each accum-id is bound to a
+promise that, when forced, produces the accum-id’s current value.
+
+In this mode, iteration does not continue until one such promise is
+forced, which triggers any additional iteration necessary to produce a
+value. If the loop body is lazy in its accum-ids—that is, it returns a
+value without forcing any of them—then the loop (or any of its
+iterations) will produce a value before iteration has completely
+finished. If a reference to at least one such promise is retained, then
+forcing it will resume iteration from the point at which it was
+suspended, even if control has left the dynamic extent of the loop body.
+
+Examples:
+
+  > (for/foldr ([acc '()] #:delay) ~ ~
+               ([v (in-range 1 4)])
+      (printf "--> ~v\n" v)
+      (begin0
+        (cons v (force acc))
+        (printf "<-- ~v\n" v)))
+  --> 1
+  --> 2
+  --> 3
+  <-- 3
+  <-- 2
+  <-- 1
+  '(1 2 3)
+  > (define resume
+      (for/foldr ([acc '()] #:delay) ~ ~
+                 ([v (in-range 1 5)])
+        (printf "--> ~v\n" v)
+        (begin0
+          (cond
+            [(= v 1) (force acc)]
+            [(= v 2) acc]
+            [else    (cons v (force acc))])
+          (printf "<-- ~v\n" v))))
+  --> 1
+  --> 2
+  <-- 2
+  <-- 1
+  > (force resume)
+  --> 3
+  --> 4
+  <-- 4
+  <-- 3
+  '(3 4)
+
+This extra control over iteration order allows for/foldr to both consume
+and construct infinite sequences, so long as it is at least sometimes
+lazy in its accumulators.
+
++See also for/stream for a more convenient (albeit less flexible) way to
+lazily transform infinite sequences. (Internally, for/stream is defined
+in terms of for/foldr.)
+
+Examples:
+
+  > (define squares (for/foldr ([s empty-stream] #:delay) ~ ~
+                               ([n (in-naturals)])
+                      (stream-cons (* n n) (force s))))
+  > (stream->list (stream-take squares 10))
+  '(0 1 4 9 16 25 36 49 64 81)
+
+The suspension introduced by the #:delay option does not ordinarily
+affect the loop’s eventual return value, but if #:delay and #:result are
+combined, the accum-ids will be delayed in the scope of the result-expr
+in the same way they are delayed within the loop body. This can be used
+to introduce an additional layer of suspension around the evaluation of
+the entire loop, if desired.
+
+Examples:
+
+  > (define evaluated-yet? #f)
+  > (for/foldr ([acc (set! evaluated-yet? #t)] #:delay) () ~ ~
+      (force acc))
+  > evaluated-yet?
+  #t
+
+  > (define evaluated-yet? #f)
+  > (define start
+      (for/foldr ([acc (set! evaluated-yet? #t)] #:delay #:result acc) () ~ ~
+        (force acc)))
+  > evaluated-yet?
+  #f
+  > (force start)
+  > evaluated-yet?
+  #t
+
+If the #:delay-as option is provided, then delayed-id is bound to an
+additional promise that returns the values of all accum-ids at once.
+When multiple accum-ids are provided, forcing this promise can be
+slightly more efficient than forcing the promises bound to the accum-ids
+individually.
+
+If the #:delay-with option is provided, the given delayer-id is used to
+suspend nested iterations (instead of the default, delay). A form of the
+shape (delayer-id recur-expr) is constructed and placed in expression
+position, where recur-expr is an expression that, when evaluated, will
+perform the next iteration and return its result (or results). Sensible
+choices for delayer-id include lazy, delay/sync, delay/thread, or any of
+the other promise constructors from racket/promise, as well as thunk
+from racket/function. However, beware that choices such as thunk or
+delay/name may evaluate their subexpression multiple times, which can
+lead to nonsensical results for sequences that have state, as the state
+will be shared between all evaluations of the recur-expr.
+
+If multiple accum-ids are given, the #:delay-with option is provided,
+and delayer-id is not bound to one of delay, lazy, delay/strict,
+delay/sync, delay/thread, or delay/idle, the accum-ids will not be bound
+at all, even within the loop body. Instead, the #:delay-as option must
+be specified to access the accumulator values via delayed-id.
+
+Added in version 7.3.0.3.
 
                                         *for**
 (for* (for-clause ...) body-or-break ... body) ~
@@ -3276,15 +3461,16 @@ Like for, but with an implicit #:when #t between each pair of
 for-clauses, so that all sequence iterations are nested.
 
 Example:
+
   > (for* ([i '(1 2)]
            [j "ab"])
       (display (list i j)))
   (1 a)(1 b)(2 a)(2 b)
 
-
                                         *for*/list*
 (for*/list (for-clause ...) body-or-break ... body) ~
-(for*/lists (id ...) (for-clause ...) body-or-break ... body)
+(for*/lists (id ... maybe-result) (for-clause ...)
+  body-or-break ... body)
 (for*/vector maybe-length (for-clause ...) body-or-break ... body)
 (for*/hash (for-clause ...) body-or-break ... body)
 (for*/hasheq (for-clause ...) body-or-break ... body)
@@ -3295,100 +3481,110 @@ Example:
 (for*/product (for-clause ...) body-or-break ... body)
 (for*/first (for-clause ...) body-or-break ... body)
 (for*/last (for-clause ...) body-or-break ... body)
-(for*/fold ([accum-id init-expr] ...) (for-clause ...)
+(for*/fold ([accum-id init-expr] ... maybe-result) (for-clause ...)
+  body-or-break ... body)
+(for*/foldr ([accum-id init-expr] ... accum-option ...)
+            (for-clause ...)
   body-or-break ... body)
 
 Like for/list, etc., but with the implicit nesting of for*.
 
 Example:
+
   > (for*/list ([i '(1 2)]
                 [j "ab"])
       (list i j))
   '((1 #\a) (1 #\b) (2 #\a) (2 #\b))
 
+Changed in version 7.3.0.3: Added the for*/foldr form.
+
 18.2. Deriving New Iteration Forms
 
                                         *for/fold/derived*
 (for/fold/derived orig-datum ~
-  ([accum-id init-expr] ...) (for-clause ...)
+  ([accum-id init-expr] ... maybe-result) (for-clause ...)
   body-or-break ... body)
 
 Like for/fold, but the extra orig-datum is used as the source for all
 syntax errors.
 
 Examples:
+
   > (define-syntax (for/digits stx)
       (syntax-case stx ()
-        [(_ clauses . defs+exprs)
+        [(_ clauses body ... tail-expr)
          (with-syntax ([original stx])
            #'(let-values
-               ([(n k)
-                 (for/fold/derived original ([n 0] [k 1]) clauses
-                   (define d (let () . defs+exprs))
-                   (values (+ n (* d k)) (* k 10)))])
+                 ([(n k)
+                   (for/fold/derived
+                       original ([n 0] [k 1])
+                     clauses
+                     body ...
+                     (values (+ n (* tail-expr k)) (* k 10)))])
                n))]))
-
   ; If we misuse for/digits, we can get good error reporting
-  ; because the use of orig-datum allows for source correlation: ~
+  ; because the use of orig-datum allows for source correlation: ~ ~
   > (for/digits
         [a (in-list '(1 2 3))]
         [b (in-list '(4 5 6))]
       (+ a b))
   eval:3:0: for/digits: bad sequence binding clause
-    at: a ~
-    in: (for/digits (a (in-list (quote (1 2 3)))) (b (in-list ~
+    at: a ~ ~
+    in: (for/digits (a (in-list (quote (1 2 3)))) (b (in-list ~ ~
   (quote (4 5 6)))) (+ a b))
   > (for/digits
         ([a (in-list '(1 2 3))]
          [b (in-list '(2 4 6))])
       (+ a b))
   963
-  ; Another example: compute the max during iteration: ~
+  ; Another example: compute the max during iteration: ~ ~
   > (define-syntax (for/max stx)
       (syntax-case stx ()
-         [(_ clauses . defs+exprs)
-          (with-syntax ([original stx])
-            #'(for/fold/derived original
-                                ([current-max -inf.0])
-                                clauses
-                (define maybe-new-max
-                  (let () . defs+exprs))
-                (if (> maybe-new-max current-max)
-                    maybe-new-max
-                    current-max)))]))
-
+        [(_ clauses body ... tail-expr)
+         (with-syntax ([original stx])
+           #'(for/fold/derived original
+               ([current-max -inf.0])
+               clauses
+               body ...
+               (define maybe-new-max tail-expr)
+               (if (> maybe-new-max current-max)
+                   maybe-new-max
+                   current-max)))]))
   > (for/max ([n '(3.14159 2.71828 1.61803)]
               [s '(-1      1       1)])
       (* n s))
   2.71828
 
+Changed in version 6.11.0.1: Added the #:result form.
+
                                         *for*/fold/derived*
 (for*/fold/derived orig-datum ~
-  ([accum-id init-expr] ...) (for-clause ...)
+  ([accum-id init-expr] ... maybe-result) (for-clause ...)
   body-or-break ... body)
 
 Like for*/fold, but the extra orig-datum is used as the source for all
 syntax errors.
 
 Examples:
+
   > (define-syntax (for*/digits stx)
       (syntax-case stx ()
-        [(_ clauses . defs+exprs)
+        [(_ clauses body ... tail-expr)
          (with-syntax ([original stx])
            #'(let-values
-               ([(n k)
-                 (for*/fold/derived original ([n 0] [k 1]) clauses
-                   (define d (let () . defs+exprs))
-                   (values (+ n (* d k)) (* k 10)))])
+                 ([(n k)
+                   (for*/fold/derived original ([n 0] [k 1])
+                     clauses
+                     body ...
+                     (values (+ n (* tail-expr k)) (* k 10)))])
                n))]))
-
   > (for*/digits
         [ds (in-list '((8 3) (1 1)))]
         [d (in-list ds)]
       d)
   eval:8:0: for*/digits: bad sequence binding clause
-    at: ds ~
-    in: (for*/digits (ds (in-list (quote ((8 3) (1 1))))) (d ~
+    at: ds ~ ~
+    in: (for*/digits (ds (in-list (quote ((8 3) (1 1))))) (d ~ ~
   (in-list ds)) d)
   > (for*/digits
         ([ds (in-list '((8 3) (1 1)))]
@@ -3396,14 +3592,30 @@ Examples:
       d)
   1138
 
+Changed in version 6.11.0.1: Added the #:result form.
+
+                                        *for/foldr/derived*
+(for/foldr/derived orig-datum ~
+  ([accum-id init-expr] ... accum-option ...) (for-clause ...)
+  body-or-break ... body)
+(for*/foldr/derived orig-datum
+  ([accum-id init-expr] ... accum-option ...) (for-clause ...)
+  body-or-break ... body)
+
+Like for/foldr and for*/foldr, but the extra orig-datum is used as the
+source for all syntax errors as in for/fold/derived and
+for*/fold/derived.
+
+Added in version 7.3.0.3.
+
                                         *define-sequence-syntax*
 (define-sequence-syntax id ~
   expr-transform-expr
   clause-transform-expr)
  
-  expr-transform-expr : (or/c (-> identifier?) ~
+  expr-transform-expr : (or/c (-> identifier?) ~ ~
                               (syntax? . -> . syntax?))
-  clause-transform-expr : (syntax? . -> . syntax?) ~
+  clause-transform-expr : (syntax? . -> . syntax?) ~ ~
 
 Defines id as syntax. An (id . rest) form is treated specially when used
 to generate a sequence in a for-clause of for (or one of its variants).
@@ -3413,7 +3625,7 @@ transform the clause.
 When id is used in any other expression position, the result of
 expr-transform-expr is used. If it is a procedure of zero arguments,
 then the result must be an identifier other-id, and any use of id is
-converted to a use of other-id. Otherwise,expr-transform-expr must
+converted to a use of other-id. Otherwise, expr-transform-expr must
 produce a procedure (of one argument) that is used as a macro
 transformer.
 
@@ -3429,30 +3641,28 @@ clause-transform-expr, use for-clause-syntax-protect instead of
 syntax-protect.
 
 Examples:
+
   > (define (check-nat n)
       (unless (exact-nonnegative-integer? n)
         (raise-argument-error 'in-digits "exact-nonnegative-integer?" n)))
-
   > (define-sequence-syntax in-digits
       (lambda () #'in-digits/proc)
       (lambda (stx)
         (syntax-case stx ()
           [[(d) (_ nat)]
            #'[(d)
-              (:do-in ~
+              (:do-in ~ ~
                 ([(n) nat])
                 (check-nat n)
                 ([i n])
                 (not (zero? i))
                 ([(j d) (quotient/remainder i 10)])
-                #true
-                #true
+                #t
+                #t
                 [j])]]
           [_ #f])))
-
   > (define (in-digits/proc n)
       (for/list ([d (in-digits n)]) d))
-
   > (for/list ([d (in-digits 1138)]) d)
   '(8 3 1 1)
   > (map in-digits (list 137 216))
@@ -3499,7 +3709,7 @@ For an example of :do-in, see define-sequence-syntax.
 
                                         *for-clause-syntax-protect*
 (for-clause-syntax-protect stx) -> syntax? ~
-  stx : syntax? ~
+  stx : syntax? ~ ~
 
 Provided for-syntax: Like syntax-protect, but allows the for expander to
 disarm the result syntax object, and arms the pieces of a clause instead
@@ -3567,7 +3777,7 @@ however, and the result of the expr takes the place of the (unquote
 expr) form in the quasiquote result. An (unquote-splicing expr)
 similarly escapes, but the expr must produce a list, and its elements
 are spliced as multiple values place of the (unquote-splicing expr),
-which must appear as the car or a quoted pair, as an element of a quoted
+which must appear as the car of a quoted pair, as an element of a quoted
 vector, or as an element of a quoted prefab structure; in the case of a
 pair, if the cdr of the relevant quoted pair is empty, then expr need
 not produce a list, and its result is used directly in place of the
@@ -3580,6 +3790,7 @@ other way than as (unquote expr) or (unquote-splicing expr), a syntax
 error is reported.
 
 Examples:
+
   > (quasiquote (0 1 2))
   '(0 1 2)
   > (quasiquote (0 (unquote (+ 1 2)) 4))
@@ -3588,8 +3799,8 @@ Examples:
   '(0 1 2 4)
   > (quasiquote (0 (unquote-splicing 1) 4))
   unquote-splicing: contract violation
-    expected: list? ~
-    given: 1 ~
+    expected: list? ~ ~
+    given: 1 ~ ~
   > (quasiquote (0 (unquote-splicing 1)))
   '(0 . 1)
 
@@ -3597,13 +3808,14 @@ A quasiquote, unquote, or unquote-splicing form is typically abbreviated
 with `, ,, or ,@, respectively. See also [missing].
 
 Examples:
+
   > `(0 1 2)
   '(0 1 2)
   > `(1 ,(+ 1 2) 4)
   '(1 3 4)
   > `#s(stuff 1 ,(+ 1 2) 4)
   '#s(stuff 1 3 4)
-  > ‘#hash(("a" . ,(+ 1 2)))
+  > `#hash(("a" . ,(+ 1 2)))
   '#hash(("a" . 3))
   > `#hash((,(+ 1 2) . "a"))
   '#hash((,(+ 1 2) . "a"))
@@ -3619,6 +3831,7 @@ unquote-splicing escapes.  Multiple nestings of quasiquote require
 multiple nestings of unquote or unquote-splicing to escape.
 
 Examples:
+
   > `(1 `,(+ 1 ,(+ 2 3)) 4)
   '(1 `,(+ 1 5) 4)
   > `(1 ```,,@,,@(list (+ 1 2)) 4)
@@ -3631,7 +3844,15 @@ expressions. For example, in
   `(,1 2 3)
 
 a single tail '(2 3) is used for every evaluation of the quasiquote
-expression.
+expression. When allocating fresh data, the quasiquote form allocates
+mutable vectors, mutable boxes and immutable hashes.
+
+Examples:
+
+  > (immutable? `#(,0))
+  #f
+  > (immutable? `#hash((a . ,0)))
+  #t
 
 unquote
 
@@ -3647,14 +3868,14 @@ unquote-splicing form as an expression is a syntax error.
 
                                         *quote-syntax*
 (quote-syntax datum) ~
-(quote-syntax datum #:local) ~
+(quote-syntax datum #:local) ~ ~
 
 Similar to quote, but produces a syntax object that preserves the
 lexical information and source-location information attached to datum at
 expansion time.
 
-When #:local is specified, than all scopes in the syntax object’s
-lexical information is preserved. When #:local is omitted, then the
+When #:local is specified, then all scopes in the syntax object’s
+lexical information are preserved. When #:local is omitted, then the
 scope sets within datum are pruned to omit the scope for any binding
 form that appears between the quote-syntax form and the enclosing
 top-level context, module body, or phase level crossing, whichever is
@@ -3664,22 +3885,20 @@ Unlike syntax (#'), quote-syntax does not substitute pattern variables
 bound by with-syntax, syntax-parse, or syntax-case.
 
 Examples:
+
   > (syntax? (quote-syntax x))
   #t
   > (quote-syntax (1 2 3))
-  #<syntax:72:0 (1 2 3)>
+  #<syntax:eval:78:0 (1 2 3)>
   > (with-syntax ([a #'5])
       (quote-syntax (a b c)))
-  #<syntax:73:0 (a b c)>
-  > (free-identifier? (let ([x 1]) (quote-syntax x))
-                      (quote-syntax x))
-  free-identifier?: undefined;
-   cannot reference undefined identifier
-  > (free-identifier? (let ([x 1]) (quote-syntax x #:local)) ~
-                      (quote-syntax x))
-  eval:75:0: quote-syntax: bad syntax;
-   has 2 parts after keyword
-    in: (quote-syntax x #:local) ~
+  #<syntax:eval:79:0 (a b c)>
+  > (free-identifier=? (let ([x 1]) (quote-syntax x))
+                       (quote-syntax x))
+  #t
+  > (free-identifier=? (let ([x 1]) (quote-syntax x #:local)) ~ ~
+                       (quote-syntax x))
+  #f
 
 Changed in version 6.3: Added scope pruning and support for #:local.
 
@@ -3694,7 +3913,7 @@ read-eval-print-loop.
 
 23. Blocks: block
 
- (require racket/block) package: base ~
+ (require racket/block) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/block
 library, not racket/base or racket.
@@ -3714,13 +3933,13 @@ The final defn-or-expr is executed in tail position, if it is an
 expression.
 
 Examples:
+
   > (define (f x)
       (block
         (define y (add1 x))
         (displayln y)
         (define z (* 2 y))
         (+ 3 z)))
-
   > (f 12)
   13
   29
@@ -3741,7 +3960,7 @@ context.
 
 25. Performance Hints: begin-encourage-inline
 
- (require racket/performance-hint) package: base ~
+ (require racket/performance-hint) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/performance-hint library, not racket/base or racket.
@@ -3785,7 +4004,7 @@ as begin-encourage-inline) fail.
 
 26. Importing Modules Lazily: lazy-require
 
- (require racket/lazy-require) package: base ~
+ (require racket/lazy-require) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/lazy-require library, not racket/base or racket.
@@ -3804,7 +4023,7 @@ given, it defaults to fun-id.
 If the enclosing relative phase level is not 0, then module-path is also
 placed in a submodule (with a use of define-runtime-module-path-index at
 phase level 0 within the submodule). Introduced submodules have the
-names lazy-require-n-m, where n is a phase-level number and m is a
+names lazy-require-auxn-m, where n is a phase-level number and m is a
 number.
 
 When the use of a lazily-required function triggers module loading, it
@@ -3813,9 +4032,9 @@ compilation dependency (in case the function is used in the process of
 compiling a module).
 
 Examples:
+
   > (lazy-require
       [racket/list (partition)])
-
   > (partition even? '(1 2 3 4 5))
   '(2 4)
   '(1 3 5)
@@ -3823,11 +4042,96 @@ Examples:
       (provide hello)
       (printf "starting hello server\n")
       (define (hello) (printf "hello!\n")))
-
   > (lazy-require
       ['hello ([hello greet])])
-
   > (greet)
   starting hello server
   hello!
 
+                                        *lazy-require-syntax*
+(lazy-require-syntax [module-path (macro-import ...)] ...) ~
+ 
+macro-import = macro-id
+             | (orig-macro-id macro-id)
+
+Like lazy-require but for macros. That is, it defines each macro-id as a
+macro that, when used, dynamically loads the macro’s implementation from
+the given module-path. If orig-macro-id is not given, it defaults to
+macro-id.
+
+Use lazy-require-syntax in the implementation of a library with large,
+complicated macros to avoid a dependence from clients of the library on
+the macro “compilers.” Note that only macros with exceptionally large
+compile-time components (such as Typed Racket, which includes a type
+checker and optimizer) benefit from lazy-require-syntax; typical macros
+do not.
+
+Warning: lazy-require-syntax breaks the invariants that Racket’s module
+loader and linker rely on; these invariants normally ensure that the
+references in code produced by a macro are loaded before the code runs.
+Safe use of lazy-require-syntax requires a particular structure in the
+macro implementation. (In particular, lazy-require-syntax cannot simply
+be introduced in the client code.) The macro implementation must follow
+these rules:
+
+* the interface module must require the runtime-support module
+
+* the compiler module must require the runtime-support module via an
+  absolute module path rather than a relative path
+
+To explain the concepts of “interface, compiler, and runtime-support
+modules”, here is an example module that exports a macro:
+
+  (module original racket/base
+    (define (ntimes-proc n thunk)
+      (for ([i (in-range n)]) (thunk)))
+    (define-syntax-rule (ntimes n expr)
+      (ntimes-proc n (lambda () expr)))
+    (provide ntimes))
+
+Suppose we want to use lazy-require-syntax to lazily load the
+implementation of the ntimes macro transformer. The original module must
+be split into three parts:
+
+  (module runtime-support racket/base
+    (define (ntimes-proc n thunk)
+      (for ([i (in-range n)]) (thunk)))
+    (provide ntimes-proc))
+  (module compiler racket/base
+    (require 'runtime-support)
+    (define-syntax-rule (ntimes n expr)
+      (ntimes-proc n (lambda () expr)))
+    (provide ntimes))
+  (module interface racket/base
+    (require racket/lazy-require)
+    (require 'runtime-support)
+    (lazy-require-syntax ['compiler (ntimes)])
+    (provide ntimes))
+
+The runtime support module contains the function and value definitions
+that the macro refers to. The compiler module contains the macro
+definition(s) themselves—the part of the code that “disappears” after
+compile time. The interface module lazily loads the macro transformer,
+but it makes sure the runtime support module is defined at run time by
+requiring it normally. In a larger example, of course, the runtime
+support and compiler may both consist of multiple modules.
+
+Here what happens when we don’t separate the runtime support into a
+separate module:
+
+  > (module bad-no-runtime racket/base
+      (define (ntimes-proc n thunk)
+        (for ([i (in-range n)]) (thunk)))
+      (define-syntax-rule (ntimes n expr)
+        (ntimes-proc n (lambda () expr)))
+      (provide ntimes))
+  > (module bad-client racket/base
+      (require racket/lazy-require)
+      (lazy-require-syntax ['bad-no-runtime (ntimes)])
+      (ntimes 3 (printf "hello?\n")))
+  > (require 'bad-client)
+  no module instance found:
+  #<resolved-module-path:'bad-no-runtime> 0
+
+A similar error occurs when the interface module doesn’t introduce a
+dependency on the runtime support module.

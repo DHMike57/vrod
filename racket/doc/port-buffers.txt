@@ -37,19 +37,27 @@ port-read-handler).
 
                                         *flush-output*
 (flush-output [out]) -> void? ~
-  out : output-port? = (current-output-port) ~
+  out : output-port? = (current-output-port) ~ ~
 
 Forces all buffered data in the given output port to be physically
 written. Only file-stream ports, TCP ports, and custom ports (see
 [missing]) use buffers; when called on a port without a buffer,
 flush-output has no effect.
 
+If flushing a file-stream port or TCP port encounters an error when
+writing, then all buffered bytes in the port are discarded.
+Consequently, a further attempt to flush or close the port will not
+fail.
+
+Changed in version 7.4.0.10: Consistently, discard buffered bytes on
+error, including in a TCP output port.
+
                                         *file-stream-buffer-mode*
 (file-stream-buffer-mode port) -> (or/c 'none 'line 'block #f) ~
-  port : port? ~
+  port : port? ~ ~
 (file-stream-buffer-mode port mode) -> void?
-  port : port? ~
-  mode : (or/c 'none 'line 'block) ~
+  port : port? ~ ~
+  mode : (or/c 'none 'line 'block) ~ ~
 
 Gets or sets the buffer mode for port, if possible. File-stream ports
 support setting the buffer mode, TCP ports (see [missing]) support
@@ -66,10 +74,10 @@ if the mode cannot be determined. If port is an input port and mode is
 
                                         *file-position*
 (file-position port) -> exact-nonnegative-integer? ~
-  port : port? ~
+  port : port? ~ ~
 (file-position port pos) -> void?
-  port : port? ~
-  pos : (or/c exact-nonnegative-integer? eof-object?) ~
+  port : port? ~ ~
+  pos : (or/c exact-nonnegative-integer? eof-object?) ~ ~
 
 Returns or sets the current read/write position of port.
 
@@ -90,9 +98,14 @@ exn:fail:filesystem exception is raised.
 
 When file-position sets the position pos beyond the current size of an
 output file or (byte) string, the file/string is enlarged to size pos
-and the new region is filled with 0 bytes.  If pos is beyond the end of
-an input file or (byte) string, then reading thereafter returns eof
-without changing the port’s position.
+and the new region is filled with 0 bytes; in the case of a file. In the
+case of a file output port, the file might not be enlarged until more
+data is written to the file; in that case, beware that writing to a file
+opened in 'append mode on Unix and Mac OS will reset the file pointer to
+the end of a file before each write, which defeats file enlargement via
+file-position. If pos is beyond the end of an input file or (byte)
+string, then reading thereafter returns eof without changing the port’s
+position.
 
 When changing the file position for an output port, the port is first
 flushed if its buffer is not empty. Similarly, setting the position for
@@ -103,15 +116,15 @@ position via one port does not flush the other port’s buffer.
 
                                         *file-position**
 (file-position* port) -> (or/c exact-nonnegative-integer? #f) ~
-  port : port? ~
+  port : port? ~ ~
 
 Like file-position on a single argument, but returns #f if the position
 is not known.
 
                                         *file-truncate*
 (file-truncate port size) -> void? ~
-  port : (and/c output-port? file-stream-port?) ~
-  size : exact-nonnegative-integer? ~
+  port : (and/c output-port? file-stream-port?) ~ ~
+  size : exact-nonnegative-integer? ~ ~
 
 Sets the size of the file written by port to size, assuming that the
 port is associated to a file whose size can be set.

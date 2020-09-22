@@ -1,6 +1,6 @@
 The racket/load Language
 
- #lang racket/load package: base ~
+ #lang racket/load package: base ~ ~
 
 The racket/load language supports evaluation where each top-level form
 in the module body is separately passed to eval in the same way as for

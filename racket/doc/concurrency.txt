@@ -35,12 +35,14 @@ to improve performance.
 
     6 Engines
 
+    7 Machine Memory Order
+
 1. Threads
 
 +[missing] in [missing] introduces threads.
 
 See [missing] for basic information on the Racket thread model. See also
-Futures.
+Futures and Places.
 
 When a thread is created, it is placed into the management of the
 current custodian and added to the current thread group. A thread can
@@ -62,23 +64,11 @@ A thread can be used as a synchronizable event (see Events).  A thread
 is ready for synchronization when thread-wait would not block; the
 synchronization result of a thread is the thread itself.
 
-All constant-time procedures and operations provided by Racket are
-thread-safe because they are atomic. For example, set! assigns to a
-variable as an atomic action with respect to all threads, so that no
-thread can see a “half-assigned” variable. Similarly, vector-set!
-assigns to a vector atomically. The hash-set! procedure is not atomic,
-but the table is protected by a lock; see [missing] for more
-information. Port operations are generally not atomic, but they are
-thread-safe in the sense that a byte consumed by one thread from an
-input port will not be returned also to another thread, and procedures
-like port-commit-peeked and write-bytes-avail offer specific concurrency
-guarantees.
-
 1.1. Creating Threads
 
                                         *thread*
 (thread thunk) -> thread? ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 Calls thunk with no arguments in a new thread of control. The thread
 procedure returns immediately with a thread descriptor value. When the
@@ -87,7 +77,7 @@ terminates.
 
                                         *thread?*
 (thread? v) -> thread? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a thread descriptor, #f otherwise.
 
@@ -98,7 +88,7 @@ Returns the thread descriptor for the currently executing thread.
 
                                         *thread/suspend-to-kill*
 (thread/suspend-to-kill thunk) -> thread? ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 Like thread, except that “killing” the thread through kill-thread or
 custodian-shutdown-all merely suspends the thread instead of terminating
@@ -106,8 +96,8 @@ it.
 
                                         *call-in-nested-thread*
 (call-in-nested-thread thunk [cust]) -> any ~
-  thunk : (-> any) ~
-  cust : custodian? = (current-custodian) ~
+  thunk : (-> any) ~ ~
+  cust : custodian? = (current-custodian) ~ ~
 
 Creates a nested thread managed by cust to execute thunk. (The nested
 thread’s current custodian is inherited from the creating thread,
@@ -132,11 +122,16 @@ nested thread is created, the break is moved to the nested thread. If a
 break remains queued on the nested thread when it completes, the break
 is moved to the original thread.
 
+If the thread created by call-in-nested-thread dies while itself in a
+call to call-in-nested-thread, the outer call to call-in-nested-thread
+waits for the innermost nested thread to complete, and any breaks
+pending on the inner threads are moved to the original thread.
+
 1.2. Suspending, Resuming, and Killing Threads
 
                                         *thread-suspend*
 (thread-suspend thd) -> void? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Immediately suspends the execution of thd if it is running. If the
 thread has terminated or is already suspended, thread-suspend has no
@@ -148,8 +143,8 @@ and the thread is not suspended.
 
                                         *thread-resume*
 (thread-resume thd [benefactor]) -> void? ~
-  thd : thread? ~
-  benefactor : (or/c thread? custodian? #f) = #f ~
+  thd : thread? ~ ~
+  benefactor : (or/c thread? custodian? #f) = #f ~ ~
 
 Resumes the execution of thd if it is suspended and has at least one
 custodian (possibly added through benefactor, as described below). If
@@ -178,7 +173,7 @@ if benefactor is supplied, it triggers up to three additional actions:
 
                                         *kill-thread*
 (kill-thread thd) -> void? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Terminates the specified thread immediately, or suspends the thread if
 thd was created with thread/suspend-to-kill. Terminating the main thread
@@ -196,8 +191,8 @@ and other threads can safely use the port.
 
                                         *break-thread*
 (break-thread thd [kind]) -> void? ~
-  thd : thread? ~
-  kind : (or/c #f 'hang-up 'terminate) = #f ~
+  thd : thread? ~ ~
+  kind : (or/c #f 'hang-up 'terminate) = #f ~ ~
 
 Registers a break with the specified thread, where kind optionally
 indicates the kind of break to register. If breaking is disabled in thd,
@@ -205,7 +200,7 @@ the break will be ignored until breaks are re-enabled (see [missing]).
 
                                         *sleep*
 (sleep [secs]) -> void? ~
-  secs : (>=/c 0) = 0 ~
+  secs : (>=/c 0) = 0 ~ ~
 
 Causes the current thread to sleep until at least secs seconds have
 passed after it starts sleeping. A zero value for secs simply acts as a
@@ -215,13 +210,13 @@ of the actual sleep time is unspecified.
 
                                         *thread-running?*
 (thread-running? thd) -> any ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Returns #t if thd has not terminated and is not suspended, #f otherwise.
 
                                         *thread-dead?*
 (thread-dead? thd) -> any ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Returns #t if thd has terminated, #f otherwise.
 
@@ -229,7 +224,7 @@ Returns #t if thd has terminated, #f otherwise.
 
                                         *thread-wait*
 (thread-wait thd) -> void? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Blocks execution of the current thread until thd has terminated. Note
 that (thread-wait (current-thread)) deadlocks the current thread, but a
@@ -237,7 +232,7 @@ break can end the deadlock (if breaking is enabled; see [missing]).
 
                                         *thread-dead-evt*
 (thread-dead-evt thd) -> evt? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Returns a synchronizable event (see Events) that is ready for
 synchronization if and only if thd has terminated.  Unlike using thd
@@ -249,7 +244,7 @@ itself.
 
                                         *thread-resume-evt*
 (thread-resume-evt thd) -> evt? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Returns a synchronizable event (see Events) that becomes ready for
 synchronization when thd is running.  (If thd has terminated, the event
@@ -262,15 +257,16 @@ to the event does not prevent thd from being garbage collected (see
 
                                         *thread-suspend-evt*
 (thread-suspend-evt thd) -> evt? ~
-  thd : thread? ~
+  thd : thread? ~ ~
 
 Returns a synchronizable event (see Events) that becomes ready for
 synchronization when thd is suspended.  (If thd has terminated, the
 event will never unblock.)  If thd is suspended and then resumes after a
 call to thread-suspend-evt, the result event remains ready; after each
 resume of thd created a fresh event to be returned by
-thread-suspend-evt. The synchronization result of a thread-suspend event
-is the thread-suspend event itself.
+thread-suspend-evt. The result of the event is thd, but if thd is never
+resumed, then reference to the event does not prevent thd from being
+garbage collected (see [missing]).
 
 1.4. Thread Mailboxes
 
@@ -282,9 +278,9 @@ channel.
 
                                         *thread-send*
 (thread-send thd v [fail-thunk]) -> any ~
-  thd : thread? ~
-  v : any/c ~
-  fail-thunk : (or/c (-> any) #f) ~
+  thd : thread? ~ ~
+  v : any/c ~ ~
+  fail-thunk : (or/c (-> any) #f) ~ ~
              = (lambda () (raise-mismatch-error ....))
 
 Queues v as a message to thd without blocking. If the message is queued,
@@ -316,7 +312,7 @@ thread-receive event itself.
 
                                         *thread-rewind-receive*
 (thread-rewind-receive lst) -> void? ~
-  lst : list? ~
+  lst : list? ~ ~
 
 Pushes the elements of lst back onto the front of the current thread’s
 queue. The elements are pushed one by one, so that the first available
@@ -364,18 +360,20 @@ decremented, just as with semaphore-wait. For most kinds of events,
 however (such as a port), synchronizing does not modify the event’s
 state.
 
-Racket values that act as synchronizable events include semaphores,
-channels, asynchronous channels, ports, TCP listeners, log receivers,
-threads, subprocesses, will executors, and custodian boxes. Libraries
-can define new synchronizable events, especially though prop:evt.
+Racket values that act as synchronizable events include asynchronous
+channels, channels, custodian boxes, log receivers, place channels,
+ports, semaphores, subprocesses, TCP listeners, threads, and will
+executors. Libraries can define new synchronizable events, especially
+though prop:evt.
 
                                         *evt?*
 (evt? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a synchronizable event, #f otherwise.
 
 Examples:
+
   > (evt? never-evt)
   #t
   > (evt? (make-channel))
@@ -385,7 +383,7 @@ Examples:
 
                                         *sync*
 (sync evt ...) -> any ~
-  evt : evt? ~
+  evt : evt? ~ ~
 
 Blocks as long as none of the synchronizable events evts are ready, as
 defined above.
@@ -397,20 +395,19 @@ current-evt-pseudo-random-generator parameter sets the random-number
 generator that controls this choice.
 
 Examples:
-  > (define ch (make-channel))
 
+  > (define ch (make-channel))
   > (thread (λ () (displayln (sync ch))))
   #<thread>
   > (channel-put ch 'hellooooo)
   hellooooo
 
-
 Changed in version 6.1.0.3: Allow 0 arguments instead of 1 or more.
 
                                         *sync/timeout*
 (sync/timeout timeout evt ...) -> any ~
-  timeout : (or/c #f (and/c real? (not/c negative?)) (-> any)) ~
-  evt : evt? ~
+  timeout : (or/c #f (and/c real? (not/c negative?)) (-> any)) ~ ~
+  evt : evt? ~ ~
 
 Like sync if timeout is #f. If timeout is a real number, then the result
 is #f if timeout seconds pass without a successful synchronization. If
@@ -424,6 +421,7 @@ timeout.
 See also alarm-evt for an alternative timeout mechanism.
 
 Examples:
+
   ; times out before waking up
   > (sync/timeout
      0.5
@@ -434,12 +432,11 @@ Examples:
      never-evt)
   no ready events
 
-
 Changed in version 6.1.0.3: Allow 1 argument instead of 2 or more.
 
                                         *sync/enable-break*
 (sync/enable-break evt ...) -> any ~
-  evt : evt? ~
+  evt : evt? ~ ~
 
 Like sync, but breaking is enabled (see [missing]) while waiting on the
 evts. If breaking is disabled when sync/enable-break is called, then
@@ -448,14 +445,14 @@ but not both.
 
                                         *sync/timeout/enable-break*
 (sync/timeout/enable-break timeout evt ...) -> any ~
-  timeout : (or/c #f (and/c real? (not/c negative?)) (-> any)) ~
-  evt : evt? ~
+  timeout : (or/c #f (and/c real? (not/c negative?)) (-> any)) ~ ~
+  evt : evt? ~ ~
 
 Like sync/enable-break, but with a timeout as for sync/timeout.
 
                                         *choice-evt*
 (choice-evt evt ...) -> evt? ~
-  evt : evt? ~
+  evt : evt? ~ ~
 
 Creates and returns a single event that combines the evts. Supplying the
 result to sync is the same as supplying each evt to the same call.
@@ -467,12 +464,10 @@ chosen pseudo-randomly, and the synchronization result is the chosen
 evt’s synchronization result.
 
 Examples:
+
   > (define ch1 (make-channel))
-
   > (define ch2 (make-channel))
-
   > (define either-channel (choice-evt ch1 ch2))
-
   > (thread (λ () (displayln (sync either-channel))))
   #<thread>
   > (channel-put
@@ -480,11 +475,10 @@ Examples:
      'tuturuu)
   tuturuu
 
-
                                         *wrap-evt*
 (wrap-evt evt wrap) -> evt? ~
-  evt : evt? ~
-  wrap : (any/c ... . -> . any) ~
+  evt : evt? ~ ~
+  wrap : (any/c ... . -> . any) ~ ~
 
 Creates an event that is ready for synchronization when evt is ready for
 synchronization, but whose synchronization result is determined by
@@ -495,20 +489,18 @@ synchronization result of evt.
 The call to wrap is parameterize-breaked to disable breaks initially.
 
 Examples:
+
   > (define ch (make-channel))
-
-  > (define evt (wrap-evt ch (λ (v) (format "you've got mail: ~a" v)))) ~
-
+  > (define evt (wrap-evt ch (λ (v) (format "you've got mail: ~a" v)))) ~ ~
   > (thread (λ () (displayln (sync evt))))
   #<thread>
   > (channel-put ch "Dear Alice ...")
   you've got mail: Dear Alice ...
 
-
                                         *handle-evt*
 (handle-evt evt handle) -> handle-evt? ~
-  evt : evt? ~
-  handle : (any/c ... . -> . any) ~
+  evt : evt? ~ ~
+  handle : (any/c ... . -> . any) ~ ~
 
 Like wrap-evt, except that handle is called in tail position with
 respect to the synchronization request—and without breaks explicitly
@@ -516,10 +508,9 @@ disabled—when it is not wrapped by wrap-evt, chaperone-evt, or another
 handle-evt.
 
 Examples:
+
   > (define msg-ch (make-channel))
-
   > (define exit-ch (make-channel))
-
   > (thread
      (λ ()
        (let loop ([val 0])
@@ -534,17 +525,14 @@ Examples:
   > (channel-put msg-ch 5)
   val = 0
   val = 5
-
   > (channel-put msg-ch 7)
-
   > (channel-put exit-ch 'done)
   val = 7
   done
 
-
                                         *guard-evt*
 (guard-evt maker) -> evt? ~
-  maker : (-> (or/c evt? any/c)) ~
+  maker : (-> (or/c evt? any/c)) ~ ~
 
 Creates a value that behaves as an event, but that is actually an event
 maker.
@@ -562,7 +550,7 @@ is guard.
 
                                         *nack-guard-evt*
 (nack-guard-evt maker) -> evt? ~
-  maker : (evt? . -> . (or/c evt? any/c)) ~
+  maker : (evt? . -> . (or/c evt? any/c)) ~ ~
 
 Like guard-evt, but when maker is called, it is given a NACK (“negative
 acknowledgment”) event. After starting the call to maker, if the event
@@ -579,7 +567,7 @@ synchronization.
 
                                         *poll-guard-evt*
 (poll-guard-evt maker) -> evt? ~
-  maker : (boolean? . -> . (or/c evt? any/c)) ~
+  maker : (boolean? . -> . (or/c evt? any/c)) ~ ~
 
 Like guard-evt, but when maker is called, it is provided a boolean value
 that indicates whether the event will be used for a poll, #t, or for a
@@ -592,8 +580,8 @@ result.
 
                                         *replace-evt*
 (replace-evt evt maker) -> evt? ~
-  evt : evt? ~
-  maker : (any/c ... . -> . (or/c evt? any/c)) ~
+  evt : evt? ~ ~
+  maker : (any/c ... . -> . (or/c evt? any/c)) ~ ~
 
 Like guard-evt, but maker is called only after evt becomes ready for
 synchronization, and the synchronization result of evt is passed to
@@ -613,20 +601,22 @@ is guard.
 
 Added in version 6.1.0.3.
 
-always-evt : evt? ~
+always-evt : evt? ~ ~
 
 A constant event that is always ready for synchronization, with itself
 as its synchronization result.
 
 Example:
+
   > (sync always-evt)
   #<always-evt>
 
-never-evt : evt? ~
+never-evt : evt? ~ ~
 
 A constant event that is never ready for synchronization.
 
 Example:
+
   > (sync/timeout 0.1 never-evt)
   #f
 
@@ -642,18 +632,16 @@ not yet expired. The system-idle event’s synchronization result is
 event.
 
 Examples:
-  > (define th (thread (λ () (let loop () (loop)))))
 
+  > (define th (thread (λ () (let loop () (loop)))))
   > (sync/timeout 0.1 (system-idle-evt))
   #f
   > (kill-thread th)
-
   > (sync (system-idle-evt))
-
 
                                         *alarm-evt*
 (alarm-evt msecs) -> evt? ~
-  msecs : real? ~
+  msecs : real? ~ ~
 
 Returns a synchronizable event that is not ready for synchronization
 when (current-inexact-milliseconds) would return a value that is less
@@ -663,26 +651,27 @@ msecs. The synchronization result of a alarm event is the alarm event
 itself.
 
 Examples:
-  > (define alarm (alarm-evt (+ (current-inexact-milliseconds) 100)))
 
+  > (define alarm (alarm-evt (+ (current-inexact-milliseconds) 100)))
   > (sync alarm)
   #<alarm-evt>
 
                                         *handle-evt?*
 (handle-evt? evt) -> boolean? ~
-  evt : evt? ~
+  evt : evt? ~ ~
 
 Returns #t if evt was created by handle-evt or by choice-evt applied to
 another event for which handle-evt? produces #t. For any other event,
 handle-evt?  produces #f.
 
 Examples:
+
   > (handle-evt? never-evt)
   #f
   > (handle-evt? (handle-evt always-evt values))
   #t
 
-prop:evt : struct-type-property? ~
+prop:evt : struct-type-property? ~ ~
 
 A structure type property that identifies structure types whose
 instances can serve as synchronizable events. The property value can  be
@@ -706,6 +695,10 @@ any of the following:
   or procedure is used as above. Otherwise, the structure acts as an
   event that is never ready.
 
+For working with foreign libraries, a prop:evt value can also be a
+result of unsafe-poller, although that possibility is omitted from the
+safe contract of prop:evt.
+
 Instances of a structure type with the prop:input-port or
 prop:output-port property are also synchronizable events by virtue of
 being a port. If the structure type has more than one of prop:evt,
@@ -715,28 +708,23 @@ and the prop:input-port property takes precedence over prop:output-port
 for synchronization.
 
 Examples:
+
   > (define-struct wt (base val)
-                   #:property prop:evt (struct-field-index base)) ~
-
+                   #:property prop:evt (struct-field-index base)) ~ ~
   > (define sema (make-semaphore))
-
   > (sync/timeout 0 (make-wt sema #f))
   #f
   > (semaphore-post sema)
-
   > (sync/timeout 0 (make-wt sema #f))
   #<semaphore>
   > (semaphore-post sema)
-
   > (sync/timeout 0 (make-wt (lambda (self) (wt-val self)) sema))
   #<semaphore>
   > (semaphore-post sema)
-
   > (define my-wt (make-wt (lambda (self) (wrap-evt
                                            (wt-val self)
                                            (lambda (x) self)))
                            sema))
-
   > (sync/timeout 0 my-wt)
   #<wt>
   > (sync/timeout 0 my-wt)
@@ -746,7 +734,7 @@ Examples:
 (current-evt-pseudo-random-generator) ~
  -> pseudo-random-generator?
 (current-evt-pseudo-random-generator generator) -> void?
-  generator : pseudo-random-generator? ~
+  generator : pseudo-random-generator? ~ ~
 
 A parameter that determines the pseudo-random number generator used by
 sync for events created by choice-evt.
@@ -772,7 +760,7 @@ For buffered asynchronous channels, see Buffered Asynchronous Channels.
 
                                         *channel?*
 (channel? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a channel, #f otherwise.
 
@@ -787,29 +775,29 @@ value through the channel.
 
                                         *channel-get*
 (channel-get ch) -> any ~
-  ch : channel? ~
+  ch : channel? ~ ~
 
 Blocks until a sender is ready to provide a value through ch. The result
 is the sent value.
 
                                         *channel-try-get*
 (channel-try-get ch) -> any ~
-  ch : channel? ~
+  ch : channel? ~ ~
 
 Receives and returns a value from ch if a sender is immediately ready,
 otherwise returns #f.
 
                                         *channel-put*
 (channel-put ch v) -> void? ~
-  ch : channel? ~
-  v : any/c ~
+  ch : channel? ~ ~
+  v : any/c ~ ~
 
 Blocks until a receiver is ready to accept the value v through ch.
 
                                         *channel-put-evt*
 (channel-put-evt ch v) -> channel-put-evt? ~
-  ch : channel? ~
-  v : any/c ~
+  ch : channel? ~ ~
+  v : any/c ~ ~
 
 Returns a fresh synchronizable event for use with sync. The event is
 ready for synchronization when (channel-put ch v) would not block, and
@@ -817,7 +805,7 @@ the event’s synchronization result is the event itself.
 
                                         *channel-put-evt?*
 (channel-put-evt? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a channel-put event produced by channel-put-evt, #f
 otherwise.
@@ -843,13 +831,13 @@ synchronization result of a semaphore is the semaphore itself.
 
                                         *semaphore?*
 (semaphore? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a semaphore, #f otherwise.
 
                                         *make-semaphore*
 (make-semaphore [init]) -> semaphore? ~
-  init : exact-nonnegative-integer? = 0 ~
+  init : exact-nonnegative-integer? = 0 ~ ~
 
 Creates and returns a new semaphore with the counter initially set to
 init. If init is larger than a semaphore’s maximum internal counter
@@ -857,7 +845,7 @@ value, the exn:fail exception is raised.
 
                                         *semaphore-post*
 (semaphore-post sema) -> void? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Increments the semaphore’s internal counter and returns #<void>. If the
 semaphore’s internal counter has already reached its maximum value, the
@@ -865,7 +853,7 @@ exn:fail exception is raised.
 
                                         *semaphore-wait*
 (semaphore-wait sema) -> void? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Blocks until the internal counter for semaphore sema is non-zero. When
 the counter is non-zero, it is decremented and semaphore-wait returns
@@ -873,7 +861,7 @@ the counter is non-zero, it is decremented and semaphore-wait returns
 
                                         *semaphore-try-wait?*
 (semaphore-try-wait? sema) -> boolean? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Like semaphore-wait, but semaphore-try-wait? never blocks execution.  If
 sema’s internal counter is zero, semaphore-try-wait? returns #f
@@ -882,7 +870,7 @@ positive, it is decremented and #t is returned.
 
                                         *semaphore-wait/enable-break*
 (semaphore-wait/enable-break sema) -> void? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Like semaphore-wait, but breaking is enabled (see [missing]) while
 waiting on sema. If breaking is disabled when
@@ -892,7 +880,7 @@ both.
 
                                         *semaphore-peek-evt*
 (semaphore-peek-evt sema) -> semaphore-peek-evt? ~
-  sema : semaphore? ~
+  sema : semaphore? ~ ~
 
 Creates and returns a new synchronizable event (for use with sync, for
 example) that is ready for synchronization when sema is ready, but
@@ -902,7 +890,7 @@ event itself.
 
                                         *semaphore-peek-evt?*
 (semaphore-peek-evt? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a semaphore wrapper produced by semaphore-peek-evt,
 #f otherwise.
@@ -912,10 +900,10 @@ Returns #t if v is a semaphore wrapper produced by semaphore-peek-evt,
                       proc                
                      [try-fail-thunk]     
                       arg ...)        -> any
-  sema : semaphore? ~
-  proc : procedure? ~
-  try-fail-thunk : (or/c (-> any) #f) = #f ~
-  arg : any/c ~
+  sema : semaphore? ~ ~
+  proc : procedure? ~ ~
+  try-fail-thunk : (or/c (-> any) #f) = #f ~ ~
+  arg : any/c ~ ~
 
 Waits on sema using semaphore-wait, calls proc with all args, and then
 posts to sema. A continuation barrier blocks full continuation jumps
@@ -929,10 +917,10 @@ and try-fail-thunk is called if the wait fails.
                                    proc                
                                   [try-fail-thunk]     
                                    arg ...)        -> any
-  sema : semaphore? ~
-  proc : procedure? ~
-  try-fail-thunk : (or/c (-> any) #f) = #f ~
-  arg : any/c ~
+  sema : semaphore? ~ ~
+  proc : procedure? ~ ~
+  try-fail-thunk : (or/c (-> any) #f) = #f ~ ~
+  arg : any/c ~ ~
 
 Like call-with-semaphore, except that semaphore-wait/enable-break is
 used with sema in non-try mode. When try-fail-thunk is provided and not
@@ -941,7 +929,7 @@ sema.
 
 2.4. Buffered Asynchronous Channels
 
- (require racket/async-channel) package: base ~
+ (require racket/async-channel) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/async-channel library, not racket/base or racket.
@@ -961,13 +949,13 @@ synchronization result is the same as the async-channel-get result.
 
                                         *async-channel?*
 (async-channel? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an asynchronous channel, #f otherwise.
 
                                         *make-async-channel*
 (make-async-channel [limit]) -> async-channel? ~
-  limit : (or/c exact-positive-integer? #f) = #f ~
+  limit : (or/c exact-positive-integer? #f) = #f ~ ~
 
 Returns an asynchronous channel with a buffer limit of limit items. A
 get operation blocks when the channel is empty, and a put operation
@@ -976,14 +964,14 @@ channel buffer has no limit (so a put never blocks).
 
                                         *async-channel-get*
 (async-channel-get ach) -> any/c ~
-  ach : async-channel? ~
+  ach : async-channel? ~ ~
 
 Blocks until at least one value is available in ach, and then returns
 the first of the values that were put into async-channel.
 
                                         *async-channel-try-get*
 (async-channel-try-get ach) -> any/c ~
-  ach : async-channel? ~
+  ach : async-channel? ~ ~
 
 If at least one value is immediately available in ach, returns the first
 of the values that were put into ach. If async-channel is empty, the
@@ -991,24 +979,25 @@ result is #f.
 
                                         *async-channel-put*
 (async-channel-put ach v) -> void? ~
-  ach : async-channel? ~
-  v : any/c ~
+  ach : async-channel? ~ ~
+  v : any/c ~ ~
 
 Puts v into ach, blocking if ach’s buffer is full until space is
 available.
 
                                         *async-channel-put-evt*
 (async-channel-put-evt ach v) -> evt? ~
-  ach : async-channel? ~
-  v : any/c ~
+  ach : async-channel? ~ ~
+  v : any/c ~ ~
 
 Returns a synchronizable event that is ready for synchronization when
 (async-channel-put ach v) would return a value (i.e., when the channel
 holds fewer values already than its limit); the synchronization result
-of a asychronous channel-put event is the asychronous channel-put event
-itself.
+of a asynchronous channel-put event is the asynchronous channel-put
+event itself.
 
 Examples:
+
   (define (server input-channel output-channel)
     (thread (lambda ()
               (define (get)
@@ -1026,48 +1015,34 @@ Examples:
                   [(long) (begin
                             (put (do-large-computation))
                             (loop (get)))])))))
-
-
   (define to-server (make-async-channel))
-
-
   (define from-server (make-async-channel))
-
-
+   
   > (server to-server from-server)
   #<thread>
   > (async-channel? to-server)
   #t
   > (printf "Adding 1 to 4\n")
   Adding 1 to 4
-
   > (async-channel-put to-server 'add)
-
   > (async-channel-put to-server 4)
-
   > (printf "Result is ~a\n" (async-channel-get from-server))
   Result is 5
-
   > (printf "Ask server to do a long computation\n")
   Ask server to do a long computation
-
   > (async-channel-put to-server 'long)
-
   > (printf "I can do other stuff\n")
   I can do other stuff
-
   > (printf "Ok, computation from server is ~a\n"
             (async-channel-get from-server))
   Ok, computation from server is 3
-
   > (async-channel-put to-server 'quit)
-
 
 2.4.2. Contracts and Impersonators on Asynchronous Channels
 
                                         *async-channel/c*
 (async-channel/c c) -> contract? ~
-  c : contract? ~
+  c : contract? ~ ~
 
 Returns a contract that recognizes asynchronous channels. Values put
 into or retrieved from the channel must match c.
@@ -1089,11 +1064,11 @@ contract.
                            prop-val ... 
                            ...)         
  -> (and/c async-channel? impersonator?)
-  channel : async-channel? ~
-  get-proc : (any/c . -> . any/c) ~
-  put-proc : (any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  channel : async-channel? ~ ~
+  get-proc : (any/c . -> . any/c) ~ ~
+  put-proc : (any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any ~ ~
 
 Returns an impersonator of channel, which redirects the
 async-channel-get and async-channel-put operations.
@@ -1122,11 +1097,11 @@ override impersonator property values of channel.
                          prop-val ... 
                          ...)         
  -> (and/c async-channel? chaperone?)
-  channel : async-channel? ~
-  get-proc : (any/c . -> . any/c) ~
-  put-proc : (any/c . -> . any/c) ~
-  prop : impersonator-property? ~
-  prop-val : any ~
+  channel : async-channel? ~ ~
+  get-proc : (any/c . -> . any/c) ~ ~
+  put-proc : (any/c . -> . any/c) ~ ~
+  prop : impersonator-property? ~ ~
+  prop-val : any ~ ~
 
 Like impersonate-async-channel, but the get-proc procedure must produce
 the same value or a chaperone of the original value, and put-proc must
@@ -1165,14 +1140,14 @@ capturing and restoring threads can be different.
 
                                         *thread-cell?*
 (thread-cell? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a thread cell, #f otherwise.
 
                                         *make-thread-cell*
 (make-thread-cell v [preserved?]) -> thread-cell? ~
-  v : any/c ~
-  preserved? : any/c = #f ~
+  v : any/c ~ ~
+  preserved? : any/c = #f ~ ~
 
 Creates and returns a new thread cell. Initially, v is the cell’s value
 for all threads. If preserved? is true, then the cell’s initial value
@@ -1181,36 +1156,32 @@ otherwise the cell’s value is initially v in all future threads.
 
                                         *thread-cell-ref*
 (thread-cell-ref cell) -> any ~
-  cell : thread-cell? ~
+  cell : thread-cell? ~ ~
 
 Returns the current value of cell for the current thread.
 
                                         *thread-cell-set!*
 (thread-cell-set! cell v) -> any ~
-  cell : thread-cell? ~
-  v : any/c ~
+  cell : thread-cell? ~ ~
+  v : any/c ~ ~
 
 Sets the value in cell to v for the current thread.
 
 Examples:
+
   > (define cnp (make-thread-cell '(nerve) #f))
-
   > (define cp (make-thread-cell '(cancer) #t))
-
   > (thread-cell-ref cnp)
   '(nerve)
   > (thread-cell-ref cp)
   '(cancer)
   > (thread-cell-set! cnp '(nerve nerve))
-
   > (thread-cell-set! cp '(cancer cancer))
-
   > (thread-cell-ref cnp)
   '(nerve nerve)
   > (thread-cell-ref cp)
   '(cancer cancer)
   > (define ch (make-channel))
-
   > (thread (lambda ()
               (channel-put ch (thread-cell-ref cnp))
               (channel-put ch (thread-cell-ref cp))
@@ -1222,18 +1193,16 @@ Examples:
   > (channel-get ch)
   '(cancer cancer)
   > (thread-cell-set! cp '(cancer cancer cancer))
-
   > (thread-cell-ref cp)
   '(cancer cancer cancer)
   > (channel-put ch 'ok)
-
   > (channel-get ch)
   '(cancer cancer)
 
                                         *current-preserved-thread-cell-values*
 (current-preserved-thread-cell-values) -> thread-cell-values? ~
 (current-preserved-thread-cell-values thread-cell-vals) -> void?
-  thread-cell-vals : thread-cell-values? ~
+  thread-cell-vals : thread-cell-values? ~ ~
 
 When called with no arguments, this procedure produces a
 thread-cell-vals that represents the current values (in the current
@@ -1248,7 +1217,7 @@ current thread reverts to its initial value.
 
                                         *thread-cell-values?*
 (thread-cell-values? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a set of thread cell values produced by
 current-preserved-thread-cell-values, #f otherwise.
@@ -1279,35 +1248,44 @@ associated with a parameter through parameterize remains reachable as
 long the continuation is reachable, even if the parameter is mutated.
 
                                         *make-parameter*
-(make-parameter v [guard]) -> parameter? ~
-  v : any/c ~
-  guard : (or/c (any/c . -> . any) #f) = #f ~
+(make-parameter v [guard name]) -> parameter? ~
+  v : any/c ~ ~
+  guard : (or/c (any/c . -> . any) #f) = #f ~ ~
+  name : symbol? = 'parameter-procedure ~ ~
 
 Returns a new parameter procedure. The value of the parameter is
-initialized to v in all threads.  If guard is supplied, it is used as
-the parameter’s guard procedure.  A guard procedure takes one argument.
-Whenever the parameter procedure is applied to an argument, the argument
-is passed on to the guard procedure. The result returned by the guard
-procedure is used as the new parameter value.  A guard procedure can
-raise an exception to reject a change to the parameter’s value. The
-guard is not applied to the initial v.
+initialized to v in all threads.
+
+If guard is not #f, it is used as the parameter’s guard procedure.  A
+guard procedure takes one argument. Whenever the parameter procedure is
+applied to an argument, the argument is passed on to the guard
+procedure. The result returned by the guard procedure is used as the new
+parameter value.  A guard procedure can raise an exception to reject a
+change to the parameter’s value. The guard is not applied to the initial
+v.
+
+The name argument is used as the parameter procedure’s name as reported
+by object-name.
+
+Changed in version 7.4.0.6: Added the name argument.
 
                                         *parameterize*
 (parameterize ([parameter-expr value-expr] ...) ~
   body ...+)
  
-  parameter-expr : parameter? ~
+  parameter-expr : parameter? ~ ~
 
 +[missing] in [missing] introduces parameterize.
 
 The result of a parameterize expression is the result of the last body.
 The parameter-exprs determine the parameters to set, and the value-exprs
 determine the corresponding values to install while evaluating the
-body-exprs. All of the parameter-exprs are evaluated first (and checked
-with parameter?), then all value-exprs are evaluated, and then the
-parameters are bound in the continuation to preserved thread cells that
-contain the values of the value-exprs. The last body-expr is in tail
-position with respect to the entire parameterize form.
+bodys. The parameter-exprs and value-exprs are evaluated left-to-right
+(interleaved), and then the parameters are bound in the continuation to
+preserved thread cells that contain the values of the value-exprs; the
+result of each parameter-expr is checked with parameter? just before it
+is bound. The last body is in tail position with respect to the entire
+parameterize form.
 
 Outside the dynamic extent of a parameterize expression, parameters
 remain bound to other thread cells. Effectively, therefore, old
@@ -1321,13 +1299,11 @@ continuation via a continuation mark (see [missing]) using a private
 key.
 
 Examples:
+
   > (parameterize ([exit-handler (lambda (x) 'no-exit)])
       (exit))
-
   > (define p1 (make-parameter 1))
-
   > (define p2 (make-parameter 2))
-
   > (parameterize ([p1 3]
                    [p2 (p1)])
       (cons (p1) (p2)))
@@ -1343,7 +1319,6 @@ Examples:
           k))
   '(1 . 3)
   > (define ch (make-channel))
-
   > (parameterize ([p1 0])
       (thread (lambda ()
                 (channel-put ch (cons (p1) (p2))))))
@@ -1351,7 +1326,6 @@ Examples:
   > (channel-get ch)
   '(0 . 2)
   > (define k-ch (make-channel))
-
   > (define (send-k)
       (parameterize ([p1 0])
         (thread (lambda ()
@@ -1360,7 +1334,6 @@ Examples:
                                  ((let/cc k
                                     (channel-put k-ch k)
                                     (esc)))))))))
-
   > (send-k)
   #<thread>
   > (thread (lambda () ((channel-get k-ch)
@@ -1387,9 +1360,9 @@ series of single-parameter parameterize forms.
 (make-derived-parameter parameter      ~
                         guard         
                         wrap)     -> parameter?
-  parameter : parameter? ~
-  guard : (any/c . -> . any) ~
-  wrap : (any/c . -> . any) ~
+  parameter : parameter? ~ ~
+  guard : (any/c . -> . any) ~ ~
+  wrap : (any/c . -> . any) ~ ~
 
 Returns a parameter procedure that sets or retrieves the same value as
 parameter, but with:
@@ -1404,14 +1377,14 @@ procedures.
 
                                         *parameter?*
 (parameter? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a parameter procedure, #f otherwise.
 
-                                        *parameter-procedure*
+                                        *parameter-procedure=?*
 (parameter-procedure=? a b) -> boolean? ~
-  a : parameter? ~
-  b : parameter? ~
+  a : parameter? ~ ~
+  b : parameter? ~ ~
 
 Returns #t if the parameter procedures a and b always modify the same
 parameter with the same guards (although possibly with different
@@ -1425,15 +1398,15 @@ Returns the current continuation’s parameterization.
                                         *call-with-parameterization*
 (call-with-parameterization parameterization      ~
                             thunk)           -> any
-  parameterization : parameterization? ~
-  thunk : (-> any) ~
+  parameterization : parameterization? ~ ~
+  thunk : (-> any) ~ ~
 
 Calls thunk (via a tail call) with parameterization as the current
 parameterization.
 
                                         *parameterization?*
 (parameterization? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a parameterization returned by
 current-parameterization, #f otherwise.
@@ -1442,14 +1415,14 @@ current-parameterization, #f otherwise.
 
 +[missing] in [missing] introduces futures.
 
- (require racket/future) package: base ~
+ (require racket/future) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/future and racket libraries, but not racket/base.
 
 Currently, parallel support for future is enabled by default for
-Windows, Linux x86/x86_64, and Mac OS X x86/x86_64. To enable support
-for other platforms, use --enable-futures with configure when building
+Windows, Linux x86/x86_64, and Mac OS x86/x86_64. To enable support for
+other platforms, use --enable-futures with configure when building
 Racket.
 
 The future and touch functions from racket/future provide access to
@@ -1473,9 +1446,10 @@ assignment to the variable can be visible in other futures and threads.
 Furthermore, guarantees about the visibility of effects and ordering are
 determined by the operating system and hardware—which rarely support,
 for example, the guarantee of sequential consistency that is provided
-for thread-based concurrency. At the same time, operations that seem
-obviously safe may have a complex enough implementation internally that
-they cannot run in parallel. See also [missing] in [missing].
+for thread-based concurrency; see also Machine Memory Order. At the same
+time, operations that seem obviously safe may have a complex enough
+implementation internally that they cannot run in parallel. See also
+[missing] in [missing].
 
 A future never runs in parallel if all of the custodians that allow its
 creating thread to run are shut down. Such futures can execute through a
@@ -1485,9 +1459,9 @@ call to touch, however.
 
                                         *future*
 (future thunk) -> future? ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 (touch f) -> any
-  f : future? ~
+  f : future? ~ ~
 
 The future procedure returns a future value that encapsulates thunk.
 The touch function forces the evaluation of the thunk inside the given
@@ -1499,6 +1473,8 @@ values.
 Between a call to future and touch for a given future, the given thunk
 may run speculatively in parallel to other computations, as described
 above.
+
+Example:
 
   > (let ([f (future (lambda () (+ 1 2)))])
       (list (+ 3 4) (touch f)))
@@ -1514,20 +1490,22 @@ Racket configuration.
 (current-future) -> (or/c #f future?) ~
 
 Returns the descriptor of the future whose thunk execution is the
-current continuation.  If a future thunk itself uses touch, future-thunk
-executions can be nested, in which case the descriptor of the most
-immediately executing future is returned.  If the current continuation
-is not a future-thunk execution, the result is #f.
+current continuation; that is, if a future descriptor f is returned,
+(touch f) will produce the result of the current continuation. If a
+future thunk itself uses touch, future-thunk executions can be nested,
+in which case the descriptor of the most immediately executing future is
+returned.  If the current continuation does not return to the touch of
+any future, the result is #f.
 
                                         *future?*
 (future? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a future value, #f otherwise.
 
                                         *would-be-future*
 (would-be-future thunk) -> future? ~
-  thunk : (-> any) ~
+  thunk : (-> any) ~ ~
 
 Returns a future that never runs in parallel, but that consistently logs
 all potentially “unsafe” operations during the execution of the future’s
@@ -1553,11 +1531,18 @@ with would-be-future ensures the logging of all three calls to printf.
 Returns the number of parallel computation units (e.g., processors or
 cores) that are available on the current machine.
 
+                                        *for/async*
+(for/async (for-clause ...) body ...+) ~
+(for*/async (for-clause ...) body ...+)
+
+Like for and for*, but each iteration of the body is executed in a
+separate future, and the futures may be touched in any order.
+
 4.2. Future Semaphores
 
                                         *make-fsemaphore*
 (make-fsemaphore init) -> fsemaphore? ~
-  init : exact-nonnegative-integer? ~
+  init : exact-nonnegative-integer? ~ ~
 
 Creates and returns a new future semaphore with the counter initially
 set to init.
@@ -1568,21 +1553,28 @@ computations). In contrast, operations on plain semaphores are not safe
 to perform in parallel, and they therefore prevent a computation from
 continuing in parallel.
 
+Beware of trying to use an fsemaphore to implement a lock. A future may
+run concurrently and in parallel to other futures, but a future that is
+not demanded by a Racket thread can be suspended at any time—such as
+just after it takes a lock and before it releases the lock. If you must
+share mutable data among futures, lock-free data structures are
+generally a better fit.
+
                                         *fsemaphore?*
 (fsemaphore? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an future semaphore value, #f otherwise.
 
                                         *fsemaphore-post*
 (fsemaphore-post fsema) -> void? ~
-  fsema : fsemaphore? ~
+  fsema : fsemaphore? ~ ~
 
 Increments the future semaphore’s internal counter and returns #<void>.
 
                                         *fsemaphore-wait*
 (fsemaphore-wait fsema) -> void? ~
-  fsema : fsemaphore? ~
+  fsema : fsemaphore? ~ ~
 
 Blocks until the internal counter for fsema is non-zero. When the
 counter is non-zero, it is decremented and fsemaphore-wait returns
@@ -1590,7 +1582,7 @@ counter is non-zero, it is decremented and fsemaphore-wait returns
 
                                         *fsemaphore-try-wait?*
 (fsemaphore-try-wait? fsema) -> boolean? ~
-  fsema : fsemaphore? ~
+  fsema : fsemaphore? ~ ~
 
 Like fsemaphore-wait, but fsemaphore-try-wait? never blocks execution.
 If fsema’s internal counter is zero, fsemaphore-try-wait? returns #f
@@ -1599,7 +1591,7 @@ positive, it is decremented and #t is returned.
 
                                         *fsemaphore-count*
 (fsemaphore-count fsema) -> exact-nonnegative-integer? ~
-  fsema : fsemaphore? ~
+  fsema : fsemaphore? ~ ~
 
 Returns fsema’s current internal counter value.
 
@@ -1618,7 +1610,7 @@ string message, each event logged for a future has a data value that is
 an instance of a future-event prefab structure:
 
   (struct future-event (future-id proc-id action time prim-name user-data)
-    #:prefab) ~
+    #:prefab) ~ ~
 
 The future-id field is an exact integer that identifies a future, or it
 is #f when action is 'missing. The future-id field is particularly
@@ -1684,10 +1676,10 @@ Assuming no 'missing events, then 'start-work, 'start-0-work,
 'touch-pause is always paired with 'touch-resume.
 
 In process 0, some event pairs can be nested within other event pairs:
-'sync, 'block, or 'touch with 'result or 'abort; and 'touch-pause with
-'touch-resume.
+'sync, 'block, or 'touch with 'result or 'abort; 'touch-pause with
+'touch-resume; and 'start-work with 'end-work.
 
-An 'block in process 0 is generated when an unsafe operation is handled.
+A 'block in process 0 is generated when an unsafe operation is handled.
 This type of event will contain a symbol in the unsafe-op-name field
 that is the name of the operation.  In all other cases, this field
 contains #f.
@@ -1704,12 +1696,13 @@ on both the action and prim-name fields:
 * 'touch on process 0: contains the integer ID of the future  being
   touched.
 
-* 'sync and prim-name = |allocate memory|:  The size (in bytes) of the
+* 'sync and prim-name is '|allocate memory|:  The size (in bytes) of the
   requested allocation.
 
-* 'sync and prim-name = jit_on_demand:  The runtime thread is performing
-  a JIT compilation on behalf of the  future future-id.  The field
-  contains the name of the function  being JIT compiled (as a symbol).
+* 'sync and prim-name is 'jit_on_demand:  The runtime thread is
+  performing a JIT compilation on behalf of the  future future-id.  The
+  field contains the name of the function  being JIT compiled (as a
+  symbol).
 
 * 'create: A new future was created.  The field contains the integer ID
   of the newly created future.
@@ -1718,7 +1711,7 @@ on both the action and prim-name fields:
 
 +[missing] in [missing] introduces places.
 
- (require racket/place) package: base ~
+ (require racket/place) package: base ~ ~
 
 The bindings documented in this section are provided by the racket/place
 and racket libraries, but not racket/base.
@@ -1726,14 +1719,21 @@ and racket libraries, but not racket/base.
 Places enable the development of parallel programs that take advantage
 of machines with multiple processors, cores, or hardware threads.
 
-Currently, parallel support for places is enabled only for Racket 3m
-(which is the main variant of Racket), and only by default for Windows,
-Linux x86/x86_64, and Mac OS X x86/x86_64. To enable support for other
+Currently, parallel support for places is enabled only for the 3m (main)
+and CS variants of Racket, and only by default for Windows, Linux
+x86/x86_64, and Mac OS x86/x86_64. To enable support for other
 platforms, use --enable-places with configure when building Racket. The
 place-enabled? function reports whether places run in parallel.
+Implementation and operating-system constraints may limit the
+scalability of places. For example, although places can perform garbage
+collections independently in the 3m variant, a garbage collection may
+need to manipulate a page table that is shared across all places, and
+that shared page table can be a bottleneck with enough places—perhaps
+around 8 or 16.
 
 A place is a parallel task that is effectively a separate instance of
-the Racket virtual machine. Places communicate through place channels,
+the Racket virtual machine, although all places run within a single
+operating-system process. Places communicate through place channels,
 which are endpoints for a two-way buffered communication.
 
 To a first approximation, place channels support only immutable,
@@ -1800,6 +1800,9 @@ current values of the following parameters are used:
 current-library-collection-paths, current-library-collection-links, and
 current-compiled-file-roots.
 
+A newly created place is registered with the current custodian, so that
+the place is terminated when the custodian is shut down.
+
 5.1. Using Places
 
                                         *place-enabled?*
@@ -1811,26 +1814,26 @@ are simulated using thread.
 
                                         *place?*
 (place? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is a place descriptor value, #f otherwise. Every place
 descriptor is also a place channel.
 
                                         *place-channel?*
 (place-channel? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is place channel, #f otherwise.
 
                                         *dynamic-place*
 (dynamic-place  module-path          ~
                 start-name          
-               [#:at location        ~
-                #:named named]) -> place? ~
-  module-path : (or/c module-path? path?) ~
-  start-name : symbol? ~
-  location : (or/c #f place-location?) = #f ~
-  named : any/c = #f ~
+               [#:at location        ~ ~
+                #:named named]) -> place? ~ ~
+  module-path : (or/c module-path? path?) ~ ~
+  start-name : symbol? ~ ~
+  location : (or/c #f place-location?) = #f ~ ~
+  named : any/c = #f ~ ~
 
 Creates a place to run the procedure that is identified by  module-path
 and start-name. The result is a  place descriptor value that represents
@@ -1839,7 +1842,7 @@ The place descriptor  value is also a place channel that permits
 communication with  the place.
 
 The module indicated by module-path must export a function  with the
-name start-proc. The function must accept a single  argument, which is a
+name start-name. The function must accept a single  argument, which is a
 place channel that corresponds to the  other end of communication for
 the place descriptor returned  by place.
 
@@ -1852,7 +1855,7 @@ value. Use (exit v) to  immediately terminate a place with the
 completion value  v. Since a completion value is limited to an exact
 integer  between 0 and 255, any other value for v  is converted to 0.
 
-If the function indicated by module-path and  start-proc returns, then
+If the function indicated by module-path and  start-name returns, then
 the place terminates with the  completion value 0.
 
 In the created place, the current-input-port parameter is  set to an
@@ -1874,17 +1877,17 @@ inspector (see [missing]).
                                         *dynamic-place**
 (dynamic-place*  module-path      ~
                  start-name      
-                [#:in in          ~
-                 #:out out        ~
-                 #:err err]) -> place? ~
+                [#:in in          ~ ~
+                 #:out out        ~ ~
+                 #:err err]) -> place? ~ ~
                                 (or/c output-port? #f)
                                 (or/c input-port? #f)
                                 (or/c input-port? #f)
-  module-path : (or/c module-path? path?) ~
-  start-name : symbol? ~
-  in : (or/c input-port? #f) = #f ~
-  out : (or/c output-port? #f) = (current-output-port) ~
-  err : (or/c output-port? #f) = (current-error-port) ~
+  module-path : (or/c module-path? path?) ~ ~
+  start-name : symbol? ~ ~
+  in : (or/c input-port? #f) = #f ~ ~
+  out : (or/c output-port? #f) = (current-output-port) ~ ~
+  err : (or/c output-port? #f) = (current-error-port) ~ ~
 
 Like dynamic-place, but accepts specific ports to the new  place’s
 ports, and returns a created port when #f is  supplied for a port. The
@@ -1922,8 +1925,13 @@ dynamic-place.
 Creates a place that evaluates body   expressions with id bound to a
 place channel.  The   bodys close only over id plus the top-level
 bindings of the enclosing module, because the   bodys are lifted to a
-function that is exported by   the module. The result of place is a
-place descriptor,   like the result of dynamic-place.
+submodule.   The result of place is a place descriptor,   like the
+result of dynamic-place.
+
+The generated submodule has the name place-body-n for an integer n, and
+the submodule exports a main function that takes a place channel for the
+new place. The submodule is not intended for use, however, except by the
+expansion of the place form.
 
 The place binding is protected in the same way as  dynamic-place.
 
@@ -1933,9 +1941,9 @@ The place binding is protected in the same way as  dynamic-place.
         body ...+)
  
 maybe-port = 
-           | #:in in-expr ~
-           | #:out out-expr ~
-           | #:err err-expr ~
+           | #:in in-expr ~ ~
+           | #:out out-expr ~ ~
+           | #:err err-expr ~ ~
 
 Like place, but supports optional #:in, #:out,  and #:err expressions
 (at most one of each) to specify ports in the same way and  with the
@@ -1944,9 +1952,17 @@ the same as for  dynamic-place*.
 
 The place* binding is protected in the same way as  dynamic-place.
 
+                                        *place/context*
+(place/context id body ...+) ~
+
+Like place, but body ... may have free lexical variables, which are
+automatically sent to the newly-created place. Note that these variables
+must have values accepted by place-message-allowed?, otherwise an
+exn:fail:contract exception is raised.
+
                                         *place-wait*
 (place-wait p) -> exact-integer? ~
-  p : place? ~
+  p : place? ~ ~
 
 Returns the completion value of the place indicated by p, blocking until
 the place has terminated.
@@ -1957,7 +1973,7 @@ only when the pumping threads have completed.
 
                                         *place-dead-evt*
 (place-dead-evt p) -> evt? ~
-  p : place? ~
+  p : place? ~ ~
 
 Returns a synchronizable event (see Events) that is ready for
 synchronization if and only if p has terminated. The synchronization
@@ -1970,15 +1986,15 @@ running.
 
                                         *place-kill*
 (place-kill p) -> void? ~
-  p : place? ~
+  p : place? ~ ~
 
 Immediately terminates the place, setting the place’s completion value
 to 1 if the place does not have a completion value already.
 
                                         *place-break*
 (place-break p [kind]) -> void? ~
-  p : place? ~
-  kind : (or/c #f 'hang-up 'terminate) = #f ~
+  p : place? ~ ~
+  kind : (or/c #f 'hang-up 'terminate) = #f ~ ~
 
 Sends the main thread of place p a break; see [missing].
 
@@ -1995,8 +2011,8 @@ destination place (via an existing place channel).
 
                                         *place-channel-put*
 (place-channel-put pch v) -> void ~
-  pch : place-channel? ~
-  v : place-message-allowed? ~
+  pch : place-channel? ~ ~
+  v : place-message-allowed? ~ ~
 
 Sends a message v on channel pch. Since place channels  are
 asynchronous, place-channel-put calls are non-blocking.
@@ -2006,22 +2022,22 @@ such as converting a mutable string to an immutable string.
 
                                         *place-channel-get*
 (place-channel-get pch) -> place-message-allowed? ~
-  pch : place-channel? ~
+  pch : place-channel? ~ ~
 
 Returns a message received on channel pch, blocking until a message is
 available.
 
                                         *place-channel-put/get*
 (place-channel-put/get pch v) -> any/c ~
-  pch : place-channel? ~
-  v : any/c ~
+  pch : place-channel? ~ ~
+  v : any/c ~ ~
 
 Sends an immutable message v on channel pch and then waits for a message
 (perhaps a reply) on the same channel.
 
                                         *place-message-allowed?*
 (place-message-allowed? v) -> boolean? ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is allowed as a message on a place channel, #f
 otherwise.
@@ -2042,10 +2058,11 @@ kinds of data are allowed as messages:
 
 * pairs, lists, vectors, and immutable prefab structures containing
   message-allowed values, where a mutable vector is automatically
-  replaced by an immutable vector;
+  replaced by an immutable vector and where impersonators of vectors and
+  prefab structures are copied;
 
 * hash tables where mutable hash tables are automatically replaced by
-  immutable variants;
+  immutable variants, and where a hash table impersonator is copied;
 
 * place channels, where a place descriptor is automatically replaced by
   a plain place channel;
@@ -2060,9 +2077,9 @@ kinds of data are allowed as messages:
   shared-fxvector, make-shared-fxvector, shared-bytes, and
   make-shared-bytes.
 
-prop:place-location : struct-type-property? ~
+prop:place-location : struct-type-property? ~ ~
 (place-location? v) -> boolean?
-  v : any/c ~
+  v : any/c ~ ~
 
 A structure type property and associated predicate for implementations
 of place locations. The value of prop:place-location must be a procedure
@@ -2084,7 +2101,7 @@ string message, each event logged for a place has a data value that is
 an instance of a place-event prefab structure:
 
   (struct place-event (place-id action value time)
-    #:prefab) ~
+    #:prefab) ~ ~
 
 The place-id field is an exact integer that identifies a place.
 
@@ -2118,7 +2135,7 @@ place-event.
 
 6. Engines
 
- (require racket/engine) package: base ~
+ (require racket/engine) package: base ~ ~
 
 The bindings documented in this section are provided by the
 racket/engine library, not racket/base or racket.
@@ -2135,7 +2152,7 @@ expires, and when the engine is stopped (either because it terminated or
 it reached a safe point to stop). Each log message holds a value of the
 struct:
 
-  (struct engine-info (msec name) #:prefab) ~
+  (struct engine-info (msec name) #:prefab) ~ ~
 
 where the msec field holds the result of (current-inexact-milliseconds)
 at the moment of logging, and the name field holds the name of the
@@ -2143,7 +2160,7 @@ procedure passed to engine.
 
                                         *engine*
 (engine proc) -> engine? ~
-  proc : ((any/c . -> . void?) . -> . any/c) ~
+  proc : ((any/c . -> . void?) . -> . any/c) ~ ~
 
 Returns an engine object to encapsulate a thread that runs only when
 allowed. The proc procedure should accept one argument, and proc is run
@@ -2159,14 +2176,14 @@ suspends, and #f disables suspends. Initially, suspends are allowed.
 
                                         *engine?*
 (engine? v) -> any ~
-  v : any/c ~
+  v : any/c ~ ~
 
 Returns #t if v is an engine produced by engine, #f otherwise.
 
                                         *engine-run*
 (engine-run until engine) -> boolean? ~
-  until : (or/c evt? real?) ~
-  engine : engine? ~
+  until : (or/c evt? real?) ~ ~
+  engine : engine? ~ ~
 
 Allows the thread associated with engine to execute for up as long as
 until milliseconds (if until is a real number) or until is ready (if
@@ -2181,14 +2198,51 @@ procedure raises an exception, then it is re-raised by engine-run.
 
                                         *engine-result*
 (engine-result engine) -> any ~
-  engine : engine? ~
+  engine : engine? ~ ~
 
 Returns the result for engine if it has completed with a value (as
 opposed to an exception), #f otherwise.
 
                                         *engine-kill*
 (engine-kill engine) -> void? ~
-  engine : engine? ~
+  engine : engine? ~ ~
 
 Forcibly terminates the thread associated with engine if it is still
 running, leaving the engine result unchanged.
+
+7. Machine Memory Order
+
+Unlike Racket threads, futures and places can expose the underlying
+machine’s memory model, including a weak memory ordering. For example,
+when a future writes to multiple slots in a mutable vector, it’s
+possible on some platforms for another future to observe the writes in a
+different order or not at all, unless the futures are explicitly
+synchronized. Similarly, shared byte strings or fxvectors can expose the
+machine’s memory model across places.
+
+Racket ensures that a machine’s memory model is not observed in a way
+that unsafely exposes the implementation of primitive datatypes. For
+example, it is not possible for one future to see a partially
+constructed primitive value as a result of reading a vector that is
+mutated by another future.
+
+The box-cas!, vector-cas!, unsafe-box*-cas!, unsafe-vector*-cas!, and
+unsafe-struct*-cas! operations all provide a machine-level
+compare-and-set, so they can be used in ways that are specifically
+supported by the a machine’s memory model. The (memory-order-acquire)
+and (memory-order-release) operations similarly constrain machine-level
+stores and loads. Synchronization operations such as place messages,
+future touches, and future semaphores imply suitable machine-level
+acquire and release ordering.
+
+                                        *memory-order-acquire*
+(memory-order-acquire) -> void? ~
+(memory-order-release) -> void?
+
+Those operations implement a machine-level memory fence on platforms
+where one is needed for synchronization. The memory-order-acquire
+operation ensures at least a load–load and load–store fence at the
+machine level, and the memory-order-release operation ensures at least a
+store–store and store–load fence at the machine level.
+
+Added in version 7.7.0.11.
