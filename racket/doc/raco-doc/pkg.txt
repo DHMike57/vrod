@@ -1,0 +1,4 @@
+raco pkg: Package Management
+
+See [missing] for information on the raco pkg command, which is used for
+managing external code packages.

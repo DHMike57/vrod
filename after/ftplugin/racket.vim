@@ -5,6 +5,8 @@
 " Disable vim-racket's nasty K mapping to browser-based html docs.
 " Has to be an after script to override.
 " We make sure the mapping exists to prevent the possibility of an error.
-if !empty(maparg("K", "n"))
+
+if maparg("K", "n") != ""
+    "echom maparg("K","n") |sleep 1
     nunmap <buffer> K
 endif

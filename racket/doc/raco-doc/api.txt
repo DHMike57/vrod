@@ -1,0 +1,293 @@
+API for Raw Compilation
+
+ (require compiler/compiler) package: base ~
+
+The compiler/compiler library provides the functionality of raco make
+for compilation to bytecode, but through a Racket API.
+
+1. Bytecode Compilation
+
+((compile-zos  expr                      
+              [#:module? module?          ~
+               #:verbose? verbose?])      ~
+               racket-files              
+               dest-dir)             -> void?
+  expr : any/c ~
+  module? : any/c = #f ~
+  verbose? : any/c = #f ~
+  racket-files : (listof path-string?) ~
+  dest-dir : (or/c path-string? false/c (one-of/c 'auto)) ~
+
+Supplying just expr returns a compiler that is initialized with the
+expression expr, as described below.
+
+The compiler takes a list of Racket files and compiles each of them to
+bytecode, placing the resulting bytecode in a ".zo" file within the
+directory specified by dest-dir.  If dest-dir is #f, each bytecode
+result is placed in the same directory as its source file.  If dest-dir
+is 'auto, each bytecode file is placed in a "compiled" subdirectory
+relative to the source; the directory is created if necessary.
+
+If expr is anything other than #f, then a namespace is created for
+compiling the files that are supplied later, and expr is evaluated to
+initialize the created namespace. For example, expr might load a set of
+macros. In addition, the expansion-time part of each expression later
+compiled is evaluated in the namespace before being compiled, so that
+the effects are visible when compiling later expressions.
+
+If expr is #f, then no compilation namespace is created (the current
+namespace is used), and expressions in the files are assumed to compile
+independently (so there’s no need to evaluate the expansion-time part of
+an expression to compile).
+
+Typically, expr is #f for compiling module files, and it is (void) for
+compiling files with top-level definitions and expressions.
+
+If module? is #t, then the given files are read and compiled as modules
+(so there is no dependency on the current namespace’s top-level
+environment).
+
+If verbose? is #t, the output file for each given file is reported
+through the current output port.
+
+                                        *compile-collection-zos*
+(compile-collection-zos                                             ~
+                         collection ...+                           
+                        [#:skip-path skip-path                      ~
+                         #:skip-paths skip-paths                    ~
+                         #:skip-doc-sources? skip-docs?             ~
+                         #:managed-compile-zo managed-compile-zo])  ~
+ -> void?
+  collection : string? ~
+  skip-path : (or/c path-string? #f) = #f ~
+  skip-paths : (listof path-string?) = null ~
+  skip-docs? : any/c = #f ~
+  managed-compile-zo : (path-string? . -> . void?) ~
+                     = (make-caching-managed-compile-zo)
+
+Compiles the specified collection’s files to ".zo" files by using
+managed-compile-zo on each source file. The ".zo" files are placed into
+the collection’s "compiled" directory.
+
+By default, all files with the extension ".rkt", ".ss", or ".scm" in a
+collection are compiled, as are all such files within subdirectories;
+the set of such suffixes is extensible globally as described in
+get-module-suffixes, and compile-collection-zos recognizes suffixes from
+the 'libs group. However, any file or directory whose path starts with
+skip-path or an element of skip-paths is skipped. (“Starts with” means
+that the simplified path p’s byte-string form after (simplify-path p
+#f)starts with the byte-string form of (simplify-path skip-path #f).)
+
+The collection compiler reads the collection’s "info.rkt" file (see
+[missing]) to obtain further instructions for compiling the collection.
+The following fields are used:
+
+* name : The name of the collection as a string, used only for status
+  and error reporting.
+
+* compile-omit-paths : A list of immediate file and directory paths that
+  should not be compiled. Alternatively, this field’s value is 'all,
+  which is equivalent to specifying all files and directories in the
+  collection (to effectively ignore the collection for compilation).
+  Automatically omitted files and directories are "compiled", "doc", and
+  those whose names start with ..
+
+  Files that are required by other files, however, are always compiled
+  in the process of compiling the requiring file—even when the required
+  file is listed with this field or when the field’s value is 'all.
+
+* compile-omit-files : A list of filenames (without directory paths)
+  that are not compiled, in addition to the contents of
+  compile-omit-paths.  Do not use this field; it is for backward
+  compatibility.
+
+* scribblings : A list of lists, each of which starts with a path for
+  documentation source.  See [missing] for more information.  The
+  sources (and the files that they require) are compiled in the same way
+  as other module files, unless skip-docs? is a true value.
+
+* compile-include-files : A list of filenames (without directory paths)
+  to be compiled, in addition to files that are compiled based on the
+  file’s extension, being in scribblings, or being required by other
+  compiled files.
+
+* module-suffixes and doc-module-suffixes : Used indirectly via
+  get-module-suffixes.
+
+Changed in version 6.3 of package base: Added support for
+compile-include-files.
+
+                                        *compile-directory-zos*
+(compile-directory-zos                                             ~
+                        path                                      
+                        info                                      
+                       [#:verbose verbose?                         ~
+                        #:skip-path skip-path                      ~
+                        #:skip-paths skip-paths                    ~
+                        #:skip-doc-sources? skip-docs?             ~
+                        #:managed-compile-zo managed-compile-zo])  ~
+ -> void?
+  path : path-string? ~
+  info : procedure? ~
+  verbose? : any/c = #f ~
+  skip-path : (or/c path-string? #f) = #f ~
+  skip-paths : (listof path-string?) = null ~
+  skip-docs? : any/c = #f ~
+  managed-compile-zo : (path-string? . -> . void?) ~
+                     = (make-caching-managed-compile-zo)
+
+Like compile-collection-zos, but compiles the given directory rather
+than a collection. The info function behaves like the result of get-info
+to supply "info.rkt" fields, instead of using an "info.rkt" file (if
+any) in the directory.
+
+2. Recognizing Module Suffixes
+
+ (require compiler/module-suffix) package: base ~
+
+The compiler/module-suffix library provides functions for recognizing
+file suffixes that correspond to Racket modules for the purposes of
+compiling files in a directory, running tests for files in a directory,
+and so on. The set of suffixes always includes ".rkt", ".ss", and
+".scm", but it can be extended globally by "info.rkt" configurations in
+collections.
+
+Added in version 6.3 of package base.
+
+                                        *get-module-suffixes*
+(get-module-suffixes [#:group group                ~ ~
+                      #:mode mode                  ~
+                      #:namespace namespace]) -> (listof bytes?) ~
+  group : (or/c 'all 'libs 'docs) = 'all ~
+  mode : (or/c 'preferred 'all-available 'no-planet 'no-user) ~
+       = 'preferred
+  namespace : (or/c #f namespace?) = #f ~
+
+Inspects "info.rkt" files (see [missing]) of installed collections to
+produce a list of file suffixes that should be recognized as Racket
+modules. Each suffix is reported as a byte string that does not include
+the . that precedes a suffix.
+
+The mode and namespace arguments are propagated to
+find-relevant-directories to determine which collection directories
+might configure the set of suffixes. Consequently, suffix registrations
+are found reliably only if raco setup (or package installations or
+updates that trigger raco setup) is run.
+
+The group argument determines whether the result includes all registered
+suffixes, only those that are registered as general library suffixes, or
+only those that are registered as documentation suffixes. The set of
+general-library suffixes always includes ".rkt", ".ss", and ".scm". The
+set of documentation suffixes always includes ".scrbl".
+
+The following fields in an "info.rkt" file extend the set of suffixes:
+
+* module-suffixes : A list of byte strings that correspond to
+  general-library module suffixes (without the . that must appear before
+  the suffix). Non-lists or non-byte-string elements of the list are
+  ignored.
+
+* doc-module-suffixes : A list of byte strings as for module-suffixes,
+  but for documentation modules.
+
+                                        *get-module-suffix-regexp*
+(get-module-suffix-regexp [#:group group                ~ ~
+                           #:mode mode                  ~
+                           #:namespace namespace]) -> byte-regexp? ~
+  group : (or/c 'all 'libs 'docs) = 'all ~
+  mode : (or/c 'preferred 'all-available 'no-planet 'no-user) ~
+       = 'preferred
+  namespace : (or/c #f namespace?) = #f ~
+
+Returns a regexp value that matches paths ending with a suffix as
+reported by get-module-suffixes. The pattern includes a subpatterns for
+the suffix without its leading .
+
+3. Loading Compiler Support
+
+The compiler unit loads certain tools on demand via dynamic-require and
+get-info. If the namespace used during compilation is different from the
+namespace used to load the compiler, or if other load-related parameters
+are set, then the following parameter can be used to restore settings
+for dynamic-require.
+
+                                        *current-compiler-dynamic-require-wrapper*
+(current-compiler-dynamic-require-wrapper) ~
+ -> ((-> any) . -> . any)
+(current-compiler-dynamic-require-wrapper proc) -> void?
+  proc : ((-> any) . -> . any) ~
+
+A parameter whose value is a procedure that takes a thunk to apply. The
+default wrapper sets the current namespace (via parameterize) before
+calling the thunk, using the namespace in which the compiler/compiler
+library was originally instantiated.
+
+4. Options for the Compiler
+
+ (require compiler/option) package: base ~
+
+The compiler/option module provides options (in the form of parameters)
+that control the compiler’s behaviors.
+
+More options are defined by the dynext/compile and dynext/link
+libraries, which control the actual C compiler and linker that are used
+for compilation via C.
+
+                                        *somewhat-verbose*
+(somewhat-verbose) -> boolean? ~
+(somewhat-verbose on?) -> void?
+  on? : any/c ~
+
+A #t value for the parameter causes the compiler to print the files that
+it compiles and produces. The default is #f.
+
+                                        *verbose*
+(verbose) -> boolean? ~
+(verbose on?) -> void?
+  on? : any/c ~
+
+A #t value for the parameter causes the compiler to print verbose
+messages about its operations. The default is #f.
+
+                                        *compile-subcollections*
+(compile-subcollections) -> (one-of/c #t #f) ~
+(compile-subcollections cols) -> void?
+  cols : (one-of/c #t #f) ~
+
+A parameter that specifies whether sub-collections are compiled by
+compile-collection-zos.  The default is #t.
+
+5. The Compiler as a Unit
+
+5.1. Signatures
+
+ (require compiler/sig) package: compiler-lib ~
+
+compiler^ : signature ~
+
+Includes all of the names exported by compiler/compiler.
+
+compiler:option^ : signature ~
+
+Includes all of the names exported by compiler/option.
+
+5.2. Main Compiler Unit
+
+ (require compiler/compiler-unit) package: compiler-lib ~
+
+compiler@ : unit? ~
+
+Provides the exports of compiler/compiler in unit form, where C-compiler
+operations are imports to the unit, although they are not used.
+
+The unit imports compiler:option^, dynext:compile^, dynext:link^, and
+dynext:file^. It exports compiler^.
+
+5.3. Options Unit
+
+ (require compiler/option-unit) package: compiler-lib ~
+
+compiler:option@ : unit? ~
+
+Provides the exports of compiler/option in unit form. It imports no
+signatures, and exports compiler:option^.

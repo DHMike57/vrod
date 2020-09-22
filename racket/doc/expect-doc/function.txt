@@ -1,0 +1,262 @@
+Procedure Expectations
+
+                                        *expect-call*
+(expect-call args call-exp) -> expectation? ~
+  args : arguments? ~
+  call-exp : expectation? ~
+
+Returns an expectation that expects a procedure and checks call-exp on a
+thunk wrapping a call to that procedure with args. Use with
+expect-return to check the return value of the procedure call and with
+expect-raise or expect-not-raise to check how the procedure call behaves
+with respect to raised errors. The expected procedure’s arity is checked
+to ensure it can be called with args. See also expect-call-exn.
+
+Examples:
+
+  > (define exp-addition (expect-call (arguments 3 8) (expect-return 11)))
+  > (expect! + exp-addition)
+  > (expect! - exp-addition)
+  expected a different value
+    subject: #<procedure:-> ~
+    in: call with (arguments 3 8) ~
+    in: the return value ~
+    expected: equal? to 11 ~
+    actual: -5 ~
+  > (expect! (thunk 'wrong-arity) exp-addition)
+  expected a more inclusive arity
+    subject: #<procedure> ~
+    in: the procedure's arity ~
+    expected: arity accepting 2 arguments ~
+    actual: 0 ~
+  > (expect! (thunk* (raise 'error)) exp-addition)
+  expected no value raised
+    subject: #<procedure:eval:5:0> ~
+    in: call with (arguments 3 8) ~
+    in: the raised value ~
+    expected: nothing ~
+    actual: 'error ~
+
+                                        *expect-apply*
+(expect-apply f call-exp) -> expectation? ~
+  f : procedure? ~
+  call-exp : expectation? ~
+
+The inverse of expect-call. Returns an expectation that expects an
+arguments value and checks call-exp on a thunk wrapping a call to f with
+the arguments. Like expect-call, to check the return value or raised
+values use expect-return, expect-raise, or expect-not-raise for
+call-exp. See also expect-apply-exn.
+
+Examples:
+
+  > (define exp-add1=10 (expect-apply add1 (expect-return 10)))
+  > (expect! (arguments 9) exp-add1=10)
+  > (expect! (arguments 2) exp-add1=10)
+  expected a different value
+    subject: (arguments 2) ~
+    in: application to #<procedure:add1> ~
+    in: the return value ~
+    expected: equal? to 10 ~
+    actual: 3 ~
+
+                                        *expect-return*
+(expect-return value-exp ...) -> expectation? ~
+  value-exp : any/c ~
+
+Returns an expectation that expects a thunk that returns one value for
+each value-exp. Then, each returned value is checked against the
+corresponding value-exp. Each value-exp is converted to an expectation
+with ->expectation. To assert properties about the list of values as a
+whole, see expect-return*.
+
+Examples:
+
+  > (expect! (thunk 'foo) (expect-return 'foo))
+  > (expect! (thunk 'bar) (expect-return 'foo))
+  expected a different value
+    subject: #<procedure> ~
+    in: the return value ~
+    expected: equal? to 'foo ~
+    actual: 'bar ~
+  > (expect! (thunk (raise 'error)) (expect-return 'foo))
+  expected no value raised
+    subject: #<procedure> ~
+    in: the raised value ~
+    expected: nothing ~
+    actual: 'error ~
+  > (expect! (thunk (values 'foo 'bar)) (expect-return 'foo 'bar))
+
+                                        *expect-return**
+(expect-return* values-exp) -> expectation? ~
+  values-exp : (or/c list? expectation?) ~
+
+Like expect-return, but returns an expectation that expects a thunk,
+then calls that thunk and checks the list of values returned against
+values-exp. If values-exp is a list, it is converted to an expectation
+with ->expectation.
+
+Examples:
+
+  > (define expect-even-values
+      (expect-return* (expect-list-length (expect-pred even?))))
+  > (expect! (thunk (values)) expect-even-values)
+  > (expect! (thunk (values 'foo 'bar)) expect-even-values)
+  > (expect! (thunk 'foo) expect-even-values)
+  expected a different kind of value
+    subject: #<procedure> ~
+    in: the return values list ~
+    in: the number of items ~
+    expected: even? ~
+    actual: 1 ~
+
+                                        *expect-raise*
+(expect-raise [raise-exp]) -> expectation? ~
+  raise-exp : any/c = expect-any ~
+
+Returns an expectation that expects a thunk raises a value which is then
+checked against raise-exp. The given raise-exp is converted to an
+expectation with ->expectation.
+
+Examples:
+
+  > (define (raise-foo) (raise 'foo))
+  > (expect! raise-foo (expect-raise 'foo))
+  > (define (success) 'success)
+  > (expect! success (expect-raise 'foo))
+  expected any value raised
+    subject: #<procedure:success> ~
+    in: the raised value ~
+    expected: anything ~
+    actual: nothing ~
+  > (define (raise-bar) (raise 'bar))
+  > (expect! raise-bar (expect-raise 'foo))
+  expected a different value
+    subject: #<procedure:raise-bar> ~
+    in: the raised value ~
+    expected: equal? to 'foo ~
+    actual: 'bar ~
+
+expect-not-raise : expectation? ~
+
+An expectation that expects a thunk does not raise any value when
+called.
+
+Examples:
+
+  > (expect! (thunk 'success) expect-not-raise)
+  > (expect! (thunk (raise 'failure)) expect-not-raise)
+  expected no value raised
+    subject: #<procedure> ~
+    in: the raised value ~
+    expected: nothing ~
+    actual: 'failure ~
+  > (define (not-a-thunk unexpected-arg)
+      'foo)
+  > (expect! not-a-thunk expect-not-raise)
+  expected a more inclusive arity
+    subject: #<procedure:not-a-thunk> ~
+    in: the procedure's arity ~
+    expected: arity accepting 0 arguments ~
+    actual: 1 ~
+
+                                        *expect-exn*
+(expect-exn [msg-exp]) -> expectation? ~
+  msg-exp : (or/c string? regexp? expectation?) = expect-any ~
+
+Returns an expectation that expects an exn value or a subtype. The input
+exception’s message is then checked against msg-exp. If msg-exp is a
+regexp, it is converted to an expectation with (expect-regexp-match
+msg-exp); otherwise it is converted with ->expectation. See also
+expect-call-exn and expect-apply-exn.
+
+Examples:
+
+  > (define foo-exn (make-exn "foo
+  exception" (current-continuation-marks)))
+  > (expect! foo-exn (expect-exn #rx"foo"))
+  > (expect! foo-exn (expect-exn "foo exception"))
+  > (expect! foo-exn (expect-exn "foo"))
+  expected a different value
+    subject: (exn "foo exception" #<continuation-mark-set>) ~
+    in: the exn-message struct field ~
+    expected: equal? to "foo" ~
+    actual: "foo exception" ~
+  > (expect! 'not-an-exn (expect-exn))
+  expected a different kind of value
+    subject: 'not-an-exn ~
+    expected: exn? ~
+    actual: 'not-an-exn ~
+
+                                        *expect-call-exn*
+(expect-call-exn args [msg-exp]) -> expectation? ~
+  args : arguments? ~
+  msg-exp : (or/c string? regexp? expectation?) = expect-any ~
+
+Convenient shorthand for (expect-call args (expect-raise (expect-exn
+msg-exp))).
+
+                                        *expect-apply-exn*
+(expect-apply-exn f [msg-exp]) -> expectation? ~
+  f : procedure? ~
+  msg-exp : (or/c string? regexp? expectation?) = expect-any ~
+
+Convenient shorthand for (expect-apply args (expect-raise (expect-exn
+msg-exp))).
+
+1. Procedure Context Structures
+
+the-return-context : context? ~
+
+A context that represents the (only) return value of a procedure call.
+For calls that return multiple values, see the-return*-context.
+
+the-return*-context : context? ~
+
+A context that represents the list of all return values in a procedure
+call.
+
+the-raise-context : context? ~
+
+A context that represents the value that was given to raise in a
+procedure call that aborted with an exception.
+
+                                        *struct*
+(struct call-context context (args) ~
+    #:transparent) ~
+  args : arguments? ~
+(make-call-context args) -> call-context?
+  args : arguments? ~
+
+A context and its constructor that represents the thunk created by
+calling the subject procedure with args.
+
+                                        *struct*
+(struct apply-context context (proc) ~
+    #:transparent) ~
+  proc : procedure? ~
+(make-apply-context proc) -> apply-context?
+  proc : procedure? ~
+
+A context and its constructor that represents the thunk created by
+applying the subject arguments to proc.
+
+the-arity-context : context? ~
+
+A context that represents the arity of a procedure, as returned by
+procedure-arity.
+
+2. Procedure Attribute Structures
+
+                                        *struct*
+(struct arity-includes-attribute attribute (value) ~
+    #:transparent) ~
+  value : procedure-arity? ~
+(make-arity-includes-attribute arity)
+ -> arity-includes-attribute?
+  arity : procedure-arity? ~
+
+An attribute and its constructor that represents an arity that a
+procedure includes, in the sense of arity-includes?. This is distinct
+from arity-attribute in that the procedure’s actual arity may not be
+arity=? to the value arity.

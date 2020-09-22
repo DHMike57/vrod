@@ -1,0 +1,5 @@
+raco planet: Automatic Package Distribution
+
+See [missing] for information on the raco planet command, which is used
+for managing packages that can be automatically downloaded and installed
+from the PLaneT server.

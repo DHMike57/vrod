@@ -1,0 +1,110 @@
+Text and String Expectations
+
+                                        *expect-regexp-match*
+(expect-regexp-match pattern [result-exp]) -> expectation? ~
+  pattern : regexp? ~
+  result-exp : (or/c (listof (or/c string? bytes? #f expectation?)) ~
+                     expectation?)
+             = expect-not-false
+
+Returns an expectation that expects a value is either a string, a
+bytestring, a path, or a port. Then, the value is matched against
+pattern using regexp-match and the match result is checked with
+result-exp. Using the default for result-exp checks that pattern matches
+the input value and ignores the result of the match. If result-exp is
+not an expectation, it is converted to one with ->expectation.
+
+Examples:
+
+  > (expect! "This is some message" (expect-regexp-match #rx"some"))
+  > (expect! "12x4x6" (expect-regexp-match #rx"x." '("x4")))
+  > (expect! "12x4x6" (expect-regexp-match #rx"x." '("x6")))
+  expected a different value
+    subject: "12x4x6" ~
+    in: the results of matching #rx"x." ~
+    in: item at position 0 ~
+    expected: equal? to "x6" ~
+    actual: "x4" ~
+
+                                        *expect-string-contains?*
+(expect-string-contains? str) -> expectation? ~
+  str : string? ~
+
+Returns an expectation that expects a string that contains str.
+Convenient shorthand for combining expect-contains with expect-pred and
+string?.
+
+Examples:
+
+  > (expect! "This is some message" (expect-string-contains? "some
+  message"))
+  > (expect! "This is some message" (expect-string-contains? "foo"))
+  expected a value to be contained
+    subject: "This is some message" ~
+    expected: "foo" contained with string-contains? ~
+    actual: "This is some message" ~
+
+                                        *expect-output*
+(expect-output exp [#:call call-exp]) -> expectation? ~ ~
+  exp : (or/c string? regexp? expectation?) ~
+  call-exp : expectation? = expect-not-raise ~
+
+Returns an expectation that expects a thunk. That thunk is called and
+the string it writes to current-output-port is checked against exp. If
+exp is not an expectation, it is converted to one with either
+expect-regexp-match if it’s a regexp or ->expectation otherwise.
+
+Examples:
+
+  > (define (foo) (display "foo!!!"))
+  > (expect! foo (expect-output "foo!!!"))
+  > (expect! foo (expect-output #rx"foo"))
+  > (expect! foo (expect-output "bar"))
+  expected a different value
+    subject: #<procedure:foo> ~
+    in: the string written to the output port ~
+    expected: equal? to "bar" ~
+    actual: "foo!!!" ~
+
+If call-exp is provided, the input thunk is additionally checked against
+call-exp. This allows asserting both the output of a thunk and other
+properties of the thunk without calling it twice, for the rare times
+when multiple calls should be avoided.
+
+Examples:
+
+  > (define (foo) (display "foo!!!"))
+  > (expect! foo (expect-output "foo!!!" #:call (expect-return (void)))) ~
+  > (expect! foo (expect-output "foo!!!" #:call (expect-raise))) ~
+  expected any value raised
+    subject: #<procedure:foo> ~
+    in: the raised value ~
+    expected: anything ~
+    actual: nothing ~
+
+1. String Attributes and Contexts
+
+                                        *struct*
+(struct regexp-match-context context (regexp) ~
+    #:transparent) ~
+  regexp : regexp? ~
+(make-regexp-match-context regexp) -> regexp-match-context?
+  regexp : regexp? ~
+
+A context and its constructor that indicates a fault occurred in the
+result of calling regexp-match with regexp.
+
+                                        *struct*
+(struct regexp-match-attribute attribute (regexp) ~
+    #:transparent) ~
+  regexp : regexp? ~
+(make-regexp-match-attribute regexp) -> regexp-match-attribute?
+  regexp : regexp? ~
+
+An attribute and its constructor that refers to whether or not a value
+matches regexp.
+
+the-output-context : context? ~
+
+A context that represents the string written to current-output-port
+during the evaluation of a thunk.

@@ -1,0 +1,84 @@
+Structure Expectations
+
+                                        *expect-struct*
+(expect-struct id [accessor-id expect-expr] ...) ~
+ 
+  expect-expr : any/c ~
+
+Creates an expectation that checks a value is an instance of the
+structure type id, then checks the value of applying each accessor-id to
+the struct with the corresponding expect-expr. If any expect-expr is not
+an expectation, it is converted to one with ->expectation. Not all
+accessors of id need to be provided; extra fields in structures checked
+by the expectation do not cause any faults. Accessors may be provided in
+any order.
+
+The id must have a transformer binding to a struct-info? value, and that
+value must supply the structure type’s predicate. Accessors of the
+struct’s supertypes are allowed. Faults found by the expectation in
+accessed fields have a struct-accessor-context value added to their
+contexts.
+
+Examples:
+
+  > (struct fish (color weight) #:transparent) ~
+  > (expect! (fish 'red 5) (expect-struct fish [fish-color 'blue]))
+  expected a different value
+    subject: (fish 'red 5) ~
+    in: the fish-color struct field ~
+    expected: equal? to 'blue ~
+    actual: 'red ~
+
+                                        *define-struct-expectation*
+(define-struct-expectation struct-maybe-id) ~
+ 
+struct-maybe-id = struct-id
+                | (id struct-id)
+
+Binds id to a procedure that constructs expectations with expect-struct.
+The bound procedure accepts one keyword argument for each non-inherited
+field of struct-id and passes it to struct-id. If id is not provided, it
+defaults to expect-struct-id. All keyword arguments to the bound
+procedure are optional; if not provided they default to expect-any.
+
+Like expect-struct, struct-id must have a transformer binding to a
+struct-info?, which is inspected by define-struct-expectation to
+determine what accessors to generate keyword arguments for. All
+accessors must be of the pattern struct-id-field-id (such as fish-color)
+or an "ambiguous keyword form" syntax error is reported. For accessors
+matching this pattern, the corresponding keyword used by the bound
+procedure is the symbol 'field-id converted to a keyword.
+
+Examples:
+
+  > (struct fish (color weight) #:transparent) ~
+  > (define-struct-expectation fish)
+  > (expect! (fish 'red 5) (expect-fish #:weight 20)) ~
+  expected a different value
+    subject: (fish 'red 5) ~
+    in: the fish-weight struct field ~
+    expected: equal? to 20 ~
+    actual: 5 ~
+
+                                        *struct*
+(struct struct-accessor-context context (accessor-id) ~
+    #:transparent) ~
+  accessor-id : identifier? ~
+
+A context that indicates a fault lies in a struct field defined by
+accessor-id.
+
+                                        *make-struct-accessor-context*
+(make-struct-accessor-context accessor-id) ~
+ -> struct-field-context?
+  accessor-id : identifier? ~
+
+Returns a struct-accessor-context with a default context-description
+string referencing accessor-id.
+
+Example:
+
+  > (make-struct-accessor-context #'shape-area)
+  (struct-accessor-context
+   "the shape-area struct field"
+   #<syntax:eval:1:0 shape-area>) ~

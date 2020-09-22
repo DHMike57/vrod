@@ -1,0 +1,11 @@
+Overview of RackUnit
+
+There are three basic concepts in RackUnit:
+
+* A check is the basic unit of a test.  As the name suggests, it checks
+  whether some condition is true.
+
+* A test case is a group of checks that form one conceptual unit.  If
+  any check within the case fails, the entire case fails.
+
+* A test suite is a group of test cases and test suites that has a name.

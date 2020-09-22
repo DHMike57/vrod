@@ -1,0 +1,34 @@
+Mac OS Dynamic Library Paths
+
+ (require compiler/exe-dylib-path) package: base ~
+
+The compiler/exe-dylib-path library provides functions for reading and
+adjusting dynamic-library references in a Mac OS executable.
+
+Added in version 6.3 of package base.
+
+                                        *find-matching-library-path*
+(find-matching-library-path exe-path          ~
+                            library-str) -> (or/c #f string?)
+  exe-path : path-string? ~
+  library-str : string? ~
+
+Searches dynamic-linking information in exe-path for a library reference
+whose name includes library-str and returns the executable’s path to the
+library for the first match. If no match is found, the result is #f.
+
+                                        *update-matching-library-path*
+(update-matching-library-path exe-path               ~
+                              library-str           
+                              library-path-str) -> void?
+  exe-path : path-string? ~
+  library-str : string? ~
+  library-path-str : string? ~
+
+Searches dynamic-linking information in exe-path for each library
+reference whose name includes library-str and replaces the executable’s
+path to that library with library-path-str.
+
+A single match is expected, and the update assumes enough space for the
+new path, perhaps because the executable is linked with
+-headerpad_max_install_names.

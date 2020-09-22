@@ -1,0 +1,10 @@
+raco docs: Documentation Search
+
+The raco docs command searches the documentation for the given
+identifiers or search terms.
+
+Command-line flags:
+
+* -h or --help — show help information for this command
+
+* -- — do not treat remaining arguments as switches

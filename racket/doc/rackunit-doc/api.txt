@@ -1,0 +1,1136 @@
+RackUnit API
+
+ (require rackunit) package: rackunit-lib ~
+
+1. Overview of RackUnit
+
+There are three basic concepts in RackUnit:
+
+* A check is the basic unit of a test.  As the name suggests, it checks
+  whether some condition is true.
+
+* A test case is a group of checks that form one conceptual unit.  If
+  any check within the case fails, the entire case fails.
+
+* A test suite is a group of test cases and test suites that has a name.
+
+2. Checks
+
+Checks are the basic building block of RackUnit.  A check checks some
+condition and always evaluates to (void).  If the condition doesn’t
+hold, the check will report the failure using the current check-info
+stack (see current-check-handler for customizing how failures are
+handled).
+
+Although checks are implemented as macros, which is necessary to grab
+source locations (see Custom Checks), they are conceptually functions
+(with the exception of check-match below). This means, for instance,
+checks always evaluate their arguments.  You can use a check as a first
+class function, though this will affect the source location that the
+check grabs.
+
+2.1. Basic Checks
+
+The following are the basic checks RackUnit provides.  You can create
+your own checks using define-check.
+
+                                        *check-eq?*
+(check-eq? v1 v2 [message]) -> void? ~
+  v1 : any/c ~
+  v2 : any/c ~
+  message : (or/c string? #f) = #f ~
+(check-not-eq? v1 v2 [message]) -> void?
+  v1 : any/c ~
+  v2 : any/c ~
+  message : (or/c string? #f) = #f ~
+(check-eqv? v1 v2 [message]) -> void?
+  v1 : any/c ~
+  v2 : any/c ~
+  message : (or/c string? #f) = #f ~
+(check-not-eqv? v1 v2 [message]) -> void?
+  v1 : any/c ~
+  v2 : any/c ~
+  message : (or/c string? #f) = #f ~
+(check-equal? v1 v2 [message]) -> void?
+  v1 : any/c ~
+  v2 : any/c ~
+  message : (or/c string? #f) = #f ~
+(check-not-equal? v1 v2 [message]) -> void?
+  v1 : any/c ~
+  v2 : any/c ~
+  message : (or/c string? #f) = #f ~
+
+Checks that v1 is equal (or not equal) to v2, using eq?, eqv?, or
+equal?, respectively. The optional message is included in the output if
+the check fails.
+
+For example, the following checks all fail:
+
+  > (check-eq? (list 1) (list 1) "allocated data not eq?")
+  --------------------
+  FAILURE
+  name:       check-eq?
+  location:   eval:3:0 ~
+  message:    "allocated data not eq?"
+  actual:     '(1)
+  expected:   '(1)
+  --------------------
+  > (check-not-eq? 1 1 "fixnums are eq?")
+  --------------------
+  FAILURE
+  name:       check-not-eq?
+  location:   eval:4:0 ~
+  params:     '(1 1)
+  message:    "fixnums are eq?"
+  --------------------
+  > (check-eqv? 1 1.0 "not eqv?")
+  --------------------
+  FAILURE
+  name:       check-eqv?
+  location:   eval:5:0 ~
+  message:    "not eqv?"
+  actual:     1
+  expected:   1.0
+  --------------------
+  > (check-not-eqv? 1 1 "integers are eqv?")
+  --------------------
+  FAILURE
+  name:       check-not-eqv?
+  location:   eval:6:0 ~
+  params:     '(1 1)
+  message:    "integers are eqv?"
+  --------------------
+  > (check-equal? 1 1.0 "not equal?")
+  --------------------
+  FAILURE
+  name:       check-equal?
+  location:   eval:7:0 ~
+  message:    "not equal?"
+  actual:     1
+  expected:   1.0
+  --------------------
+  > (check-not-equal? (list 1) (list 1) "equal?")
+  --------------------
+  FAILURE
+  name:       check-not-equal?
+  location:   eval:8:0 ~
+  params:     '((1) (1))
+  message:    "equal?"
+  --------------------
+
+                                        *check-pred*
+(check-pred pred v [message]) -> void? ~
+  pred : (-> any/c any/c) ~
+  v : any/c ~
+  message : (or/c string? #f) = #f ~
+
+Checks that pred returns a value that is not #f when applied to v.  The
+optional message is included in the output if the check fails. The value
+returned by a successful check is the value returned by pred.
+
+For example, the following check passes:
+
+  > (check-pred string? "I work")
+
+The following check fails:
+
+  > (check-pred number? "I fail")
+  --------------------
+  FAILURE
+  name:       check-pred
+  location:   eval:10:0 ~
+  params:     '(#<procedure:number?> "I fail") ~
+  --------------------
+
+                                        *check-*
+(check-= v1 v2 epsilon [message]) -> void? ~
+  v1 : number? ~
+  v2 : number? ~
+  epsilon : number? ~
+  message : (or/c string? #f) = #f ~
+
+Checks that v1 and v2 are numbers within epsilon of one another.  The
+optional message is included in the output if the check fails.
+
+For example, the following check passes:
+
+  > (check-= 1.0 1.01 0.02 "I work")
+
+The following check fails:
+
+  > (check-= 1.0 1.01 0.005 "I fail")
+  --------------------
+  FAILURE
+  name:       check-=
+  location:   eval:12:0 ~
+  params:     '(1.0 1.01 0.005)
+  message:    "I fail"
+  --------------------
+
+                                        *check-within*
+(check-within v1 v2 epsilon [message]) -> void? ~
+  v1 : any/c ~
+  v2 : any/c ~
+  epsilon : number? ~
+  message : (or/c string? #f) = #f ~
+
+Checks that v1 and v2 are equal? to each other, while allowing numbers
+inside of them to be different by at most epsilon from one another. If
+(equal? v1 v2) would call equal? on sub-pieces that are numbers, then
+those numbers are considered "good enough" if they’re within epsilon.
+
+For example, the following checks pass:
+
+  > (check-within (list 6 10) (list 6.02 9.99) 0.05)
+  > (check-within (flvector 3.0 4.0 5.0) (flvector 3.01 4.01 5.014) 0.02)
+  > (check-within (hash 'C 20 'F 68) (hash 'C 25 'F 77) 10)
+
+And the following checks fail:
+
+  > (check-within (list 6e+23 10.0) (list 6.02e+23 9.8) 0.05)
+  --------------------
+  FAILURE
+  name:       check-within
+  location:   eval:16:0 ~
+  actual:     '(6e+23 10.0)
+  expected:   '(6.02e+23 9.8)
+  --------------------
+  > (check-within (hash 'C 18 'F 64) (hash 'C 25 'F 77) 10)
+  --------------------
+  FAILURE
+  name:       check-within
+  location:   eval:17:0 ~
+  actual:     '#hash((C . 18) (F . 64))
+  expected:   '#hash((C . 25) (F . 77))
+  --------------------
+
+Added in version 1.10 of package rackunit-lib.
+
+                                        *check-true*
+(check-true v [message]) -> void? ~
+  v : any/c ~
+  message : (or/c string? #f) = #f ~
+(check-false v [message]) -> void?
+  v : any/c ~
+  message : (or/c string? #f) = #f ~
+(check-not-false v [message]) -> void?
+  v : any/c ~
+  message : (or/c string? #f) = #f ~
+
+Checks that v is #t, is #f, or is not #f, respectively.  The optional
+message is included in the output if the check fails.
+
+For example, the following checks all fail:
+
+  > (check-true 1)
+  --------------------
+  FAILURE
+  name:       check-true
+  location:   eval:18:0 ~
+  params:     '(1)
+  --------------------
+  > (check-false 1)
+  --------------------
+  FAILURE
+  name:       check-false
+  location:   eval:19:0 ~
+  params:     '(1)
+  --------------------
+  > (check-not-false #f)
+  --------------------
+  FAILURE
+  name:       check-not-false
+  location:   eval:20:0 ~
+  params:     '(#f)
+  --------------------
+
+                                        *check-exn*
+(check-exn exn-predicate thunk [message]) -> void? ~
+  exn-predicate : (or/c (-> any/c any/c) regexp?) ~
+  thunk : (-> any) ~
+  message : (or/c string? #f) = #f ~
+
+Checks that thunk raises an exception and that either exn-predicate
+returns a true value if it is a function, or that it matches the message
+in the exception if exn-predicate is a regexp. In the latter case, the
+exception raised must be an exn:fail?.  The optional message is included
+in the output if the check fails.  A common error is to use an
+expression instead of a function of no arguments for thunk.  Remember
+that checks are conceptually functions.
+
+For example, the following checks succeed:
+
+  > (check-exn
+     exn:fail? ~
+     (lambda ()
+       (raise (make-exn:fail "Hi there" ~
+                             (current-continuation-marks)))))
+  > (check-exn
+     exn:fail? ~
+     (lambda ()
+       (error 'hi "there")))
+
+The following check fails:
+
+  > (check-exn exn:fail? ~
+               (lambda ()
+                 (break-thread (current-thread))))
+  --------------------
+  ERROR
+  name:       check-exn
+  location:   eval:23:0 ~
+
+  user break
+  --------------------
+
+The following example is a common mistake. The call to error is not
+within a lambda, so it bypasses check-exn entirely.
+
+  ; Forgot to wrap the expression in a thunk.  Don't do this!
+  > (check-exn exn:fail? ~
+               (error 'hi "there"))
+  --------------------
+  ERROR
+  name:       check-exn
+  location:   eval:24:0 ~
+
+  hi: there
+  --------------------
+
+                                        *check-not-exn*
+(check-not-exn thunk [message]) -> void? ~
+  thunk : (-> any) ~
+  message : (or/c string? #f) = #f ~
+
+Checks that thunk does not raise any exceptions. The optional message is
+included in the output if the check fails.
+
+  > (check-not-exn (λ () 1))
+  > (check-not-exn (λ () (car '())))
+  --------------------
+  FAILURE
+  name:               check-not-exn
+  location:           eval:26:0 ~
+  params:             '(#<procedure>)
+  message:            "Exception raised"
+  exception-message:  "car: contract violation\n  expected: ~
+  pair?\n  given: '()" ~
+  exception:
+    #(struct:exn:fail:contract "car: contract violation\n  expected: ~
+  pair?\n  given: '()" #<continuation-mark-set>) ~
+  --------------------
+  > (check-not-exn (λ () (/ 1 0)) "don't divide by 0")
+  --------------------
+  FAILURE
+  name:               check-not-exn
+  location:           eval:27:0 ~
+  params:             '(#<procedure>)
+  message:            "don't divide by 0"
+  exception-message:  "/: division by zero" ~
+  exception:
+    #(struct:exn:fail:contract:divide-by-zero "/: division by zero" ~
+  #<continuation-mark-set>)
+  --------------------
+
+                                        *check-regexp-match*
+(check-regexp-match regexp string) -> void? ~
+  regexp : regexp? ~
+  string : string? ~
+
+Checks that regexp matches the string.
+
+For example, the following check succeeds:
+
+  > (check-regexp-match "a+bba" "aaaaaabba")
+
+The following check fails:
+
+  > (check-regexp-match "a+bba" "aaaabbba")
+  --------------------
+  FAILURE
+  name:       check-regexp-match
+  location:   eval:29:0 ~
+  params:     '("a+bba" "aaaabbba")
+  --------------------
+
+                                        *check-match*
+(check-match v pattern) ~
+(check-match v pattern pred)
+
+A check that pattern matches on the test value.  Matches the test value
+v against pattern as a match clause.  If no pred is provided, then if
+the match succeeds, the entire check succeeds.  For example, this use
+succeeds:
+
+  > (check-match (list 1 2 3) (list _ _ 3))
+
+This check fails to match:
+
+  > (check-match (list 1 2 3) (list _ _ 4))
+  --------------------
+  FAILURE
+  name:       check-match
+  location:   eval:31:0 ~
+  actual:     '(1 2 3)
+  expected:   '(list _ _ 4)
+  --------------------
+
+If pred is provided, it is evaluated with the bindings from the match
+pattern.  If it produces #t, the entire check succeeds, otherwise it
+fails.  For example, this use succeeds, binding x in the predicate:
+
+  > (check-match (list 1 (list 3)) (list x (list _)) (odd? x))
+
+This check fails because the pred fails:
+
+  > (check-match 6 x (odd? x))
+  --------------------
+  FAILURE
+  name:       check-match
+  location:   eval:33:0 ~
+  actual:     6
+  expected:   'x
+  --------------------
+
+This check fails because of a failure to match:
+
+  > (check-match (list 1 2) (list x) (odd? x))
+  --------------------
+  FAILURE
+  name:       check-match
+  location:   eval:34:0 ~
+  actual:     '(1 2)
+  expected:   '(list x)
+  --------------------
+
+                                        *check*
+(check op v1 v2 [message]) -> void? ~
+  op : (-> any/c any/c any/c) ~
+  v1 : any/c ~
+  v2 : any/c ~
+  message : (or/c string? #f) = #f ~
+
+The most generic check.  Succeeds if op applied to v1 and v2 is not #f,
+otherwise raises an exception of type exn:test:check.  The optional
+message is included in the output if the check fails.
+
+For example, the following check succeeds:
+
+  > (check < 2 3)
+
+The following check fails:
+
+  > (check memq 'pine '(apple orange pear))
+  --------------------
+  FAILURE
+  name:       check
+  location:   eval:36:0 ~
+  params:     '(#<procedure:memq> pine (apple orange pear)) ~
+  --------------------
+
+                                        *fail*
+(fail [message]) -> void? ~
+  message : (or/c string? #f) = #f ~
+
+This check fails unconditionally.  Good for creating test stubs that you
+intend to fill out later.  The optional message is included in the
+output.
+
+2.2. Augmenting Information on Check Failure
+
+When a check fails, it may add information about the failure to
+RackUnit’s check-info stack. Additional information can be stored by
+using the with-check-info* function, and the with-check-info macro.
+
+                                        *struct*
+(struct check-info (name value) ~
+    #:extra-constructor-name make-check-info ~
+    #:transparent) ~
+  name : symbol? ~
+  value : any/c ~
+
+A check-info structure stores information associated with the context of
+the execution of a check. The value is normally written in a check
+failure message using write, but the rackunit library provides several
+special formatting wrappers that can influence how the check info value
+is printed.
+
+Changed in version 1.6 of package rackunit-lib: Changed from opaque to
+transparent
+
+                                        *struct*
+(struct string-info (value) ~
+    #:transparent) ~
+  value : string? ~
+
+A special wrapper around a string for use as a check-info value. When
+displayed in a check failure message, value is displayed without quotes.
+Used to print messages instead of writing values.
+
+  > (define-check (string-info-check)
+      (with-check-info (['value "hello world"]
+                        ['message (string-info "hello world")])
+        (fail-check)))
+  > (string-info-check)
+  --------------------
+  FAILURE
+  name:       string-info-check
+  location:   eval:38:0 ~
+  params:     '()
+  value:      "hello world"
+  message:    hello world
+  --------------------
+
+Added in version 1.2 of package rackunit-lib.
+
+                                        *struct*
+(struct nested-info (values) ~
+    #:transparent) ~
+  values : (listof check-info?) ~
+
+A special wrapper around a list of check-infos for use as a check-info
+value. A check info whose value is a nested info is displayed as an
+indented subsequence of infos. Nested infos can be placed inside nested
+infos, yielding greater indentation.
+
+  > (define-check (nested-info-check)
+      (define infos
+        (list (make-check-info 'foo "foo") (make-check-info 'bar "bar")))
+      (with-check-info (['nested (nested-info infos)]) (fail-check)))
+  > (nested-info-check)
+  --------------------
+  FAILURE
+  name:       nested-info-check
+  location:   eval:40:0 ~
+  params:     '()
+  nested:
+    foo:        "foo" ~
+    bar:        "bar" ~
+  --------------------
+
+Added in version 1.7 of package rackunit-lib.
+
+                                        *struct*
+(struct dynamic-info (proc) ~
+    #:transparent) ~
+  proc : (-> any/c) ~
+
+A special wrapper around a procedure that produces a value for a
+check-info. When a dynamic-info is displayed in a check info stack, proc
+is called to determine what value to display.
+
+  > (with-check-info (['current-dir (dynamic-info current-directory)])
+      (check-equal? 1 2)
+      (parameterize ([current-directory (find-system-path 'temp-dir)])
+        (check-equal? 1 2)))
+  --------------------
+  FAILURE
+  current-dir:  #<path:/usr/share/racket/pkgs/rackunit-doc/rackunit/scribblings/> ~
+  name:         check-equal?
+  location:     eval:41:0 ~
+  actual:       1
+  expected:     2
+  --------------------
+  --------------------
+  FAILURE
+  current-dir:  #<path:/var/tmp/> ~
+  name:         check-equal?
+  location:     eval:41:0 ~
+  actual:       1
+  expected:     2
+  --------------------
+
+The value returned by proc may itself be a special formatting value such
+as nested-info (or even another dynamic-info), in which case that value
+is rendered as it would be if it had not been wrapped in dynamic-info.
+
+  > (define current-foo (make-parameter #f))
+  > (with-check-info (['foo (dynamic-info current-foo)])
+      (check-equal? 1 2)
+      (parameterize ([current-foo
+                      (nested-info (list (make-check-info 'nested 'foo)))])
+        (check-equal? 1 2)))
+  --------------------
+  FAILURE
+  foo:        #f
+  name:       check-equal?
+  location:   eval:43:0 ~
+  actual:     1
+  expected:   2
+  --------------------
+  --------------------
+  FAILURE
+  foo:
+    nested:     foo ~
+  name:       check-equal?
+  location:   eval:43:0 ~
+  actual:     1
+  expected:   2
+  --------------------
+
+Added in version 1.9 of package rackunit-lib.
+
+The are several predefined functions that create check-info structures
+with predefined names.  This avoids misspelling errors:
+
+                                        *make-check-name*
+(make-check-name name) -> check-info? ~
+  name : string? ~
+(make-check-params params) -> check-info?
+  params : (listof any/c) ~
+(make-check-location loc) -> check-info?
+  loc : (list/c any/c (or/c number? #f) (or/c number? #f) ~
+                    (or/c number? #f) (or/c number? #f))
+(make-check-expression msg) -> check-info?
+  msg : any/c ~
+(make-check-message msg) -> check-info?
+  msg : string? ~
+(make-check-actual param) -> check-info?
+  param : any/c ~
+(make-check-expected param) -> check-info?
+  param : any/c ~
+
+                                        *with-check-info**
+(with-check-info* info thunk) -> any ~
+  info : (listof check-info?) ~
+  thunk : (-> any) ~
+
+Pushes the given info on the check-info stack for the duration (the
+dynamic extent) of the execution of thunk
+
+  > (with-check-info*
+     (list (make-check-info 'time (current-seconds)))
+     (lambda () (check = 1 2)))
+  --------------------
+  FAILURE
+  time:       1600792611
+  name:       check
+  location:   eval:44:0 ~
+  params:     '(#<procedure:=> 1 2) ~
+  --------------------
+
+When this check fails the message
+
+time: <current-seconds-at-time-of-running-check>
+
+is printed along with the usual information on an check failure.
+
+                                        *with-check-info*
+(with-check-info ((name val) ...) body ...) ~
+
+The with-check-info macro pushes the given information onto the
+check-info stack for the duration of the execution of the body
+expressions. Each name must be a quoted symbol and each val must be a
+value.
+
+  > (for-each
+     (lambda (elt)
+       (with-check-info
+        (('current-element elt))
+        (check-pred odd? elt)))
+     (list 1 3 5 7 8))
+  --------------------
+  FAILURE
+  current-element:  8
+  name:             check-pred
+  location:         eval:45:0 ~
+  params:           '(#<procedure:odd?> 8) ~
+  --------------------
+
+When this test fails the message
+
+current-element: 8
+
+is displayed along with the usual information on an check failure.
+
+                                        *with-default-check-info**
+(with-default-check-info* info thunk) -> any ~
+  info : (listof check-info?) ~
+  thunk : (-> any) ~
+
+Similar to with-check-info*, but ignores elements of info  whose name
+(as determined by check-info-name) matches the name  of an element on
+the current check-info stack.
+
+  > (with-default-check-info*
+      (list (make-check-name 'first-name))
+      (λ ()
+        (with-default-check-info*
+          (list (make-check-name 'last-name))
+          (λ ()
+            (check-true #false)))))
+  --------------------
+  FAILURE
+  name:       first-name
+  location:   eval:46:0 ~
+  params:     '(#f)
+  --------------------
+
+The error message above should include 'first-name but not  'last-name.
+
+2.3. Custom Checks
+
+Custom checks can be defined using define-check and its variants.  To
+effectively use these macros it is useful to understand a few details
+about a check’s evaluation model.
+
+First, a check should be considered a function, even though most uses
+are actually macros.  In particular, checks always evaluate their
+arguments exactly once before executing any expressions in the body of
+the checks.  Hence if you wish to write checks that evaluate user
+defined code that code must be wrapped in a thunk (a function of no
+arguments) by the user.  The predefined check-exn is an example of this
+type of check.
+
+Second, checks add information to the check-info stack: an internal list
+of check-info structures that RackUnit interprets to build error
+messages. The basic checks treat the stack as a source of optional
+arguments; if the stack is missing some information, then the check may
+supply a default value. For example, check-equal? adds a default source
+location if the check-info stack does not contain a check-info with the
+name 'location (see make-check-location).
+
+                                        *define-simple-check*
+(define-simple-check (name param ...) body ...) ~
+
+The define-simple-check macro constructs a check called name that takes
+the params and an optional message as arguments and evaluates the bodys.
+The check fails if the result of the last body is #f.  Otherwise the
+check succeeds.
+
+Simple checks cannot report extra information by using with-check-info
+inside their body.
+
+For example, the following code defines a check check-odd?
+
+  > (define-simple-check (check-odd? number)
+      (odd? number))
+
+We can use these checks in the usual way:
+
+  > (check-odd? 3)
+  > (check-odd? 2)
+  --------------------
+  FAILURE
+  name:       check-odd?
+  location:   eval:49:0 ~
+  params:     '(2)
+  --------------------
+
+                                        *define-binary-check*
+(define-binary-check (name pred actual expected)) ~
+(define-binary-check (name actual expected) body ...)
+
+The define-binary-check macro constructs a check that tests a binary
+predicate. It adds the values of actual and expected to the  check-info
+stack. The first form of define-binary-check accepts a binary predicate
+and tests if the predicate holds for the given values.  The second form
+tests if the last body evaluates to a non-false value.
+
+Here’s the first form, where we use a predefined predicate to construct
+a binary check:
+
+  > (define-binary-check (check-char=? char=? actual expected))
+
+In use:
+
+  > (check-char=? (read-char (open-input-string "a")) #\a)
+
+If the expression is more complicated, the second form should be used.
+For example, below we define a binary check that tests whether a number
+is within 0.01 of the expected value:
+
+  > (define-binary-check (check-in-tolerance actual expected)
+      (< (abs (- actual expected)) 0.01))
+
+                                        *define-check*
+(define-check (name param ...) body ...) ~
+
+The define-check macro is similar to define-simple-check, except the
+check only fails if fail-check is called in the body of the check. This
+allows more flexible checks, and in particular more flexible reporting
+options.
+
+  > (define-check (check-even? number)
+      (unless (even? number)
+        (fail-check)))
+  > (check-even? 0)
+  > (check-even? 1)
+  --------------------
+  FAILURE
+  name:       check-even?
+  location:   eval:55:0 ~
+  params:     '(1)
+  --------------------
+
+Checks defined with define-check add the source location and source
+syntax at their use-site to the check-info stack, unless the stack
+already contains values for the keys 'location and 'expression.
+
+  > (check-equal? 0 1)
+  --------------------
+  FAILURE
+  name:       check-equal?
+  location:   eval:56:0 ~
+  actual:     0
+  expected:   1
+  --------------------
+  > (with-check-info*
+      (list (make-check-location (list 'custom 6 1 #f #f)))
+      (λ () (check-equal? 0 1)))
+  --------------------
+  FAILURE
+  location:   custom:6:1 ~
+  name:       check-equal?
+  actual:     0
+  expected:   1
+  --------------------
+
+Changed in version 1.9 of package rackunit-lib: Documented the protocol
+for adding 'location and 'expression information.
+
+                                        *fail-check*
+(fail-check message) -> void? ~
+  message : string? ~
+
+Raises an exn:test:check with the contents of the check-info stack. The
+optional message is used as the exception’s message.
+
+3. Compound Testing Forms
+
+3.1. Test Cases
+
+As programs increase in complexity the unit of testing grows beyond a
+single check. For example, it may be the case that if one check fails it
+doesn’t make sense to run another.  To solve this problem compound
+testing forms can be used to group expressions.  If any expression in a
+group fails (by raising an exception) the remaining expressions will not
+be evaluated.
+
+                                        *test-begin*
+(test-begin expr ...) ~
+
+A test-begin form groups the exprs into a single unit.  If any expr
+fails the following ones are not evaluated.
+
+For example, in the following code the world is not destroyed as the
+preceding check fails:
+
+  (test-begin
+    (check-eq? 'a 'b)
+    ; This line won't be run
+    (destroy-the-world))
+
+                                        *test-case*
+(test-case name body ...+) ~
+
+Like a test-begin except a name is associated with the bodys.  The name
+will be reported if the test fails.
+
+Here’s the above example rewritten to use test-case so the test can be
+named.
+
+  (test-case
+    "Example test"
+    (check-eq? 'a 'b)
+    ; This line won't be run
+    (destroy-the-world))
+
+                                        *test-case?*
+(test-case? obj) -> boolean? ~
+  obj : any/c ~
+
+True if obj is a test case, and false otherwise.
+
+3.1.1. Shortcuts for Defining Test Cases
+
+                                        *test-check*
+(test-check name operator v1 v2) -> void? ~
+  name : string? ~
+  operator : (-> any/c any/c any/c) ~
+  v1 : any/c ~
+  v2 : any/c ~
+(test-pred name pred v) -> void?
+  name : string? ~
+  pred : (-> any/c any/c) ~
+  v : any/c ~
+(test-equal? name v1 v2) -> (void?)
+  name : string? ~
+  v1 : any/c ~
+  v2 : any/c ~
+(test-eq? name v1 v2) -> void?
+  name : string? ~
+  v1 : any/c ~
+  v2 : any/c ~
+(test-eqv? name v1 v2) -> void?
+  name : string? ~
+  v1 : any/c ~
+  v2 : any/c ~
+(test-= name v1 v2 epsilon) -> void?
+  name : string? ~
+  v1 : real? ~
+  v2 : real? ~
+  epsilon : real? ~
+(test-true name v) -> void?
+  name : string? ~
+  v : any/c ~
+(test-false name v) -> void?
+  name : string? ~
+  v : any/c ~
+(test-not-false name v) -> void?
+  name : string? ~
+  v : any/c ~
+(test-exn name pred thunk) -> void?
+  name : string? ~
+  pred : (or/c (-> any/c any/c) regexp?) ~
+  thunk : (-> any) ~
+(test-not-exn name thunk) -> void?
+  name : string? ~
+  thunk : (-> any) ~
+
+Creates a test case with the given name that performs the corresponding
+check. For example,
+
+  (test-equal? "Fruit test" "apple" "pear")
+
+is equivalent to
+
+  (test-case "Fruit test" (check-equal? "apple" "pear"))
+
+3.2. Test Suites
+
+Test cases can themselves be grouped into test suites.  A test suite can
+contain both test cases and test suites. Unlike a check or test case, a
+test suite is not immediately run.  Instead use one of the functions
+described in User Interfaces or [missing].
+
+                                        *test-suite*
+(test-suite name-expr maybe-before maybe-after test ...) ~
+ 
+maybe-before = 
+             | #:before before-thunk ~
+                
+ maybe-after = 
+             | #:after after-thunk ~
+ 
+  name-expr : string? ~
+
+Constructs a test suite with the given name and tests.  The tests may be
+checks, test cases, constructed using test-begin or test-case, or other
+test suites.
+
+The before-thunk and after-thunk are optional thunks (functions with no
+argument).  They are run before and after the tests are run,
+respectively.
+
+Unlike a check or test case, a test suite is not immediately run.
+Instead use one of the functions described in User Interfaces or
+[missing].
+
+For example, here is a test suite that displays Before before any tests
+are run, and After when the tests have finished.
+
+  (test-suite
+    "An example suite"
+    #:before (lambda () (display "Before")) ~
+    #:after  (lambda () (display "After")) ~
+    (test-case
+      "An example test"
+      (check-eq? 1 1))
+    (test-suite "A nested test suite"
+      (test-case "Another test"
+        (check < 1 2))))
+
+                                        *make-test-suite*
+(make-test-suite  name                       ~
+                  tests                     
+                 [#:before before-thunk      ~
+                  #:after after-thunk]) -> test-suite? ~
+  name : string? ~
+  tests : (listof (or/c test-case? test-suite?)) ~
+  before-thunk : (-> any) = void ~
+  after-thunk : (-> any) = void ~
+
+Constructs a test suite with the given name containing the given tests.
+Unlike the test-suite form, the tests are represented as a list of test
+values.
+
+                                        *test-suite?*
+(test-suite? obj) -> boolean? ~
+  obj : any/c ~
+
+True if obj is a test suite, and false otherwise
+
+3.2.1. Utilities for Defining Test Suites
+
+There are some macros that simplify the common cases of defining test
+suites:
+
+                                        *define-test-suite*
+(define-test-suite name test ...) ~
+
+The define-test-suite form creates a test suite with the given name
+(converted to a string) and tests, and binds it to the same name.
+
+For example, this code creates a binding for the name example-suite as
+well as creating a test suite with the name "example-suite":
+
+  (define-test-suite example-suite
+    (check = 1 1))
+
+                                        *define/provide-test-suite*
+(define/provide-test-suite name test ...) ~
+
+This form is just like define-test-suite, and in addition it provides
+the test suite.
+
+4. Test Control Flow
+
+The before, after, and around macros allow you to specify code that is
+always run before, after, or around expressions in a test case.
+
+                                        *before*
+(before before-expr expr-1 expr-2 ...) ~
+
+Whenever control enters the scope execute the before-expr before
+executing expr-1, and expr-2 ...
+
+                                        *after*
+(after expr-1 expr-2 ... after-expr) ~
+
+Whenever control exits the scope execute the after-expr after executing
+expr-1, and expr-2 ...  The after-expr is executed even if control exits
+via an exception or other means.
+
+                                        *around*
+(around before-expr expr-1 expr-2 ... after-expr) ~
+
+Whenever control enters the scope execute the before-expr before
+executing expr-1 expr-2 ..., and execute after-expr whenever control
+leaves the scope.
+
+Example:
+
+The test below checks that the file test.dat contains the string "foo".
+The before action writes to this file.  The after action deletes it.
+
+  (around
+    (with-output-to-file "test.dat"
+       (lambda ()
+         (write "foo")))
+    (with-input-from-file "test.dat"
+      (lambda ()
+        (check-equal? "foo" (read))))
+    (delete-file "test.dat"))
+
+                                        *delay-test*
+(delay-test test1 test2 ...) ~
+
+This somewhat curious macro evaluates the given tests in a context where
+current-test-case-around is parameterized to
+test-suite-test-case-around.  This has been useful in testing RackUnit.
+It might be useful for you if you create test cases that create test
+cases.
+
+5. Miscellaneous Utilities
+
+The require/expose macro allows you to access bindings that a module
+does not provide.  It is useful for testing the private functions of
+modules.
+
+                                        *require/expose*
+(require/expose module (id ...)) ~
+
+Requires id from module into the current module.  It doesn’t matter if
+the source module provides the bindings or not; require/expose can still
+get at them.
+
+Note that require/expose can be a bit fragile, especially when mixed
+with compiled code.  Use at your own risk!
+
+This example gets make-failure-test, which is defined in a RackUnit
+test:
+
+  (require/expose rackunit/private/check-test (make-failure-test))
+
+                                        *dynamic-require/expose*
+(dynamic-require/expose mod name) -> any ~
+  mod : (or/c module-path? ~
+              module-path-index?
+              resolved-module-path?)
+  name : symbol? ~
+
+Like dynamic-require, but gets internal bindings like require/expose.
+
+6. User Interfaces
+
+RackUnit provides a textual and a graphical user interface
+
+6.1. Textual User Interface
+
+ (require rackunit/text-ui) package: rackunit-lib ~
+
+The textual UI is in the rackunit/text-ui module. It is run via the
+run-tests function.
+
+                                        *run-tests*
+(run-tests test [verbosity]) -> natural-number/c ~
+  test : (or/c test-case? test-suite?) ~
+  verbosity : (symbols 'quiet 'normal 'verbose) = 'normal ~
+
+The given test is run and the result of running it output to the
+current-output-port.  The output is compatible with the (X)Emacs
+next-error command (as used, for example, by (X)Emacs’s compile
+function)
+
+The optional verbosity is one of 'quiet, 'normal, or 'verbose.  Quiet
+output displays only the number of successes, failures, and errors.
+Normal reporting suppresses some extraneous check information (such as
+the expression).  Verbose reports all information.
+
+run-tests returns the number of unsuccessful tests.
+
+6.2. Graphical User Interface
+
+ (require rackunit/gui) package: rackunit-gui ~
+
+RackUnit also provides a GUI test runner, available from the
+rackunit/gui module.
+
+                                        *test/gui*
+(test/gui test ... [#:wait? wait?]) -> void? ~ ~
+  test : (or/c test-case? test-suite?) ~
+  wait? : boolean? = #f ~
+
+Creates a new RackUnit GUI window and runs each test. The GUI is updated
+as tests complete.
+
+When wait? is true, test/gui does not return until the test runner
+window has been closed.
+
+Given the following program, the RackUnit GUI will look as shown below:
+
+  #lang racket
+  (require rackunit rackunit/gui)
+  (test/gui
+   (test-suite
+    "all tests"
+    (test-suite
+     "math tests"
+     (test-case "addition" (check-equal? (+ 1 1) 2))
+     (test-case "subtraction" (check-equal? (- 0 0) 0))
+     (test-case "multiplication" (check-equal? (* 2 2) 5)))
+    (test-suite
+     "string tests"
+     (test-case "append" (check-equal? (string-append "a" "b") "ab"))
+     (test-case "ref" (check-equal? (string-ref "abc" 1) #\b)))))
+
+Screenshot of the RackUnit window. It features a tree representing the
+nested test suites (with test cases as leaves) on the left pane, and
+information about the selected test failure in the right pane.
+
+                                        *make-gui-runner*
+(make-gui-runner) -> (-> (or/c test-case? test-suite?) ... any) ~
+
+Creates a new RackUnit GUI window and returns a procedure that, when
+applied, runs the given tests and displays the results in the GUI.

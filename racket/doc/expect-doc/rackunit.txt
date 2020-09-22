@@ -1,0 +1,154 @@
+Using Expectations with RackUnit
+
+ (require expect/rackunit) package: expect ~
+
+This module defines how to use expectations with the rackunit testing
+framework. Included are custom checks and test forms that test values
+using expectations, as well as expectation-using replacements for the
+various built in checks provided by rackunit.
+
+If you have an existing set of RackUnit tests, simply change (require
+rackunit) to (require expect/rackunit). Only checks are exported by
+expect/rackunit; if your tests use other exports of rackunit you’ll need
+to use only-in to import them from RackUnit.
+
+                                        *check-expect*
+(check-expect v exp [message]) -> void? ~
+  v : any/c ~
+  exp : any/c ~
+  message : string? = "" ~
+
+Checks that v has no faults according to exp, with message added to the
+check info stack in the event of failure. The given exp is converted to
+an expectation with ->expectation.
+
+Examples:
+
+  > (check-expect 1 (expect-pred number?))
+  > (check-expect 'foo (expect-pred number?))
+  --------------------
+  FAILURE
+  name:       check-expect
+  location:   eval:2:0 ~
+  actual:     'foo
+  expected:   number?
+
+  Expected a different kind of value
+  --------------------
+  > (check-expect #hash((a . (1 WRONG 3)) (b . (4 5 WRONG)))
+                  #hash((a . (1 2 3)) (b . (4 5 6))))
+  --------------------
+  FAILURE
+  name:       check-expect
+  location:   eval:3:0 ~
+  actual:     '#hash((a . (1 WRONG 3)) (b . (4 5 WRONG)))
+  fault:
+    summary:    expected a different value ~
+    actual:     'WRONG ~
+    expected:   equal? to 6 ~
+    context: ~
+      in:         value for key 'b ~
+      in:         item at position 2 ~
+  fault:
+    summary:    expected a different value ~
+    actual:     'WRONG ~
+    expected:   equal? to 2 ~
+    context: ~
+      in:         value for key 'a ~
+      in:         item at position 1 ~
+
+  Multiple faults found
+  --------------------
+
+check-eq? : procedure? ~
+check-eqv? : procedure? ~
+check-equal? : procedure? ~
+check-not-eq? : procedure? ~
+check-not-eqv? : procedure? ~
+check-not-equal? : procedure? ~
+check-pred : procedure? ~
+check-= : procedure? ~
+check-true : procedure? ~
+check-false : procedure? ~
+check-not-false : procedure? ~
+check-exn : procedure? ~
+check-not-exn : procedure? ~
+check : procedure? ~
+
+Custom checks that are equivalent to their corresponding rackunit checks
+except that they are defined in terms of expectations, and provide
+better error messages for most failures. None of these checks accept
+expectations as arguments.
+
+Example:
+
+  > (check-equal? '(1 2 3 foo 5) '(1 2 3 4 5))
+  --------------------
+  FAILURE
+  name:       check-equal?
+  location:   eval:1:0 ~
+  subject:    (1 2 3 foo 5)
+  actual:     'foo
+  expected:   equal? to 4
+  context:
+    in:         item at position 3 ~
+
+  Expected a different value
+  --------------------
+
+                                        *test-subject*
+(test-subject maybe-name ~
+  #:subject subject-expr ~
+  expectation-expr ...)
+ 
+maybe-name = 
+           | name-str
+ 
+  subject-expr : any/c ~
+  expectation-expr : any/c ~
+
+Creates a test-case or test-begin form containing one check-expect
+expression for each expectation-expr. The subject-expr is evaluated once
+and the resulting value is passed as the value to test by each
+check-expect expression. If name-str is provided, it must be a string
+and the resulting test is a test-case with name-str as its name,
+otherwise it is a test-begin form. Note that each expectation-expr is
+converted to an expectation by check-expect.
+
+Example:
+
+  > (test-subject "addition" #:subject + ~
+      (expect-call (arguments 1 2 3) (expect-return 6))
+      (expect-call (arguments) (expect-return 0))
+      (expect-call-exn (arguments 'foo) #rx"contract")
+      (expect-call (arguments 5 10) (expect-return 16)))
+  --------------------
+  addition
+  FAILURE
+  name:       test-expect
+  location:   eval:1:0 ~
+  subject:    #<procedure:+> ~
+  actual:     15
+  expected:   equal? to 16
+  context:
+    in:         call with (arguments 5 10) ~
+    in:         the return value ~
+
+  Expected a different value
+  --------------------
+
+                                        *fail-check/expect*
+(fail-check/expect v exp) -> void? ~
+  v : any/c ~
+  exp : any/c ~
+
+Essentially equivalent to (check-expect v exp), except as an ordinary
+function that raises an exn:test:check exception. Check infos containing
+the faults raised by exp are added to the exception, but no other infos
+(such as 'expression) are included. Like check-expect, if exp is not an
+expectation it is converted to one with ->expectation.
+
+Example:
+
+  > (fail-check/expect 'foo (expect-pred number?))
+  Expected a different kind of value

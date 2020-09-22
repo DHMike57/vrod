@@ -1,0 +1,782 @@
+raco decompile: Decompiling Bytecode
+
+The raco decompile command takes the path of a bytecode file (which
+usually  has the file extension ".zo") or a source file with an
+associated bytecode file (usually created with raco make) and  converts
+the bytecode file’s content back to an approximation of Racket code.
+When the “bytecode” file contains machine code, as for the CS  variant
+of Racket, then it cannot be converted back to an approximation of
+Racket, but installing the "disassemble" package may enable disassembly
+of the machine code. Decompilation is mostly useful for checking the
+compiler’s transformation and optimization of the source program.
+
+The raco decompile command accepts the following command-line flags:
+
+* --force — skip modification-date comparison on the given file’s path
+  and an associated ".zo" file (if any)
+
+* -n >n< or --columns >n< — format output for a display with >n< columns
+
+* --linklet — decompile only as far as linklets, instead of decoding
+  linklets to approximate Racket module forms
+
+* --no-disassemble — show machine code as-is in a byte string, instead
+  of attempting to disassemble
+
+To the degree that it can be converted back to Racket code,  many forms
+in the decompiled code have the same meanings as  always, such as
+module, define, and lambda.  Other forms and transformations are
+specific to the rendering  of bytecode, and they reflect a specific
+execution model:
+
+* Top-level variables, variables defined within the module, and
+  variables imported from other modules are prefixed with _, which helps
+  expose the difference between uses of local variables versus other
+  variables. Variables imported from other modules, moreover, have a
+  suffix starting with @ that indicates the source module. Finally,
+  imported variables with constantness have a midfix: :c to indicate
+  constant shape across all instantiations, :f to indicate a fixed value
+  after initialization, :p to indicate a procedure, :P to indicate a
+  procedure that preserves continuation  marks on return, :t to indicate
+  a structure type, :mk to indicate a structure constructor, :? to
+  indicate a structure predicate, :ref to indicate a structure accessor,
+  or :set! to indicate a structure mutator.
+
+  Non-local variables are always accessed indirectly though an implicit
+  #%globals or #%modvars variable that resides on the value stack (which
+  otherwise contains local variables). Variable accesses are further
+  wrapped with #%checked when the compiler cannot prove that the
+  variable will be defined before the access.
+
+  Uses of core primitives are shown without a leading _, and they are
+  never wrapped with #%checked.
+
+* Local-variable access may be wrapped with #%sfs-clear, which indicates
+  that the variable-stack location holding the variable will be cleared
+  to prevent the variable’s value from being retained by the garbage
+  collector. Variables whose name starts with unused are never actually
+  stored on the stack, and so they never have #%sfs-clear annotations.
+  (The bytecode compiler normally eliminates such bindings, but
+  sometimes it cannot, either because it cannot prove that the
+  right-hand side produces the right number of values, or the discovery
+  that the variable is unused happens too late with the compiler.)
+
+  Mutable variables are converted to explicitly boxed values using
+  #%box, #%unbox, and #%set-boxes! (which works on multiple boxes at
+  once). A set!-rec-values operation constructs mutually-recursive
+  closures and simultaneously updates the corresponding variable-stack
+  locations that bind the closures.  A set!, set!-values, or
+  set!-rec-values form is always used on a local variable before it is
+  captured by a closure; that ordering reflects how closures capture
+  values in variable-stack locations, as opposed to stack locations.
+
+* In a lambda form, if the procedure produced by the lambda has a name
+  (accessible via object-name) and/or source-location information, then
+  it is shown as a quoted constant at the start of the procedure’s body.
+  Afterward, if the lambda form captures any bindings from its context,
+  those bindings are also shown in a quoted constant. Neither constant
+  corresponds to a computation when the closure is called, though the
+  list of captured bindings corresponds to a closure allocation when the
+  lambda form itself is evaluated.
+
+  A lambda form that closes over no bindings is wrapped with #%closed
+  plus an identifier that is bound to the closure. The binding’s scope
+  covers the entire decompiled output, and it may be referenced directly
+  in other parts of the program; the binding corresponds to a constant
+  closure value that is shared, and it may even contain cyclic
+  references to itself or other constant closures.
+
+* A form (#%apply-values proc expr) is equivalent to (call-with-values
+  (lambda () expr) proc), but the run-time system avoids allocating a
+  closure for expr. Similarly, a #%call-with-immediate-continuation-mark
+  call is equivalent to a call-with-immediate-continuation-mark call,
+  but avoiding a closure allocation.
+
+* A define-values form may have (begin '%%inline-variant%% expr1 expr2)
+  for its expression, in which case expr2 is the normal result, but
+  expr1 may be inlined for calls to the definition from other modules.
+  Definitions of functions without an '%%inline-variant%% are never
+  inlined across modules.
+
+* Function arguments and local bindings that are known to have a
+  particular type have names that embed the known type. For example, an
+  argument might have a name that starts argflonum or a local binding
+  might have a name that starts flonum to indicate a flonum value.
+
+* A #%decode-syntax form corresponds to a syntax object.
+
+* A #%machine-code form corresponds to machine code that is not
+  disassembled, where the machine code is in a byte string.
+
+* A #%assembly-code form corresponds to disassembled machine code, where
+  the assembly code is shown as a sequence of strings.
+
+Changed in version 1.8: Added --no-disassemble.
+
+1. API for Decompiling
+
+ (require compiler/decompile) package: compiler-lib ~
+
+                                        *decompile*
+(decompile top) -> any/c ~
+  top : (or/c linkl-directory? linkl-bundle? linkl?) ~
+
+Consumes the result of parsing bytecode and returns an S-expression (as
+described above) that represents the compiled code.
+
+2. API for Parsing Bytecode
+
+ (require compiler/zo-parse) package: zo-lib ~
+
+The compiler/zo-parse module re-exports compiler/zo-structs in addition
+to zo-parse.
+
+                                        *zo-parse*
+(zo-parse [in]) -> (or/c linkl-directory? linkl-bundle?) ~
+  in : input-port? = (current-input-port) ~
+
+Parses a port (typically the result of opening a ".zo" file) containing
+bytecode.  Beware that the structure types used to represent the
+bytecode are subject to frequent changes across Racket versons.
+
+The parsed bytecode is returned in a linkl-directory or linkl-bundle
+structure—the latter only for the compilation of a module that contains
+no submodules.
+
+Within a linklet, the bytecode representation of an expression is closer
+to an S-expression than a traditional, flat control string.  For
+example, an if form is represented by a branch structure that has three
+fields: a test expression, a “then” expression, and an “else”
+expression.  Similarly, a function call is represented by an application
+structure that has a list of argument expressions.
+
+Storage for local variables or intermediate values (such as the
+arguments for a function call) is explicitly specified in terms of a
+stack.  For example, execution of an application structure reserves
+space on the stack for each argument result.  Similarly, when a let-one
+structure (for a simple let) is executed, the value obtained by
+evaluating the right-hand side expression is pushed onto the stack, and
+then the body is evaluated.  Local variables are always accessed as
+offsets from the current stack position.  When a function is called, its
+arguments are passed on the stack.  A closure is created by transferring
+values from the stack to a flat closure record, and when a closure is
+applied, the saved values are restored on the stack (though possibly in
+a different order and likely in a more compact layout than when they
+were captured).
+
+When a sub-expression produces a value, then the stack pointer is
+restored to its location from before evaluating the sub-expression. For
+example, evaluating the right-hand size for a let-one structure may
+temporarily push values onto the stack, but the stack is restored to its
+pre-let-one position before pushing the resulting value and continuing
+with the body.  In addition, a tail call resets the stack pointer to the
+position that follows the enclosing function’s arguments, and then the
+tail call continues by pushing onto the stack the arguments for the
+tail-called function.
+
+Values for global and module-level variables are not put directly on the
+stack, but instead stored in “buckets,” and an array of accessible
+buckets is kept on the stack.  When a closure body needs to access a
+global variable, the closure captures and later restores the bucket
+array in the same way that it captured and restores a local variable.
+Mutable local variables are boxed similarly to global variables, but
+individual boxes are referenced from the stack and closures.
+
+3. API for Marshaling Bytecode
+
+ (require compiler/zo-marshal) package: zo-lib ~
+
+                                        *zo-marshal-to*
+(zo-marshal-to top out) -> void? ~
+  top : (or/c linkl-directory? linkl-bundle?) ~
+  out : output-port? ~
+
+Consumes a representation of bytecode and writes it to out.
+
+                                        *zo-marshal*
+(zo-marshal top) -> bytes? ~
+  top : (or/c linkl-directory? linkl-bundle?) ~
+
+Consumes a representation of bytecode and generates a byte string for
+the marshaled bytecode.
+
+4. Bytecode Representation
+
+ (require compiler/zo-structs) package: zo-lib ~
+
+The compiler/zo-structs library defines the bytecode structures that are
+produced by zo-parse and consumed by decompile and zo-marshal.
+
+  Warning:       The compiler/zo-structs library exposes internals
+  of the Racket bytecode abstraction. Unlike other Racket
+  libraries, compiler/zo-structs is subject to       incompatible
+  changes across Racket versions.
+
+                                        *struct*
+(struct zo () ~
+    #:extra-constructor-name make-zo ~
+    #:prefab) ~
+
+A supertype for all forms that can appear in compiled code.
+
+4.1. Prefix
+
+                                        *struct*
+(struct linkl-directory zo (table) ~
+    #:extra-constructor-name make-linkl-directory ~
+    #:prefab) ~
+  table : (hash/c (listof symbol?) linkl-bundle?) ~
+(struct linkl-bundle zo (table)
+    #:extra-constructor-name make-linkl-bundle ~
+    #:prefab) ~
+  table : (hash/c (or/c symbol? fixnum?) (or linkl? any/c)) ~
+
+Wraps compiled code.
+
+Module and top-level compilation produce one or more linklets that
+represent independent evaluation in a specific phase. Even a single
+top-level expression or a module with only run-time code will generate
+multiple linklets to implement metadata and syntax data. A module with
+no submodules is represented directly by a linkl-bundle, while any other
+compiled form is represented by a linkl-directory.
+
+A linklet bundle maps an integer to a linklet representing forms to
+evaluate at the integer-indicated phase. Symbols are mapped to metadata,
+such as a module’s name as compiled or a linklet implementing literal
+syntax objects. A linklet directory normally maps '() to the main
+linklet bundle for a module or a single top-level form; for a linklet
+directory that corresponds to a sequence of top-level forms, however,
+there is no “main” linklet bundle, and symbol forms of integers are used
+to order the linkets.
+
+For a module with submodules, the linklet directory maps submodule paths
+(as lists of symbols) to linklet bundles for the corresponding
+submodules.
+
+                                        *struct*
+(struct linkl zo (name ~
+                  importss
+                  import-shapess
+                  exports
+                  internals
+                  lifts
+                  source-names
+                  body
+                  max-let-depth
+                  need-instance-access?)
+    #:extra-constructor-name make-linkl ~
+    #:prefab) ~
+  name : symbol? ~
+  importss : (listof (listof symbol?)) ~
+  import-shapess : (listof (listof  (or/c #f 'constant 'fixed ~
+                                          function-shape?
+                                          struct-shape?)))
+  exports : (listof symbol?) ~
+  internals : (listof (or/c symbol? #f)) ~
+  lifts : (listof symbol?) ~
+  source-names : (hash/c symbol? symbol?) ~
+  body : (listof (or/c form? any/c)) ~
+  max-let-depth : exact-nonnegative-integer? ~
+  need-instance-access? : boolean? ~
+
+Represents a linklet, which corresponds to a module body or a  top-level
+sequence at a single phase.
+
+The name of a linklet is for debugging purposes, similar to  the
+inferred name of a lambda form.
+
+The importss list of lists describes the linklet’s imports.  Each of the
+elements of the out list corresponds to an import  source, and each
+element of an inner list is the symbolic name of an  export from that
+source. The import-shapess list is in  parallel to imports; it reflects
+optimization assumptions  by the compiler that are used by the bytecode
+validator and checked  when the linklet is instantiated.
+
+The exports list describes the linklet’s defined names that are
+exported. The internals list describes additional definitions within the
+linket, but they are not accessible from the outside of a linklet or one
+of its instances; a #f can appear in place of an unreferenced internal
+definition that has been removed. The lifts list is an extension of
+internals for procedures that are lifted by the compiler; these
+procedures have certain properties that can be checked by the bytecode
+validator.
+
+Each symbol in exports, internals, and lifts must be distinct from any
+other symbol in those lists. The source-names table maps symbols in
+exports, internals, and lifts to other symbols, potentially not
+distinct, that correspond to original source names for the definition.
+The source-names table is used only for debugging.
+
+When a linklet is instantiated, variables corresponding to the
+flattening of the lists importss, exports, internals, and lifts are
+placed in an array (in that order) for access via toplevel references.
+The initial slot is reserved for a variable-like reference that strongly
+retains a connection to an instance of its enclosing linklet.
+
+The bodys list is the executable content of the linklet. The value of
+the last element in bodys may be returned when the linklet is
+instantiated, depending on the way that it’s instantiated.
+
+The max-let-depth field indicates the maximum size of the stack that
+will be created by any body.
+
+The need-instance-access? boolean indicates whether the linklet contains
+a toplevel for position 0. A #t is allowed (but suboptimal) if not such
+reference is present in the linklet body.
+
+                                        *struct*
+(struct function-shape (arity preserves-marks?) ~
+    #:extra-constructor-name make-function-shape ~
+    #:prefab) ~
+  arity : procedure-arity? ~
+  preserves-marks? : boolean? ~
+
+Represents the shape of an expected import, which should be a function
+having the arity specified by arity. The preserves-marks?  field is true
+if calling the function is expected to leave continuation marks
+unchanged by the time it returns.
+
+                                        *struct*
+(struct struct-shape () ~
+    #:extra-constructor-name make-struct-shape ~
+    #:prefab) ~
+(struct struct-type-shape struct-shape (field-count authentic?)
+    #:extra-constructor-name make-struct-type-shape ~
+    #:prefab) ~
+  field-count : exact-nonnegative-integer? ~
+  authentic? : boolean? ~
+(struct constructor-shape struct-shape (arity)
+    #:extra-constructor-name make-constructor-shape ~
+    #:prefab) ~
+  arity : exact-nonnegative-integer? ~
+(struct predicate-shape struct-shape (authentic?)
+    #:extra-constructor-name make-predicate-shape ~
+    #:prefab) ~
+  authentic? : boolean? ~
+(struct accessor-shape struct-shape (field-count authentic?)
+    #:extra-constructor-name make-accessor-shape ~
+    #:prefab) ~
+  field-count : exact-nonnegative-integer? ~
+  authentic? : boolean? ~
+(struct mutator-shape struct-shape (field-count authentic?)
+    #:extra-constructor-name make-mutator-shape ~
+    #:prefab) ~
+  field-count : exact-nonnegative-integer? ~
+  authentic? : boolean? ~
+(struct struct-type-property-shape struct-shape (has-guard?)
+    #:extra-constructor-name make-struct-type-property-shape ~
+    #:prefab) ~
+  has-guard? : boolean? ~
+(struct property-predicate-shape struct-shape ()
+    #:extra-constructor-name make-property-predicate-shape ~
+    #:prefab) ~
+(struct property-accessor-shape struct-shape ()
+    #:extra-constructor-name make-property-accessor-shape ~
+    #:prefab) ~
+(struct struct-other-shape struct-shape ()
+    #:extra-constructor-name make-struct-other-shape ~
+    #:prefab) ~
+
+Represents the shape of an expected import as a structure-type binding,
+constructor, etc.
+
+4.2. Forms and Inline Variants
+
+                                        *struct*
+(struct form zo () ~
+    #:extra-constructor-name make-form ~
+    #:prefab) ~
+
+A supertype for all forms that can appear in a linklet body (including
+exprs), except for literals that are represented as themselves.
+
+                                        *struct*
+(struct def-values form (ids rhs) ~
+    #:extra-constructor-name make-def-values ~
+    #:prefab) ~
+  ids : (listof toplevel?) ~
+  rhs : (or/c expr? seq? inline-variant? any/c) ~
+
+Represents a define-values form.  Each element of ids references a
+defined variable in the enclosing linklet.
+
+After rhs is evaluated, the stack is restored to its depth from before
+evaluating rhs.
+
+                                        *struct*
+(struct inline-variant zo (direct inline) ~
+    #:extra-constructor-name make-inline-variant ~
+    #:prefab) ~
+  direct : expr? ~
+  inline : expr? ~
+
+Represents a function that is bound by define-values, where the function
+has two variants. The first variant is used for normal calls to the
+function. The second may be used for cross-module inlining of the
+function.
+
+4.3. Expressions
+
+                                        *struct*
+(struct expr form () ~
+    #:extra-constructor-name make-expr ~
+    #:prefab) ~
+
+A supertype for all expression forms that can appear in compiled code,
+except for literals that are represented as themselves.
+
+                                        *struct*
+(struct lam expr (name ~
+                  flags
+                  num-params
+                  param-types
+                  rest?
+                  closure-map
+                  closure-types
+                  toplevel-map
+                  max-let-depth
+                  body)
+    #:extra-constructor-name make-lam ~
+    #:prefab) ~
+  name : (or/c symbol? vector?) ~
+  flags : (listof (or/c 'preserves-marks 'is-method 'single-result ~
+                        'only-rest-arg-not-used 'sfs-clear-rest-args))
+  num-params : exact-nonnegative-integer? ~
+  param-types : (listof (or/c 'val 'ref 'flonum 'fixnum 'extflonum)) ~
+  rest? : boolean? ~
+  closure-map : (vectorof exact-nonnegative-integer?) ~
+  closure-types : (listof (or/c 'val/ref 'flonum 'fixnum 'extflonum)) ~
+  toplevel-map : (or/c #f (set/c exact-nonnegative-integer?)) ~
+  max-let-depth : exact-nonnegative-integer? ~
+  body : (or/c expr? seq? any/c) ~
+
+Represents a lambda form.  The name field is a name for debugging
+purposes.  The num-params field indicates the number of arguments
+accepted by the procedure, not counting a rest argument; the rest? field
+indicates whether extra arguments are accepted and collected into a
+“rest” variable.  The param-types list contains num-params symbols
+indicating the type of each argumet, either 'val for a normal argument,
+'ref for a boxed argument (representing a mutable local variable),
+'flonum for a flonum argument, or 'extflonum for an extflonum argument.
+
+The closure-map field is a vector of stack positions that are captured
+when evaluating the lambda form to create a closure. The closure-types
+field provides a corresponding list of types, but no distinction is made
+between normal values and boxed values; also, this information is
+redundant, since it can be inferred by the bindings referenced though
+closure-map.
+
+When a closure captures top-level or module-level variables or refers to
+a syntax-object constant, the variables and constants are represented in
+the closure by capturing a prefix (in the sense of prefix).  The
+toplevel-map field indicates which top-level variables (i.e., linklet
+imports and definitions) are actually used by the closure (so that
+variables in a prefix can be pruned by the run-time system if they
+become unused) and whether any syntax objects are used (so that the
+syntax objects as a group can be similarly pruned). A #f value indicates
+either that no prefix is captured or all variables and syntax objects in
+the prefix should be considered used. Otherwise, numbers in the set
+indicate which variables and lifted variables are used. Variables are
+numbered consecutively by position in the prefix starting from 0, but
+the number equal to the number of non-lifted variables corresponds to
+syntax objects (i.e., the number is include if any syntax-object
+constant is used). Lifted variables are numbered immediately
+afterward—which means that, if the prefix contains any syntax objects,
+lifted-variable numbers are shifted down relative to a toplevel by the
+number of syntax object in the prefix (which makes the toplevel-map set
+more compact).
+
+When the function is called, the rest-argument list (if any) is pushed
+onto the stack, then the normal arguments in reverse order, then the
+closure-captured values in reverse order.  Thus, when body is run, the
+first value on the stack is the first value captured by the closure-map
+array, and so on.
+
+The max-let-depth field indicates the maximum stack depth created by
+body plus the arguments and closure-captured values pushed onto the
+stack.  The body field is the expression for the closure’s body.
+
+Changed in version 6.1.1.8 of package zo-lib: Added a number to
+toplevel-map to indicate whether any syntax object is used, shifting
+numbers for lifted variables up by one if any syntax object is in the
+prefix.
+
+                                        *struct*
+(struct closure expr (code gen-id) ~
+    #:extra-constructor-name make-closure ~
+    #:prefab) ~
+  code : lam? ~
+  gen-id : symbol? ~
+
+A lambda form with an empty closure, which is a procedure constant.  The
+procedure constant can appear multiple times in the graph of expressions
+for bytecode, and the code field can be a cycle for a recursive constant
+procedure; the gen-id is different for each such constant.
+
+                                        *struct*
+(struct case-lam expr (name clauses) ~
+    #:extra-constructor-name make-case-lam ~
+    #:prefab) ~
+  name : (or/c symbol? vector?) ~
+  clauses : (listof lam?) ~
+
+Represents a case-lambda form as a combination of lambda forms that are
+tried (in order) based on the number of arguments given.
+
+                                        *struct*
+(struct let-one expr (rhs body type unused?) ~
+    #:extra-constructor-name make-let-one ~
+    #:prefab) ~
+  rhs : (or/c expr? seq? any/c) ~
+  body : (or/c expr? seq? any/c) ~
+  type : (or/c #f 'flonum 'fixnum 'extflonum) ~
+  unused? : boolean? ~
+
+Pushes an uninitialized slot onto the stack, evaluates rhs and puts its
+value into the slot, and then runs body.  If type is not #f, then rhs
+must produce a value of the corresponding type, and the slot must be
+accessed by localrefs that expect the type.  If unused? is #t, then the
+slot must not be used, and the value of rhs is not actually pushed onto
+the stack (but rhs is constrained to produce a single value).
+
+After rhs is evaluated, the stack is restored to its depth from before
+evaluating rhs.  Note that the new slot is created before evaluating
+rhs.
+
+                                        *struct*
+(struct let-void expr (count boxes? body) ~
+    #:extra-constructor-name make-let-void ~
+    #:prefab) ~
+  count : exact-nonnegative-integer? ~
+  boxes? : boolean? ~
+  body : (or/c expr? seq? any/c) ~
+
+Pushes count uninitialized slots onto the stack and then runs body. If
+boxes? is #t, then the slots are filled with boxes that contain
+#<undefined>.
+
+                                        *struct*
+(struct install-value expr (count pos boxes? rhs body) ~
+    #:extra-constructor-name make-install-value ~
+    #:prefab) ~
+  count : exact-nonnegative-integer? ~
+  pos : exact-nonnegative-integer? ~
+  boxes? : boolean? ~
+  rhs : (or/c expr? seq? any/c) ~
+  body : (or/c expr? seq? any/c) ~
+
+Runs rhs to obtain count results, and installs them into existing slots
+on the stack in order, skipping the first pos stack positions. If boxes?
+is #t, then the values are put into existing boxes in the stack slots.
+
+After rhs is evaluated, the stack is restored to its depth from before
+evaluating rhs.
+
+                                        *struct*
+(struct let-rec expr (procs body) ~
+    #:extra-constructor-name make-let-rec ~
+    #:prefab) ~
+  procs : (listof lam?) ~
+  body : (or/c expr? seq? any/c) ~
+
+Represents a letrec form with lambda bindings.  It allocates a closure
+shell for each lambda form in procs, installs each onto the stack in
+previously allocated slots in reverse order (so that the closure shell
+for the last element of procs is installed at stack position 0), fills
+out each shell’s closure (where each closure normally references some
+other just-created closures, which is possible because the shells have
+been installed on the stack), and then evaluates body.
+
+                                        *struct*
+(struct boxenv expr (pos body) ~
+    #:extra-constructor-name make-boxenv ~
+    #:prefab) ~
+  pos : exact-nonnegative-integer? ~
+  body : (or/c expr? seq? any/c) ~
+
+Skips pos elements of the stack, setting the slot afterward to a new box
+containing the slot’s old value, and then runs body. This form appears
+when a lambda argument is mutated using set! within its body; calling
+the function initially pushes the value directly on the stack, and this
+form boxes the value so that it can be mutated later.
+
+                                        *struct*
+(struct localref expr (unbox? pos clear? other-clears? type) ~
+    #:extra-constructor-name make-localref ~
+    #:prefab) ~
+  unbox? : boolean? ~
+  pos : exact-nonnegative-integer? ~
+  clear? : boolean? ~
+  other-clears? : boolean? ~
+  type : (or/c #f 'flonum 'fixnum 'extflonum) ~
+
+Represents a local-variable reference; it accesses the value in the
+stack slot after the first pos slots.  If unbox?  is #t, the stack slot
+contains a box, and a value is extracted from the box.  If clear? is #t,
+then after the value is obtained, the stack slot is cleared (to avoid
+retaining a reference that can prevent reclamation of the value as
+garbage).  If other-clears? is #t, then some later reference to the same
+stack slot may clear after reading.  If type is not #f, the slot is
+known to hold a specific type of value.
+
+                                        *struct*
+(struct toplevel expr (depth pos const? ready?) ~
+    #:extra-constructor-name make-toplevel ~
+    #:prefab) ~
+  depth : exact-nonnegative-integer? ~
+  pos : exact-nonnegative-integer? ~
+  const? : boolean? ~
+  ready? : boolean? ~
+
+Represents a reference to an imported or defined variable within a
+linklet. The depth field indicates the number of stack slots to skip to
+reach the prefix array, and pos is the offset into the array.
+
+When the toplevel is an expression, if both const? and ready? are #t,
+then the variable definitely will be defined, its value stays constant,
+and the constant is effectively the same for every module instantiation.
+If only const? is #t, then the value is constant, but it may vary across
+instantiations. If only ready? is #t, then the variable definitely will
+be defined, but its value may change. If const? and ready? are both #f,
+then a check is needed to determine whether the variable is defined.
+
+When the toplevel is the left-hand side for def-values, then const? is
+#f. If ready? is #t, the variable is marked as immutable after it is
+defined.
+
+                                        *struct*
+(struct application expr (rator rands) ~
+    #:extra-constructor-name make-application ~
+    #:prefab) ~
+  rator : (or/c expr? seq? any/c) ~
+  rands : (listof (or/c expr? seq? any/c)) ~
+
+Represents a function call.  The rator field is the expression for the
+function, and rands are the argument expressions.  Before any of the
+expressions are evaluated, (length rands) uninitialized stack slots are
+created (to be used as temporary space).
+
+                                        *struct*
+(struct branch expr (test then else) ~
+    #:extra-constructor-name make-branch ~
+    #:prefab) ~
+  test : (or/c expr? seq? any/c) ~
+  then : (or/c expr? seq? any/c) ~
+  else : (or/c expr? seq? any/c) ~
+
+Represents an if form.
+
+After test is evaluated, the stack is restored to its depth from before
+evaluating test.
+
+                                        *struct*
+(struct with-cont-mark expr (key val body) ~
+    #:extra-constructor-name make-with-cont-mark ~
+    #:prefab) ~
+  key : (or/c expr? seq? any/c) ~
+  val : (or/c expr? seq? any/c) ~
+  body : (or/c expr? seq? any/c) ~
+
+Represents a with-continuation-mark expression.
+
+After each of key and val is evaluated, the stack is restored to its
+depth from before evaluating key or val.
+
+                                        *struct*
+(struct seq expr (forms) ~
+    #:extra-constructor-name make-seq ~
+    #:prefab) ~
+  forms : (listof (or/c expr? any/c)) ~
+
+Represents a begin form.
+
+After each form in forms is evaluated, the stack is restored to its
+depth from before evaluating the form.
+
+                                        *struct*
+(struct beg0 expr (seq) ~
+    #:extra-constructor-name make-beg0 ~
+    #:prefab) ~
+  seq : (listof (or/c expr? seq? any/c)) ~
+
+Represents a begin0 expression.
+
+After each expression in seq is evaluated, the stack is restored to its
+depth from before evaluating the expression.
+
+Unlike the begin0 source form, the first expression in seq is never in
+tail position, even if it is the only expression in the list.
+
+                                        *struct*
+(struct varref expr (toplevel dummy constant? from-unsafe?) ~
+    #:extra-constructor-name make-varref ~
+    #:prefab) ~
+  toplevel : (or/c toplevel? #t #f symbol?) ~
+  dummy : (or/c toplevel? #f) ~
+  constant? : boolean? ~
+  from-unsafe? : boolean? ~
+
+Represents a #%variable-reference form. The toplevel field is #t if the
+original reference was to a constant local binding, #f if the variable
+reference is for (#%variable-reference) and does not refer to a specific
+variable, or a symbol if the variable reference refers to a primitive
+variable. The dummy field accesses a variable bucket that strongly
+references its namespace (as opposed to a normal variable bucket, which
+only weakly references its namespace); it can be #f.
+
+The value of constant? is true when the toplevel field is not #t but the
+referenced variable is known to be constant. The value of from-unsafe?
+is true when the module that created the reference was compiled in
+unsafe mode.
+
+                                        *struct*
+(struct assign expr (id rhs undef-ok?) ~
+    #:extra-constructor-name make-assign ~
+    #:prefab) ~
+  id : toplevel? ~
+  rhs : (or/c expr? seq? any/c) ~
+  undef-ok? : boolean? ~
+
+Represents a set! expression that assigns to a top-level or module-level
+variable. (Assignments to local variables are represented by
+install-value expressions.) If undef-ok? is true, the assignment to id
+succeeds even if id was not previously defined (see also
+compile-allow-set!-undefined).
+
+After rhs is evaluated, the stack is restored to its depth from before
+evaluating rhs.
+
+                                        *struct*
+(struct apply-values expr (proc args-expr) ~
+    #:extra-constructor-name make-apply-values ~
+    #:prefab) ~
+  proc : (or/c expr? seq? any/c) ~
+  args-expr : (or/c expr? seq? any/c) ~
+
+Represents (call-with-values (lambda () args-expr) proc), which is
+handled specially by the run-time system.
+
+                                        *struct*
+(struct with-immed-mark expr (key def-val body) ~
+    #:extra-constructor-name make-with-immed-mark ~
+    #:prefab) ~
+  key : (or/c expr? seq? any/c) ~
+  def-val : (or/c expr? seq? any/c) ~
+  body : (or/c expr? seq? any/c) ~
+
+Represents a (call-with-immediate-continuation-mark key (lambda (arg)
+body) val) expression that is handled specially by the run-time system
+to avoid a closure allocation. One initialized slot is pushed onto the
+stack after expr and val are evaluated and before body is evaluated.
+
+After each of key and val is evaluated, the stack is restored to its
+depth from before evaluating key or val.
+
+                                        *struct*
+(struct primval expr (id) ~
+    #:extra-constructor-name make-primval ~
+    #:prefab) ~
+  id : exact-nonnegative-integer? ~
+
+Represents a direct reference to a variable imported from the run-time
+kernel.

@@ -1,0 +1,121 @@
+Meta Expectations
+
+These functions construct expectations for asserting properties of other
+expectations. This is especially useful when testing custom
+expectations.
+
+                                        *expect-exp-faults*
+(expect-exp-faults input fault-exp ...) -> expectation? ~
+  input : any/c ~
+  fault-exp : (or/c expectation? fault?) ~
+
+Returns an expectation that expects a value that is itself an
+expectation. That expectation is applied to input and is expected to
+return one fault for each fault-exp. Each returned fault is checked
+against the corresponding exp. If any exp is not an expectation, it is
+converted to one with ->expectation. See also expect-exp-faults*.
+
+Examples:
+
+  > (expect! expect-true (expect-exp-faults #f expect-any))
+  > (expect! expect-true (expect-exp-faults #f))
+  expected a different value
+    subject: #<expectation:true> ~
+    in: the expectation applied to #f ~
+    in: the return value ~
+    in: the number of items ~
+    expected: eqv? to 0 ~
+    actual: 1 ~
+
+                                        *expect-exp-faults**
+(expect-exp-faults* input fault-exp*) -> expectation? ~
+  input : any/c ~
+  fault-exp* : (or/c expectation? ~
+                     (listof (or/c fault?
+                                   expectation?)))
+
+Like expect-exp-faults, but the entire list of faults returned by
+applying a subject expectation to input is checked against fault-exp*.
+
+Examples:
+
+  > (define (expect-exp-even-faults input)
+      (expect-exp-faults* input (expect-list-length (expect-pred even?))))
+  > (define exp-ab (expect-list 1 2))
+  > (expect! exp-ab (expect-exp-even-faults '(1 2)))
+  > (expect! exp-ab (expect-exp-even-faults '(a b)))
+  > (expect! exp-ab (expect-exp-even-faults '(1 foo)))
+  expected a different kind of value
+    subject: #<expectation:list> ~
+    in: the expectation applied to '(1 foo) ~
+    in: the return value ~
+    in: the number of items ~
+    expected: even? ~
+    actual: 1 ~
+
+                                        *expect-exp-apply*
+(expect-exp-apply v thunk-exp) -> expectation? ~
+  v : any/c ~
+  thunk-exp : expectation? ~
+
+A more general form of expect-exp-faults and expect-exp-faults*. Returns
+an expectation that expects a value e that is itself an expectation.
+Then, a thunk wrapping the expression (expectation-apply e v) is created
+and checked against thunk-exp. For thunk-exp, using expect-return checks
+the returned faults of the expectation just like expect-exp-faults and
+expect-exp-faults*.
+
+Examples:
+
+  > (expect! expect-any (expect-exp-apply 'foo (expect-return '())))
+  >
+  (define error-exp (expectation (λ (_) (raise 'kaboom!)) #:name 'error)) ~
+  > (expect! error-exp (expect-exp-apply 'foo (expect-raise 'kaboom!)))
+  > (expect! error-exp (expect-exp-apply 'foo (expect-return '())))
+  expected no value raised
+    subject: #<expectation:error> ~
+    in: the expectation applied to 'foo ~
+    in: the raised value ~
+    expected: nothing ~
+    actual: 'kaboom! ~
+
+                                        *expect-fault*
+(expect-fault [#:summary summary-exp          ~ ~
+               #:actual actual-exp            ~
+               #:expected expected-exp        ~
+               #:contexts contexts-exp]) -> expectation? ~
+  summary-exp : any/c = expect-any ~
+  actual-exp : any/c = expect-any ~
+  expected-exp : any/c = expect-any ~
+  contexts-exp : any/c = expect-any ~
+
+Returns an expectation that expects a fault whose summary, actual,
+expected, and contexts fields are then checked against summary-exp,
+actual-exp, expected-exp, and contexts-exp respectively.
+
+Examples:
+
+  > (define flt
+      (fault #:summary "test fault" ~
+             #:expected (make-self-attribute 'foo) ~
+             #:actual (make-self-attribute 'bar))) ~
+  > (expect! flt (expect-fault))
+  > (expect! flt (expect-fault #:actual (make-self-attribute 'bar))) ~
+  > (expect! flt (expect-fault #:summary "not test fault")) ~
+  expected a different value
+    subject: (fault "test fault" (self-attribute "'foo" 'foo) ~
+  (self-attribute "'bar" 'bar) '())
+    in: the fault-summary struct field ~
+    expected: equal? to "not test fault" ~
+    actual: "test fault" ~
+
+                                        *struct*
+(struct expect-context context (input) ~
+    #:transparent) ~
+  input : any/c ~
+(make-expect-context input) -> expect-context?
+  input : any/c ~
+
+A context and its constructor that represents the thunk created by
+wrapping a call to expectation-apply with the subject expectation and
+input. Used by expect-exp-apply and its derivatives.

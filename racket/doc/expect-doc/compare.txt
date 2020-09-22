@@ -1,0 +1,313 @@
+Comparison and Equality Expectations
+
+                                        *expect-compare*
+(expect-compare compare other) -> expectation? ~
+  compare : (-> any/c any/c any/c) ~
+  other : any/c ~
+
+Returns an expectation that expects a value v that, when compared to
+other by calling (compare v other), returns a true value.
+
+Examples:
+
+  > (define expect-foo (expect-compare string=? "foo"))
+  > (expect! "foo" expect-foo)
+  > (expect! "bar" expect-foo)
+  expected a different value
+    subject: "bar" ~
+    expected: string=? to "foo" ~
+    actual: "bar" ~
+
+                                        *expect-not-compare*
+(expect-not-compare compare other) -> expectation? ~
+  compare : (-> any/c any/c any/c) ~
+  other : any/c ~
+
+Like expect-compare, but for an input v the returned expectation checks
+that (compare v other) returns false instead of true.
+
+Examples:
+
+  > (define expect-not-foo (expect-not-compare string=? "foo"))
+  > (expect! "bar" expect-not-foo)
+  > (expect! "foo" expect-not-foo)
+  expected a different value
+    subject: "foo" ~
+    expected: not string=? to "foo" ~
+    actual: "foo" ~
+
+                                        *expect-contains?*
+(expect-contains? contains? v) -> expectation? ~
+  contains? : (-> any/c any/c any/c) ~
+  v : any/c ~
+
+Returns an expectation that expects a container value c, that contains v
+as determined by whether (contains? c v) returns a true value.
+
+Examples:
+
+  > (define exp-foo (expect-contains? hash-has-key? 'foo))
+  > (expect! (hash 'foo 1 'bar 2) exp-foo)
+  > (expect! (hash 'bar 2) exp-foo)
+  expected a value to be contained
+    subject: '#hash((bar . 2)) ~
+    expected: 'foo contained with hash-has-key? ~
+    actual: '#hash((bar . 2)) ~
+
+                                        *expect-not-contains?*
+(expect-not-contains? contains? v) -> expectation? ~
+  contains? : (-> any/c any/c any/c) ~
+  v : any/c ~
+
+Like expect-contains?, but for an input c the returned expectation
+checks that (contains? c v) returns false instead of true.
+
+Examples:
+
+  > (define exp-not-foo (expect-not-contains? hash-has-key? 'foo))
+  > (expect! (hash 'bar 2) exp-not-foo)
+  > (expect! (hash 'foo 1 'bar 2) exp-not-foo)
+  expected a value to not be contained
+    subject: '#hash((bar . 2) (foo . 1)) ~
+    expected: not 'foo contained with hash-has-key? ~
+    actual: '#hash((bar . 2) (foo . 1)) ~
+
+                                        *expect-contains-all?*
+(expect-contains-all? contains? vs) -> expectation? ~
+  contains? : (-> any/c any/c any/c) ~
+  vs : list? ~
+
+Like expect-contains?, but for an input c the returned expectation
+checks that every item v in vs is contained in c according to (contains?
+c v). Only one fault is returned which has an and-attribute value
+containing one contains-attribute for each missing v. See
+make-contains-all-attribute for details on how this attribute is
+constructed.
+
+Examples:
+
+  > (define exp-keys (expect-contains-all? hash-has-key? '(foo bar baz)))
+  > (expect! (hash 'foo 1 'bar 2 'baz 3) exp-keys)
+  > (expect! (hash 'foo 1 'blah 4) exp-keys)
+  expected values to be contained
+    subject: '#hash((blah . 4) (foo . 1)) ~
+    expected: 'bar and 'baz contained with hash-has-key? ~
+    actual: '#hash((blah . 4) (foo . 1)) ~
+
+                                        *expect-contains-none?*
+(expect-contains-none? contains? vs) -> expectation? ~
+  contains? : (-> any/c any/c any/c) ~
+  vs : list? ~
+
+Like expect-contains?, but for an input c the returned expectation
+checks that no item v in vs is contained in c according to (contains? c
+v). Only one fault is returned which has a not-attribute wrapping an
+or-attribute containing one contains-attribute for each present v. See
+make-contains-none-attribute for details on how this attribute is
+constructed.
+
+Examples:
+
+  >
+  (define exp-no-keys (expect-contains-none? hash-has-key? '(foo bar baz)))
+  > (expect! (hash 'blah 4) exp-no-keys)
+  > (expect! (hash 'foo 1 'baz 3 'blah 4) exp-no-keys)
+  expected values to not be contained
+    subject: '#hash((baz . 3) (blah . 4) (foo . 1)) ~
+    expected: not 'foo or 'baz contained with hash-has-key? ~
+    actual: '#hash((baz . 3) (blah . 4) (foo . 1)) ~
+
+                                        *expect-eq?*
+(expect-eq? v) -> expectation? ~
+  v : any/c ~
+(expect-eqv? v) -> expectation?
+  v : any/c ~
+(expect-equal? v) -> expectation?
+  v : any/c ~
+
+Convenience shortands for calling expect-compare with eq?, eqv?, or
+equal?, respectively. However, due to the recursive properties of
+equal?, expectations returned by  expect-equal? will traverse and
+inspect all values contained in v and the input to the expectation. This
+may result in more than one fault being returned, for instance
+expect-equal? might find several faults pointing to specific incorrect
+values in a complex data structure instead of simply pointing out the
+actual data structure and expected data structure are not equal?.
+
+Example:
+
+  > (expect! '(1 2 (foo 4 5) not-a-list 8)
+             (expect-equal? '(1 2 (3 4 5) (6 7) 8)))
+  multiple failures
+    subject: '(1 2 (foo 4 5) not-a-list 8) ~
+    fault: expected a different value ~
+     in: item at position 2 ~
+     in: item at position 0 ~
+     expected: equal? to 3 ~
+     actual: 'foo ~
+    fault: expected a different kind of value ~
+     in: item at position 3 ~
+     expected: list? ~
+     actual: 'not-a-list ~
+
+                                        *expect-not-eq?*
+(expect-not-eq? v) -> expectation? ~
+  v : any/c ~
+(expect-not-eqv? v) -> expectation?
+  v : any/c ~
+(expect-not-equal? v) -> expectation?
+  v : any/c ~
+
+Negated variants of expect-eq?, expect-eqv?, and expect-equal?
+respectively.
+
+Examples:
+
+  > (expect! '(1 foo) (expect-not-equal? '(1 2)))
+  > (expect! 'a (expect-not-eq? 'a))
+  expected a different value
+    subject: 'a ~
+    expected: not eq? to 'a ~
+    actual: 'a ~
+
+                                        *expect-*
+(expect-= x epsilon) -> expectation? ~
+  x : real? ~
+  epsilon : real? ~
+
+Returns an expectation that expects a value is a number within epsilon
+of x. Returned faults have instances of =-attribute in their expected
+field.
+
+Examples:
+
+  > (define exp10 (expect-= 10 0.01))
+  > (expect! 10 exp10)
+  > (expect! 25 exp10)
+  expected a different number
+    subject: 25 ~
+    expected: = to 10 (with tolerance of 0.01) ~
+    actual: 25 ~
+  > (expect! 10.0001 exp10)
+
+1. Comparison Attributes
+
+                                        *struct*
+(struct compare-attribute attribute (proc other) ~
+    #:transparent) ~
+  proc : (-> any/c any/c any/c) ~
+  other : any/c ~
+(make-compare-attribute proc other) -> compare-attribute?
+  proc : (-> any/c any/c any/c) ~
+  other : any/c ~
+
+An attribute and its constructor that represents the result of comparing
+the input value to other using proc. See expect-compare for examples.
+
+                                        *struct*
+(struct contains-attribute attribute (proc value) ~
+    #:transparent) ~
+  proc : (-> any/c any/c any/c) ~
+  value : any/c ~
+(make-contains-attribute proc value) -> contains-attribute?
+  proc : (-> any/c any/c any/c) ~
+  value : any/c ~
+
+An attribute and its constructor that represnts whether the input value
+contains value according to proc. See expect-contains for examples.
+
+                                        *make-contains-all-attribute*
+(make-contains-all-attribute contains? vs) -> and-attribute? ~
+  contains? : (-> any/c any/c any/c) ~
+  vs : list? ~
+
+Returns an and-attribute value wrapping a list of contains-attribute
+values, one for each of vs. The description of the returned attribute is
+more succinct than the default description that and-attribute would
+normally create. Used by expect-contains-all.
+
+Example:
+
+  > (make-contains-all-attribute hash-has-key? '(foo bar baz))
+  (and-attribute
+   "'foo, 'bar and 'baz contained with hash-has-key?"
+   (list
+    (contains-attribute
+     "'foo contained with hash-has-key?"
+     #<procedure:hash-has-key?> ~
+     'foo)
+    (contains-attribute
+     "'bar contained with hash-has-key?"
+     #<procedure:hash-has-key?> ~
+     'bar)
+    (contains-attribute
+     "'baz contained with hash-has-key?"
+     #<procedure:hash-has-key?> ~
+     'baz)))
+
+                                        *make-contains-none-attribute*
+(make-contains-none-attribute contains? vs) -> not-attribute? ~
+  contains? : (-> any/c any/c any/c) ~
+  vs : list? ~
+
+Returns a not-attribute value wrapping an or-attribute which contains a
+list of contains-attribute values, one for each of vs. The description
+of the returned attribute is more succinct than the default description
+that or-attribute would normally create. Used by expect-contains-none.
+
+Example:
+
+  > (make-contains-none-attribute hash-has-key? '(foo bar baz))
+  (not-attribute
+   "not 'foo, 'bar or 'baz contained with hash-has-key?"
+   (or-attribute
+    "'foo, 'bar or 'baz contained with hash-has-key?"
+    (list
+     (contains-attribute
+      "'foo contained with hash-has-key?"
+      #<procedure:hash-has-key?> ~
+      'foo)
+     (contains-attribute
+      "'bar contained with hash-has-key?"
+      #<procedure:hash-has-key?> ~
+      'bar)
+     (contains-attribute
+      "'baz contained with hash-has-key?"
+      #<procedure:hash-has-key?> ~
+      'baz))))
+
+                                        *struct*
+(struct =-attribute attribute (value epsilon) ~
+    #:transparent) ~
+  value : real? ~
+  epsilon : real? ~
+(make-=-attribute value epsilon) -> =-attribute?
+  value : real? ~
+  epsilon : real? ~
+
+An attribute and its constructor that represents the result of comparing
+the input value to value with =, with a tolerance of epsilon allowed to
+account for floating point inaccuracies.
+
+                                        *eq-attribute?*
+(eq-attribute? v) -> boolean? ~
+  v : any/c ~
+(eqv-attribute? v) -> boolean?
+  v : any/c ~
+(equal-attribute? v) -> boolean?
+  v : any/c ~
+
+Convenient shorthand predicates for identifying compare-attribute values
+returned by make-eq-attribute, make-eqv-attribute, and
+make-equal-attribute, respectively.
+
+                                        *make-eq-attribute*
+(make-eq-attribute value) -> eq-attribute? ~
+  value : any/c ~
+(make-eqv-attribute value) -> eqv-attribute?
+  value : any/c ~
+(make-equal-attribute value) -> equal-attribute?
+  value : any/c ~
+
+Convenient shorthands for calling make-compare-attribute with eq?, eqv?,
+and equal?, respectively.

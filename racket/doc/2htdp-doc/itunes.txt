@@ -1,0 +1,174 @@
+iTunes: "itunes.rkt"
+
+Matthias Felleisen
+
+ (require 2htdp/itunes) package: htdp-lib ~
+
+The itunes.rkt teachpack implements and provides the functionality  for
+reading the collection of tracks exported from iTunes.
+
+In iTunes, select Library from the File menu and then choose  Export
+Library. Doing so exports a description of your iTunes  collection as a
+file in XML format.
+
+1. Data Definitions
+
+                                        *struct*
+(struct track (name artist album time track# added play# played) ~
+    #:extra-constructor-name make-track) ~
+  name : string? ~
+  artist : string? ~
+  album : string? ~
+  time : natural-number/c ~
+  track# : natural-number/c ~
+  added : date? ~
+  play# : natural-number/c ~
+  played : date? ~
+
+is one representations for the music tracks in an iTunes collection.
+
+An instance records that the track has title name, is produced by
+artist, belongs to album, plays for time milliseconds, is positioned at
+track#, was added at date added, has been played play# times, and was
+last played at played date.
+
+                                        *struct*
+(struct date (year month day hour minute second) ~
+    #:extra-constructor-name make-date) ~
+  year : natural-number/c ~
+  month : natural-number/c ~
+  day : natural-number/c ~
+  hour : natural-number/c ~
+  minute : natural-number/c ~
+  second : natural-number/c ~
+
+is a representations of dates in an iTunes collection.
+
+An instance records six pieces of information: the date’s year, month
+(between 1 and 12 inclusive), day (between 1 and 31), hour (between 0
+and 23), minute (between 0 and 59), and second (between 0 and 59).
+
+In this context, we introduce the following data definitions:
+
+  ; Track is a track?
+  ; Date is date?
+   
+  ; LTracks is one of: ~
+  ; – '()
+  ; – (cons Track LTracks)
+   
+  ; LLists is one of: ~
+  ; – '()
+  ; – (cons LAssoc LLists)
+   
+  ; LAssoc is one of: ~
+  ; – '()
+  ; – (cons Association LAssoc)
+   
+  ; Association is (cons string? (cons BSDN '()))
+   
+  ; BSDN satisfies either string?, integer?, real?, Date, or boolean?.
+
+2. Exported Funcions
+
+                                        *read-itunes-as-lists*
+(read-itunes-as-lists file-name) -> LLists ~
+  file-name : string? ~
+
+creates a list-of-lists representation for all tracks in file-name, an
+XML export from an iTunes library.
+
+Effect reads an XML document from file-name
+
+Example:
+
+  (read-itunes-as-lists "Library.xml")
+
+                                        *read-itunes-as-tracks*
+(read-itunes-as-tracks file-name) -> LTracks ~
+  file-name : string? ~
+
+creates a list-of-tracks representation for all tracks in file-name, an
+XML export from an iTunes library.
+
+Effect reads an XML document from file-name
+
+Example:
+
+  (read-itunes-as-tracks "Library.xml")
+
+                                        *create-track*
+(create-track name         ~
+              artist      
+              album       
+              time        
+              track#      
+              added       
+              play#       
+              played) -> (or/c track? false?)
+  name : string? ~
+  artist : string? ~
+  album : string? ~
+  time : natural-number/c ~
+  track# : natural-number/c ~
+  added : date? ~
+  play# : natural-number/c ~
+  played : date? ~
+
+creates a track representation if the inputs live up to their
+predicates. Otherwise it produces #false.
+
+Note This is a checked constructor.
+
+  > (create-track "one"
+                  "two"
+                  "three"
+                  4
+                  5
+                  (create-date 1 2 3 4 5 6)
+                  7
+                  (create-date 1 2 3 4 5 6))
+  (track "one" "two" "three" 4 5 (date 1 2 3 4 5 6) 7 (date 1 2 3 4 5 6))
+  > (create-track "one" "two" "three" 4 5 "a date" 7 "another date")
+  #f
+
+                                        *create-date*
+(create-date year month day hour minute second) ~
+ -> (or/c date? false?)
+  year : natural-number/c ~
+  month : natural-number/c ~
+  day : natural-number/c ~
+  hour : natural-number/c ~
+  minute : natural-number/c ~
+  second : natural-number/c ~
+
+creates a date representation if the inputs live up to their
+predicates. Otherwise it produces #false.
+
+Note This is a checked constructor.
+
+  > (create-date 1 2 3 4 5 6)
+  (date 1 2 3 4 5 6)
+  > (create-date 1 2 3 "four" 5 6)
+  #f
+
+In addition to the above, the teachpack exports the predicates for Track
+and Date plus all selectors:
+
+  track?
+  track-name
+  track-artist
+  track-album
+  track-time
+  track-track#
+  track-added
+  track-play#
+  track-played
+   
+  date?
+  date-year
+  date-month
+  date-day
+  date-hour
+  date-minute
+  date-second

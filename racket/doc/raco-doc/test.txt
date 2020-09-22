@@ -1,0 +1,264 @@
+raco test: Run tests
+
+The raco test command requires and runs the (by default) test submodule
+associated with each path given on the command line. Command-line flags
+can control which submodule is run, whether to run the main module if no
+submodule is found, and whether to run tests directly, in separate
+processes (the default), or in separate places. The current directory is
+set to a test file’s directory before running the file.
+
+When an argument path refers to a directory, raco test recursively
+discovers and runs all files within the directory that end in a module
+suffix (see get-module-suffixes, but the suffixes always include ".rkt",
+".scrbl", ".ss", and ".scm") or have a (possibly empty) list of
+command-line arguments provided by test-command-line-arguments in an
+"info.rkt" file, or as directed by test-include-paths in an "info.rkt"
+file.  At the same time, raco test omits files and directories within a
+directory as directed by test-omit-paths in an "info.rkt" file.
+
+A test is counted as failing if it logs a failing test code via
+test-log!, causes Racket to exit with a non-zero exit code, or (when -e
+or --check-stderr is specified) if it produces output on the error port.
+
+The raco test command accepts several flags:
+
+* -c or --collection — Interprets the arguments as collections whose
+  content should be tested (in the same way as directory content).
+
+* -p or --package — Interprets the arguments as packages whose contents
+  should be tested (in the same way as directory content). All package
+  scopes are searched for the first, most specific package scope.
+
+* -l or --lib — Interprets the arguments as libraries that should be
+  tested.
+
+* -m or --modules — Not only interprets the arguments as paths (which is
+  the default mode), but treats them the same as paths found in a
+  directory, which means ignoring a file argument that does not have a
+  module extension or is not enabled explicitly via
+  test-command-line-arguments or test-include-paths in an "info.rkt"
+  file; meanwhile, paths that are otherwise enabled can be disabled via
+  test-omit-paths in an "info.rkt" file.
+
+* --drdr — Configures defaults to imitate the DrDr continuous testing
+  system: ignore non-modules, run tests in separate processes, use as
+  many jobs as available processors, set the default timeout to 90
+  seconds, create a fresh PLTUSERHOME and TMPDIR for each test, count
+  stderr output as a test failure, quiet program output, provide empty
+  program input, and print a table of results.
+
+* -s >name< or --submodule >name< — Requires the submodule >name< rather
+  than test. Supply -s or --submodule to run multiple submodules, or
+  combine multiple submodules with --first-avail to run the first
+  available of the listed modules.
+
+* -r or --run-if-absent — Requires the top-level module of a file if a
+  relevant submodule is not present. This is the default mode.
+
+* -x or --no-run-if-absent — Ignores a file if the relevant submodule is
+  not present.
+
+* --first-avail — When multiple submodule names are provided with -s or
+  --submodule, runs only the first available submodule.
+
+* --configure-runtime  — Run a configure-runtime submodule (if any) of
+  each specified module before the module or a  submodule is run. This
+  mode is the default when only a single  module is provided or when
+  --process or --place  mode is specified, unless a submodule name is
+  provided  via -s or --submodule.
+
+* --direct — Runs each test in a thread. This mode is the default if a
+  single file is specified. Multiple tests can interfere with each other
+  and the overall test run by exiting, unsafe operations that block (and
+  thus prevent timeout), and so on.
+
+* --process — Runs each test in a separate operating-system process.
+  This     mode is the default if multiple files are specified or if a
+  directory, collection, or package is specified.
+
+* --place — Runs each test in a place, instead of in an operating-system
+  process.
+
+* -j >n< or --jobs >n< — Runs up to >n< tests in parallel.
+
+* --timeout >seconds< — Sets the default timeout (after which a test
+  counts as failed) to >seconds<. Use +inf.0 to allow tests to run
+  without limit but allow timeout sub-submodule configuration. If any
+  test fails due to a timeout, the exit status of raco test is 2 (as
+  opposed to 1 for only non-timeout failures or 0 for success).
+
+* --fresh-user — When running tests in a separate process, creates a
+  fresh directory and sets PLTUSERHOME and TMPDIR. The PLTADDONDIR
+  environment variable is also set so that the add-on directory (which
+  is where packages are installed, for example) does not change for each
+  test process.
+
+* --empty-stdin — Provide an empty stdin to each test program.
+
+* -Q or --quiet-program — Suppresses output from each test program.
+
+* -e or --check-stderr — Count any stderr output as a test failure.
+
+* --deps — If considering arguments as packages, also check package
+  dependencies.
+
+* ++ignore-stderr >pattern< — Don’t count stderr output as a test
+  failure if it matches >pattern<.  This flag can be used multiple
+  times, and stderr output is treated as success as long as it matches
+  any one >pattern<.
+
+* -q or --quiet — Suppresses output of progress information, responsible
+  parties, and varying output (see Responsible-Party and Varying-Output
+  Logging).
+
+* --heartbeat — Periodically report that a test is still running after
+  the test has been running at least 5 seconds.
+
+* --table or -t — Print a summary table after all tests. If a test uses
+  rackunit, or if a test at least uses test-log! from rackunit/log to
+  log successes and failures, the table reports test and failure counts
+  based on the log.
+
+* ++arg >argument< — Adds >argument< to the list of arguments to the
+  invoked test module, so that the invoked module sees >argument< in its
+  current-command-line-arguments. These arguments are combined with any
+  arguments specified in "info.rkt" by test-command-line-arguments.
+
+* ++args >arguments<  — The same as ++arg, but >arguments< is treated
+  as a whitespace-delimited list of arguments to add. To specify
+  multiple arguments using this flag within a typical shell,
+  >arguments< must be  enclosed in quotation marks.
+
+Changed in version 1.1 of package compiler-lib: Added --heartbeat.
+Changed in version 1.4: Changed recognition of module suffixes to use
+get-module-suffixes, which implies recognizing ".ss" and ".rkt". Changed
+in version 1.5: Added ++ignore-stderr. Changed in version 1.6: Added
+++arg and ++args.
+
+1. Test Configuration by Submodule
+
+When raco test runs a test in a submodule, a config sub-submodule can
+provide additional configuration for running the test. The config
+sub-submodule should use the info module language to define the
+following identifiers:
+
+* timeout — a real number to override the default timeout for the test,
+  which applies only when timeouts are enabled.
+
+* responsible — a string, symbol, or list of symbols and strings
+  identifying a responsible party that should be notified when the test
+  fails. See Responsible-Party and Varying-Output Logging.
+
+* lock-name — a string that names a lock file that is used to serialize
+  tests (i.e., tests that have the same lock name do not run
+  concurrently). The lock file’s location is determined by the
+  PLTLOCKDIR environment variable or defaults to (find-system-path
+  'temp-dir). The maximum time to wait on the lock file is determined by
+  the PLTLOCKTIME environment variable or defaults to 4 hours.
+
+* ignore-stderr — a string, byte string, or regexp value, as a pattern
+  that causes error output to not be treated as a failure if the output
+  matches the pattern.
+
+* random? — if true, indicates that the test’s output is expected to
+  vary. See Responsible-Party and Varying-Output Logging.
+
+In order to prevent evaluation of a file for testing purposes, it
+suffices to create a submodule that does not perform any tests and does
+not trigger the evaluation of the enclosing module. So, for instance, a
+file might look like this:
+
+  #lang racket
+   
+  (/ 1 0)
+   
+  ; don't run this file for testing: ~
+  (module test racket/base)
+
+Changed in version 1.5 of package compiler-lib: Added ignore-stderr
+support.
+
+2. Test Configuration by "info.rkt"
+
+Submodule-based test configuration is preferred (see Test Configuration
+by Submodule). In particular, to prevent raco test from running a
+particular file, normally the file should contain a submodule that takes
+no action.
+
+In some cases, however, adding a submodule is inconvenient or impossible
+(e.g., because the file will not always compile). Thus, raco test also
+consults any "info.rkt" file in the candidate test file’s directory. In
+the case of a file within a collection, "info.rkt" files from any
+enclosing collection directories are also consulted for test-omit-paths
+and test-include-paths. Finally, for a file within a package, the
+package’s "info.rkt" is consulted for pkg-authors to set the default
+responsible parties (see Responsible-Party and Varying-Output Logging)
+for all files in the package.
+
+The following "info.rkt" fields are recognized:
+
+* test-omit-paths — a list of path strings (relative to the enclosing
+  directory) and regexp values (to omit all files within the enclosing
+  directory matching the expression), or 'all to omit all files within
+  the enclosing directory. When a path string refers to a directory, all
+  files within the directory are omitted.
+
+* test-include-paths — a list of path strings (relative to the enclosing
+  directory) and regexp values (to include all files within the
+  enclosing directory matching the expression), or 'all to include all
+  files within the enclosing directory. When a path string refers to a
+  directory, all files within the directory are included.
+
+* test-command-line-arguments — a list of (list module-path-string (list
+  argument-path-string ...)), where current-command-line-arguments is
+  set to a vector that contains the argument-path-string when running
+  module-path-string.
+
+* test-timeouts — a list of (list module-path-string real-number) to
+  override the default timeout for module-path-string.
+
+* test-responsibles — a list of (list module-path-string party) or (list
+  'all party) to override the default responsible party for
+  module-path-string or all files within the directory (except as
+  overridden), respectively. Each party is a string, symbol, or list of
+  symbols and strings. See Responsible-Party and Varying-Output Logging.
+
+* test-lock-names — a list of (list module-path-string lock-string) to
+  declare a lock file name for module-path-string. See lock-name in Test
+  Configuration by Submodule.
+
+* test-ignore-stderrs — a list of (list module-path-string pattern) or
+  (list 'all pattern) to declare patterns of standard error output that
+  are allowed a non-failures for module-path-string or all files within
+  the directory. Each pattern must be a string, byte string, or regexp
+  value. See ignore-stderr in Test Configuration by Submodule.
+
+* test-randoms — a list of path strings (relative to the enclosing
+  directory) for modules whose output varies. See Responsible-Party and
+  Varying-Output Logging.
+
+* module-suffixes and doc-module-suffixes — Used indirectly via
+  get-module-suffixes.
+
+Changed in version 1.5 of package compiler-lib: Added
+test-ignore-stderrs support.
+
+3. Responsible-Party and Varying-Output Logging
+
+When a test has a declared responsible party, then the test’s output is
+prefixed with a
+
+  raco test:>which< @(test-responsible '>responsible<) ~
+
+line, where >which< is a space followed by an exact non-negative number
+indicating a parallel task when parallelism is enabled (or empty
+otherwise), and >responsible< is a string, symbol, or list datum.
+
+When a test’s output (as written to stdout) is expected to vary across
+runs—aside from varying output that has the same form as produced by
+time—then it should be declared as varying. In that case, the test’s
+output is prefixed with a
+
+  raco test:>which< @(test-random #t) ~
+
+line.

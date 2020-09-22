@@ -1,0 +1,186 @@
+Compound Testing Forms
+
+1. Test Cases
+
+As programs increase in complexity the unit of testing grows beyond a
+single check. For example, it may be the case that if one check fails it
+doesn’t make sense to run another.  To solve this problem compound
+testing forms can be used to group expressions.  If any expression in a
+group fails (by raising an exception) the remaining expressions will not
+be evaluated.
+
+                                        *test-begin*
+(test-begin expr ...) ~
+
+A test-begin form groups the exprs into a single unit.  If any expr
+fails the following ones are not evaluated.
+
+For example, in the following code the world is not destroyed as the
+preceding check fails:
+
+  (test-begin
+    (check-eq? 'a 'b)
+    ; This line won't be run
+    (destroy-the-world))
+
+                                        *test-case*
+(test-case name body ...+) ~
+
+Like a test-begin except a name is associated with the bodys.  The name
+will be reported if the test fails.
+
+Here’s the above example rewritten to use test-case so the test can be
+named.
+
+  (test-case
+    "Example test"
+    (check-eq? 'a 'b)
+    ; This line won't be run
+    (destroy-the-world))
+
+                                        *test-case?*
+(test-case? obj) -> boolean? ~
+  obj : any/c ~
+
+True if obj is a test case, and false otherwise.
+
+1.1. Shortcuts for Defining Test Cases
+
+                                        *test-check*
+(test-check name operator v1 v2) -> void? ~
+  name : string? ~
+  operator : (-> any/c any/c any/c) ~
+  v1 : any/c ~
+  v2 : any/c ~
+(test-pred name pred v) -> void?
+  name : string? ~
+  pred : (-> any/c any/c) ~
+  v : any/c ~
+(test-equal? name v1 v2) -> (void?)
+  name : string? ~
+  v1 : any/c ~
+  v2 : any/c ~
+(test-eq? name v1 v2) -> void?
+  name : string? ~
+  v1 : any/c ~
+  v2 : any/c ~
+(test-eqv? name v1 v2) -> void?
+  name : string? ~
+  v1 : any/c ~
+  v2 : any/c ~
+(test-= name v1 v2 epsilon) -> void?
+  name : string? ~
+  v1 : real? ~
+  v2 : real? ~
+  epsilon : real? ~
+(test-true name v) -> void?
+  name : string? ~
+  v : any/c ~
+(test-false name v) -> void?
+  name : string? ~
+  v : any/c ~
+(test-not-false name v) -> void?
+  name : string? ~
+  v : any/c ~
+(test-exn name pred thunk) -> void?
+  name : string? ~
+  pred : (or/c (-> any/c any/c) regexp?) ~
+  thunk : (-> any) ~
+(test-not-exn name thunk) -> void?
+  name : string? ~
+  thunk : (-> any) ~
+
+Creates a test case with the given name that performs the corresponding
+check. For example,
+
+  (test-equal? "Fruit test" "apple" "pear")
+
+is equivalent to
+
+  (test-case "Fruit test" (check-equal? "apple" "pear"))
+
+2. Test Suites
+
+Test cases can themselves be grouped into test suites.  A test suite can
+contain both test cases and test suites. Unlike a check or test case, a
+test suite is not immediately run.  Instead use one of the functions
+described in [missing] or [missing].
+
+                                        *test-suite*
+(test-suite name-expr maybe-before maybe-after test ...) ~
+ 
+maybe-before = 
+             | #:before before-thunk ~
+                
+ maybe-after = 
+             | #:after after-thunk ~
+ 
+  name-expr : string? ~
+
+Constructs a test suite with the given name and tests.  The tests may be
+checks, test cases, constructed using test-begin or test-case, or other
+test suites.
+
+The before-thunk and after-thunk are optional thunks (functions with no
+argument).  They are run before and after the tests are run,
+respectively.
+
+Unlike a check or test case, a test suite is not immediately run.
+Instead use one of the functions described in [missing] or [missing].
+
+For example, here is a test suite that displays Before before any tests
+are run, and After when the tests have finished.
+
+  (test-suite
+    "An example suite"
+    #:before (lambda () (display "Before")) ~
+    #:after  (lambda () (display "After")) ~
+    (test-case
+      "An example test"
+      (check-eq? 1 1))
+    (test-suite "A nested test suite"
+      (test-case "Another test"
+        (check < 1 2))))
+
+                                        *make-test-suite*
+(make-test-suite  name                       ~
+                  tests                     
+                 [#:before before-thunk      ~
+                  #:after after-thunk]) -> test-suite? ~
+  name : string? ~
+  tests : (listof (or/c test-case? test-suite?)) ~
+  before-thunk : (-> any) = void ~
+  after-thunk : (-> any) = void ~
+
+Constructs a test suite with the given name containing the given tests.
+Unlike the test-suite form, the tests are represented as a list of test
+values.
+
+                                        *test-suite?*
+(test-suite? obj) -> boolean? ~
+  obj : any/c ~
+
+True if obj is a test suite, and false otherwise
+
+2.1. Utilities for Defining Test Suites
+
+There are some macros that simplify the common cases of defining test
+suites:
+
+                                        *define-test-suite*
+(define-test-suite name test ...) ~
+
+The define-test-suite form creates a test suite with the given name
+(converted to a string) and tests, and binds it to the same name.
+
+For example, this code creates a binding for the name example-suite as
+well as creating a test suite with the name "example-suite":
+
+  (define-test-suite example-suite
+    (check = 1 1))
+
+                                        *define/provide-test-suite*
+(define/provide-test-suite name test ...) ~
+
+This form is just like define-test-suite, and in addition it provides
+the test suite.

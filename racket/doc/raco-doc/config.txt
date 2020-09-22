@@ -1,0 +1,165 @@
+Installation Configuration and Search Paths
+
+A configuration directory path is built into the Racket executable as
+selected at install time, and its location can be changed via the
+PLTCONFIGDIR directory or --config/-G command-line flag. Use
+find-config-dir to locate the configuration directory.
+
+Modify the "config.rktd" file in the configuration directory to
+configure other directories as described below. Use the setup/dirs
+library (which combines information from the configuration files and
+other sources) to locate configured directories, instead of reading
+"config.rktd" directly. A "config.rktd" file can also appear in the
+directory (build-path (find-system-path 'addon-dir) "etc"), but it
+controls only the results of find-addon-tethered-console-bin-dir and
+find-addon-tethered-gui-bin-dir.
+
+The path of the main collection directory is built into the Racket
+executable, and it can be changed via the --collects/-X flag, so it has
+no entry in "config.rktd". Most paths that are specified in
+"config.rktd" have default values that are relative to the main
+collection directory. The paths of the configuration directory and main
+collection directory thus work together to determine a Racket
+configuration.
+
+A "config.rktd" file in the configuration directory should contain a
+readable hash table with any of the following symbolic keys, where a
+relative path is relative to the main collection directory:
+
+* 'installation-name — a string for the installation name, which is used
+  to determine user- and version-specific paths, such as the initial
+  path produced by find-library-collection-paths and the location of
+  packages that are installed in user package scope. The default is
+  (version).
+
+* 'lib-dir — a path, string, or byte string for the main library
+  directory. It defaults to a "lib" sibling directory of the main
+  collection directory.
+
+* 'lib-search-dirs — a list of paths, strings, byte strings, or #f
+  representing the search path for directories containing foreign
+  libraries. Each #f in the list, if any, is replaced with the default
+  search path, which is the user- and version-specific "lib" directory
+  followed by the main library directory.
+
+* 'dll-dir — a path, string, or byte string for a directory containing
+  shared libraries for the main executable. It defaults to the main
+  library directory.
+
+* 'share-dir — a path, string, or byte string for the main shared-file
+  directory, which normally includes installed packages. It defaults to
+  a "share" sibling directory of the main collection directory.
+
+* 'links-file — a path, string, or byte string for the collection links
+  file. It defaults to a "links.rktd" file in the main shared-file
+  directory.
+
+* 'links-search-files — like 'lib-search-dirs, but for collection links
+  file.
+
+* 'pkgs-dir — a path, string, or byte string for packages that have
+  installation package scope. It defaults to "pkgs" in the main
+  shared-file directory.
+
+* 'pkgs-search-dirs — similar to 'lib-search-dirs, but for packages in
+  roughly installation package scope. More precisely, a #f value in the
+  list is replaced with the directory specified by 'pkgs-dir, and that
+  point in the search list corresponds to installation scope. Paths
+  before or after a #f value in the list can be selected as a scopes to
+  start searches at that path’s point in the list. Directories listed in
+  'pkgs-search-dirs typically oblige a corresponding entry in
+  'links-search-files, where the corresponding entry is "links.rktd"
+  within the directory.
+
+  Changed in version 7.0.0.19: Adapt the package-search path in a
+  general way for a directory scope.
+
+* 'bin-dir — a path, string, or byte string for the installation’s
+  directory containing executables. It defaults to a "bin" sibling
+  directory of the main collection directory.
+
+* 'gui-bin-dir — a path, string, or byte string for the installation’s
+  directory containing GUI executables. It defaults to a the 'bin-dir
+  value, if configured, or otherwise defaults in a platform-specific
+  way: to the "bin" sibling directory of the main collection directory
+  on Unix, and to the parent of the main collection directory on Windows
+  and Mac OS.
+
+  Added in version 6.8.0.2.
+
+* 'apps-dir — a path, string, or byte string for the installation’s
+  directory for ".desktop" files. It defaults to a "applications"
+  subdirectory of the main shared-file directory.
+
+* 'man-dir — a path, string, or byte string for the installation’s
+  man-page directory. It defaults to a "man" sibling directory of the
+  main collection directory.
+
+* 'doc-dir — a path, string, or byte string for the main documentation
+  directory. The value defaults to a "doc" sibling directory of the main
+  collection directory.
+
+* 'doc-search-dirs — like 'lib-search-dirs, but for directories
+  containing documentation.
+
+* 'doc-search-url — a URL string that is augmented with version and
+  search-tag queries to form a remote documentation reference.
+
+* 'doc-open-url — a URL string or #f; a string supplies a URL that is
+  used instead of a local path to search and maybe open documentation
+  pages (which normally makes sense only in an environment where opening
+  a local HTML file does not work).
+
+* 'include-dir — a path, string, or byte string for the main directory
+  containing C header files. It defaults to an "include" sibling
+  directory of the main collection directory.
+
+* 'include-search-dirs — like doc-search-dirs, but for directories
+  containing C header files.
+
+* 'catalogs — a list of URL strings used as the search path for
+  resolving package names. An #f in the list is replaced with the
+  default search path. A string that does not start with alphabetic
+  characters followed by :// is treated as a path, where a relative path
+  is relative to the configuration directory.
+
+* 'default-scope — either "user" or "installation", determining the
+  default package scope for package-management operations.
+
+* 'download-cache-dir — a path string used as the location for storing
+  downloaded package archives. When not specified, packages are cached
+  in a "download-cache" directory in the user’s add-on directory as
+  reported by (find-system-path 'addon-dir).
+
+* 'download-cache-max-files and 'download-cache-max-bytes — real numbers
+  that determine limits on the download cache. When not specified, the
+  cache is allowed to hold up to 1024 files that total up to 64 MB.
+
+* 'build-stamp — a string that identifies a build, which can be used to
+  augment the Racket version number to more specifically identify the
+  build. An empty string is normally appropriate for a release build.
+
+* 'absolute-installation? — a boolean that is #t if the installation
+  uses absolute path names, #f otherwise.
+
+* 'cgc-suffix — a string used as the suffix (before the actual suffix,
+  such as ".exe") for a "CGC" executable. Use Windows-style casing, and
+  the string will be downcased as appropriate (e.g., for a Unix binary
+  name). A #f value means that if the racket binary identifies itself as
+  CGC, then the suffix is "", otherwise it is "CGC".
+
+* '3m-suffix — analogous to 'cgc-suffix, but for 3m. A #f value means
+  that if the racket binary identifies itself as CGC, then the suffix is
+  "3m", otherwise it is "".
+
+* 'config-tethered-console-bin-dir and 'config-tethered-gui-bin-dir — a
+  path for a directory to hold extra copies of executables that are tied
+  to the configuration directory (as reported by find-config-dir) that
+  is active at the time the executables are created. See also
+  find-config-tethered-console-bin-dir and
+  find-config-tethered-gui-bin-dir.
+
+* 'interactive-file and 'gui-interactive-file — a module path to the
+  interactive module that runs when the REPL runs on startup, unless the
+  -q/--no-init-file is provided. Defaults to 'racket/interactive and
+  'racket/gui/interactive.

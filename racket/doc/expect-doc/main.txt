@@ -1,0 +1,2234 @@
+Expect: First Class Assertions
+
+ (require expect) package: expect ~
+
+Jack Firth <jackhfirth@gmail.com>
+
+This library provides expectations, composable first-class
+representations of assertions that should be true of some value. This
+library integrates with RackUnit to provide checks in terms of
+expectations, making it simpler to create custom checks with
+high-quality error messages.
+
+Source code for this library is avaible on Github
+
+    1 Data Model
+
+    2 Using Expectations with RackUnit
+
+    3 Comparison and Equality Expectations
+      3.1 Comparison Attributes
+
+    4 Boolean and Logic Expectations
+      4.1 Boolean Attributes
+
+    5 Data Structure Expectations
+      5.1 Data Structure Contexts and Attributes
+
+    6 Text and String Expectations
+      6.1 String Attributes and Contexts
+
+    7 Structure Expectations
+
+    8 Procedure Expectations
+      8.1 Procedure Context Structures
+      8.2 Procedure Attribute Structures
+
+    9 Macro Expansion Expectations
+
+    10 Expectation Combinators
+
+    11 Meta Expectations
+
+    12 Conversion to Expectations
+
+1. Data Model
+
+Conceptually, an expectation is a function that returns a list of faults
+about its input. Faults are a difference between some expected attribute
+of the input and an actual attribute. Faults are often scoped to a
+context, which identifies where precisely in the input value the
+discrepency exists. This section documents each of these structures and
+how to use their basic functionalities.
+
+                                        *expectation?*
+(expectation? v) -> boolean? ~
+  v : any/c ~
+
+Returns #t if v is an expectation, returns #f otherwise.
+
+Examples:
+
+  > (expectation? 6)
+  #f
+  > (expectation? expect-true)
+  #t
+
+                                        *expectation*
+(expectation proc [#:name name]) -> expectation? ~ ~
+  proc : (-> any/c (listof fault?)) ~
+  name : (or/c symbol? #f) = #f ~
+
+Returns an expectation whose implementation is proc and whose name (in
+the sense of object-name) is name.
+
+Examples:
+
+  > (define empty-expectation (expectation (λ (v) (list)) #:name 'empty)) ~
+  > empty-expectation
+  #<expectation:empty>
+  > (expectation-apply empty-expectation 'foo)
+  '()
+
+                                        *expectation-apply*
+(expectation-apply exp v) -> (listof faults?) ~
+  exp : expectation? ~
+  v : any/c ~
+
+Checks v against exp and returns a list of faults found by exp.
+
+Examples:
+
+  > (expectation-apply (expect-equal? (list 1 2)) (list 1 2))
+  '()
+  > (expectation-apply (expect-equal? (list 1 2)) (list 1 'foo))
+  (list
+   (fault
+    "a different value"
+    (compare-attribute "equal? to 2" #<procedure:equal?> 2) ~
+    (self-attribute "'foo" 'foo)
+    (list (sequence-context "item at position 1" 1))))
+
+                                        *expect!*
+(expect! v exp) -> void? ~
+  v : any/c ~
+  exp : any/c ~
+
+Checks that v has no faults according to exp. If it does, an instance of
+exn:fail:expect is raised with a message detailing the faults. If exp is
+not an expectation, it is converted to one with ->expectation.
+
+Examples:
+
+  > (expect! '(1 2) '(1 2))
+  > (expect! '(1 a b) '(1 2))
+  multiple failures
+    subject: '(1 a b) ~
+    fault: expected a different value ~
+     in: the number of items ~
+     expected: eqv? to 2 ~
+     actual: 3 ~
+    fault: expected a different value ~
+     in: item at position 1 ~
+     expected: equal? to 2 ~
+     actual: 'a ~
+
+                                        *struct*
+(struct exn:fail:expect exn:fail (subject faults)) ~ ~
+  subject : any/c ~
+  faults : (listof fault?) ~
+
+An instance of exn:fail that is thrown by expect! when a value does not
+live up to an expectation. The subject field is the original value
+checked against the expectation and the faults field is the list of
+faults found by the expectation.
+
+                                        *expectation-rename*
+(expectation-rename exp name) -> expectation? ~
+  exp : expectation? ~
+  name : (or/c symbol? #f) ~
+
+Returns an expectation that is like exp, but with its name (as returned
+by object-name) set to name. An expectation’s printed form inludes its
+name in the format #<expectation: name >.
+
+Examples:
+
+  > expect-any
+  #<expectation:any>
+  > (expectation-rename expect-any 'anything-at-all)
+  #<expectation:anything-at-all>
+  > (expectation-rename expect-any #f)
+  #<expectation>
+
+expect-any : expectation? ~
+
+The empty expectation. Finds no faults in any value. Not very useful on
+it’s own, but this is sometimes useful in higher order contexts such as
+a default argument.
+
+                                        *fault?*
+(fault? v) -> boolean? ~
+  v : any/c ~
+
+Returns #t if v is a fault, returns #f otherwise.
+
+Examples:
+
+  > (fault? 6)
+  #f
+  > (fault? (fault #:summary "test fault" ~
+                   #:expected (make-self-attribute 'foo) ~
+                   #:actual (make-self-attribute 'bar))) ~
+  #t
+
+                                        *fault*
+(fault  #:summary summary          ~ ~
+        #:expected expected        ~
+        #:actual actual            ~
+       [#:contexts contexts]) -> fault? ~
+  summary : string? ~
+  expected : attribute? ~
+  actual : attribute? ~
+  contexts : (listof context?) = (list) ~
+
+Returns a fault with the given summary, expected and actual attributes,
+and contexts. Contexts are given in order of least specific to most
+specific; see expect-list for an example of proper use of contexts.
+
+Examples:
+
+  > (fault #:summary "test fault" ~
+           #:expected (make-self-attribute 'foo) ~
+           #:actual (make-self-attribute 'bar)) ~
+  (fault
+   "test fault"
+   (self-attribute "'foo" 'foo)
+   (self-attribute "'bar" 'bar)
+   '())
+  > (struct test-context context () #:transparent) ~
+  > (fault #:summary "test fault with contexts" ~
+           #:expected (make-self-attribute 'foo) ~
+           #:actual (make-self-attribute 'bar) ~
+           #:contexts (list (test-context "test context") ~
+                            (test-context "nested test context")))
+  (fault
+   "test fault with contexts"
+   (self-attribute "'foo" 'foo)
+   (self-attribute "'bar" 'bar)
+   (list (test-context "test context") (test-context "nested test
+  context")))
+
+                                        *fault-summary*
+(fault-summary flt) -> string? ~
+  flt : fault? ~
+(fault-expected flt) -> attribute?
+  flt : fault? ~
+(fault-actual flt) -> attribute?
+  flt : fault? ~
+(fault-contexts flt) -> (listof context?)
+  flt : fault? ~
+
+Accessors for the various fields of a fault? structure. See fault for
+information about these fields.
+
+                                        *struct*
+(struct context (description) ~
+    #:transparent) ~
+  description : string? ~
+
+A structure type for what context a fault occurs in. Contexts are meant
+to be structured information, so that different clients can render
+descriptions of contexts in different ways. Every context includes a
+description string so that a simple text description of the context can
+be constructed. The context constructor is not provided; it’s not
+possible to create a context without defining a subtype of the context
+struct. Various expectations provided by this library define and provide
+their own context subtypes that add extra fields, see expect-list for an
+example.
+
+                                        *struct*
+(struct attribute (description) ~
+    #:transparent) ~
+  description : string? ~
+
+A structure type for an attribute, some property of a value that a fault
+refers to. Like contexts, attributes are structured information with a
+string description whose subtypes add additional fields for clients to
+use to construct error messages. Additionally, the attribute constructor
+is not provided so the only way to create attributes is with a subtype.
+See self-attribute for a trivial implementation.
+
+                                        *struct*
+(struct splice-context context (values) ~
+    #:transparent) ~
+  values : (listof context?) ~
+(make-splice-context  ctxts                    
+                     [#:description desc]) -> splice-context? ~
+  ctxts : (listof context?) ~
+  desc : (or/c string? #f) = #f ~
+
+A context and its constructor that represents a summary of ctxts. A list
+of contexts containing a splice-context can be thought of as equivalent
+to if ctxts were inserted to the list instead of the splice-context.
+This is used by expectations that produce several fine-grained contexts
+that can be considered a single logical context. The make-splice-context
+constructor uses desc as the description of the splice; if not provided,
+it combines the descriptions of ctxts. Like a contexts list passed to
+fault, the ctxts contexts are expected to be ordered from most specific
+to least specific.
+
+Examples:
+
+  > (define data-contexts
+      (list (make-sequence-context 2)
+            (make-sequence-context 6)
+            (make-dict-context 'foo)))
+  > (context-description (make-splice-context data-contexts))
+  "item at position 2 of item at position 6 of value for key 'foo"
+  > (context-description
+     (make-splice-context data-contexts #:description ".foo[6][2]")) ~
+  ".foo[6][2]"
+
+                                        *struct*
+(struct self-attribute attribute (value) ~
+    #:transparent) ~
+  value : any/c ~
+(make-self-attribute v) -> self-attribute?
+  v : any/c ~
+
+An attribute and its constructor that directly represents the value
+referred to by the context of a fault.
+
+Example:
+
+  > (make-self-attribute 'foo)
+  (self-attribute "'foo" 'foo)
+
+the-any-attribute : attribute? ~
+the-none-attribute : attribute? ~
+
+These attributes are used by faults to express that they expected or
+found any value at all or no value at all. This is typically for faults
+with a context that may not be present on all values. For a concrete
+example of their uses, see expect-raise and expect-return.
+
+2. Using Expectations with RackUnit
+
+ (require expect/rackunit) package: expect ~
+
+This module defines how to use expectations with the rackunit testing
+framework. Included are custom checks and test forms that test values
+using expectations, as well as expectation-using replacements for the
+various built in checks provided by rackunit.
+
+If you have an existing set of RackUnit tests, simply change (require
+rackunit) to (require expect/rackunit). Only checks are exported by
+expect/rackunit; if your tests use other exports of rackunit you’ll need
+to use only-in to import them from RackUnit.
+
+                                        *check-expect*
+(check-expect v exp [message]) -> void? ~
+  v : any/c ~
+  exp : any/c ~
+  message : string? = "" ~
+
+Checks that v has no faults according to exp, with message added to the
+check info stack in the event of failure. The given exp is converted to
+an expectation with ->expectation.
+
+Examples:
+
+  > (check-expect 1 (expect-pred number?))
+  > (check-expect 'foo (expect-pred number?))
+  --------------------
+  FAILURE
+  name:       check-expect
+  location:   eval:2:0 ~
+  actual:     'foo
+  expected:   number?
+
+  Expected a different kind of value
+  --------------------
+  > (check-expect #hash((a . (1 WRONG 3)) (b . (4 5 WRONG)))
+                  #hash((a . (1 2 3)) (b . (4 5 6))))
+  --------------------
+  FAILURE
+  name:       check-expect
+  location:   eval:3:0 ~
+  actual:     '#hash((a . (1 WRONG 3)) (b . (4 5 WRONG)))
+  fault:
+    summary:    expected a different value ~
+    actual:     'WRONG ~
+    expected:   equal? to 6 ~
+    context: ~
+      in:         value for key 'b ~
+      in:         item at position 2 ~
+  fault:
+    summary:    expected a different value ~
+    actual:     'WRONG ~
+    expected:   equal? to 2 ~
+    context: ~
+      in:         value for key 'a ~
+      in:         item at position 1 ~
+
+  Multiple faults found
+  --------------------
+
+check-eq? : procedure? ~
+check-eqv? : procedure? ~
+check-equal? : procedure? ~
+check-not-eq? : procedure? ~
+check-not-eqv? : procedure? ~
+check-not-equal? : procedure? ~
+check-pred : procedure? ~
+check-= : procedure? ~
+check-true : procedure? ~
+check-false : procedure? ~
+check-not-false : procedure? ~
+check-exn : procedure? ~
+check-not-exn : procedure? ~
+check : procedure? ~
+
+Custom checks that are equivalent to their corresponding rackunit checks
+except that they are defined in terms of expectations, and provide
+better error messages for most failures. None of these checks accept
+expectations as arguments.
+
+Example:
+
+  > (check-equal? '(1 2 3 foo 5) '(1 2 3 4 5))
+  --------------------
+  FAILURE
+  name:       check-equal?
+  location:   eval:1:0 ~
+  subject:    (1 2 3 foo 5)
+  actual:     'foo
+  expected:   equal? to 4
+  context:
+    in:         item at position 3 ~
+
+  Expected a different value
+  --------------------
+
+                                        *test-subject*
+(test-subject maybe-name ~
+  #:subject subject-expr ~
+  expectation-expr ...)
+ 
+maybe-name = 
+           | name-str
+ 
+  subject-expr : any/c ~
+  expectation-expr : any/c ~
+
+Creates a test-case or test-begin form containing one check-expect
+expression for each expectation-expr. The subject-expr is evaluated once
+and the resulting value is passed as the value to test by each
+check-expect expression. If name-str is provided, it must be a string
+and the resulting test is a test-case with name-str as its name,
+otherwise it is a test-begin form. Note that each expectation-expr is
+converted to an expectation by check-expect.
+
+Example:
+
+  > (test-subject "addition" #:subject + ~
+      (expect-call (arguments 1 2 3) (expect-return 6))
+      (expect-call (arguments) (expect-return 0))
+      (expect-call-exn (arguments 'foo) #rx"contract")
+      (expect-call (arguments 5 10) (expect-return 16)))
+  --------------------
+  addition
+  FAILURE
+  name:       test-expect
+  location:   eval:1:0 ~
+  subject:    #<procedure:+> ~
+  actual:     15
+  expected:   equal? to 16
+  context:
+    in:         call with (arguments 5 10) ~
+    in:         the return value ~
+
+  Expected a different value
+  --------------------
+
+                                        *fail-check/expect*
+(fail-check/expect v exp) -> void? ~
+  v : any/c ~
+  exp : any/c ~
+
+Essentially equivalent to (check-expect v exp), except as an ordinary
+function that raises an exn:test:check exception. Check infos containing
+the faults raised by exp are added to the exception, but no other infos
+(such as 'expression) are included. Like check-expect, if exp is not an
+expectation it is converted to one with ->expectation.
+
+Example:
+
+  > (fail-check/expect 'foo (expect-pred number?))
+  Expected a different kind of value
+
+3. Comparison and Equality Expectations
+
+                                        *expect-compare*
+(expect-compare compare other) -> expectation? ~
+  compare : (-> any/c any/c any/c) ~
+  other : any/c ~
+
+Returns an expectation that expects a value v that, when compared to
+other by calling (compare v other), returns a true value.
+
+Examples:
+
+  > (define expect-foo (expect-compare string=? "foo"))
+  > (expect! "foo" expect-foo)
+  > (expect! "bar" expect-foo)
+  expected a different value
+    subject: "bar" ~
+    expected: string=? to "foo" ~
+    actual: "bar" ~
+
+                                        *expect-not-compare*
+(expect-not-compare compare other) -> expectation? ~
+  compare : (-> any/c any/c any/c) ~
+  other : any/c ~
+
+Like expect-compare, but for an input v the returned expectation checks
+that (compare v other) returns false instead of true.
+
+Examples:
+
+  > (define expect-not-foo (expect-not-compare string=? "foo"))
+  > (expect! "bar" expect-not-foo)
+  > (expect! "foo" expect-not-foo)
+  expected a different value
+    subject: "foo" ~
+    expected: not string=? to "foo" ~
+    actual: "foo" ~
+
+                                        *expect-contains?*
+(expect-contains? contains? v) -> expectation? ~
+  contains? : (-> any/c any/c any/c) ~
+  v : any/c ~
+
+Returns an expectation that expects a container value c, that contains v
+as determined by whether (contains? c v) returns a true value.
+
+Examples:
+
+  > (define exp-foo (expect-contains? hash-has-key? 'foo))
+  > (expect! (hash 'foo 1 'bar 2) exp-foo)
+  > (expect! (hash 'bar 2) exp-foo)
+  expected a value to be contained
+    subject: '#hash((bar . 2)) ~
+    expected: 'foo contained with hash-has-key? ~
+    actual: '#hash((bar . 2)) ~
+
+                                        *expect-not-contains?*
+(expect-not-contains? contains? v) -> expectation? ~
+  contains? : (-> any/c any/c any/c) ~
+  v : any/c ~
+
+Like expect-contains?, but for an input c the returned expectation
+checks that (contains? c v) returns false instead of true.
+
+Examples:
+
+  > (define exp-not-foo (expect-not-contains? hash-has-key? 'foo))
+  > (expect! (hash 'bar 2) exp-not-foo)
+  > (expect! (hash 'foo 1 'bar 2) exp-not-foo)
+  expected a value to not be contained
+    subject: '#hash((bar . 2) (foo . 1)) ~
+    expected: not 'foo contained with hash-has-key? ~
+    actual: '#hash((bar . 2) (foo . 1)) ~
+
+                                        *expect-contains-all?*
+(expect-contains-all? contains? vs) -> expectation? ~
+  contains? : (-> any/c any/c any/c) ~
+  vs : list? ~
+
+Like expect-contains?, but for an input c the returned expectation
+checks that every item v in vs is contained in c according to (contains?
+c v). Only one fault is returned which has an and-attribute value
+containing one contains-attribute for each missing v. See
+make-contains-all-attribute for details on how this attribute is
+constructed.
+
+Examples:
+
+  > (define exp-keys (expect-contains-all? hash-has-key? '(foo bar baz)))
+  > (expect! (hash 'foo 1 'bar 2 'baz 3) exp-keys)
+  > (expect! (hash 'foo 1 'blah 4) exp-keys)
+  expected values to be contained
+    subject: '#hash((blah . 4) (foo . 1)) ~
+    expected: 'bar and 'baz contained with hash-has-key? ~
+    actual: '#hash((blah . 4) (foo . 1)) ~
+
+                                        *expect-contains-none?*
+(expect-contains-none? contains? vs) -> expectation? ~
+  contains? : (-> any/c any/c any/c) ~
+  vs : list? ~
+
+Like expect-contains?, but for an input c the returned expectation
+checks that no item v in vs is contained in c according to (contains? c
+v). Only one fault is returned which has a not-attribute wrapping an
+or-attribute containing one contains-attribute for each present v. See
+make-contains-none-attribute for details on how this attribute is
+constructed.
+
+Examples:
+
+  >
+  (define exp-no-keys (expect-contains-none? hash-has-key? '(foo bar baz)))
+  > (expect! (hash 'blah 4) exp-no-keys)
+  > (expect! (hash 'foo 1 'baz 3 'blah 4) exp-no-keys)
+  expected values to not be contained
+    subject: '#hash((baz . 3) (blah . 4) (foo . 1)) ~
+    expected: not 'foo or 'baz contained with hash-has-key? ~
+    actual: '#hash((baz . 3) (blah . 4) (foo . 1)) ~
+
+                                        *expect-eq?*
+(expect-eq? v) -> expectation? ~
+  v : any/c ~
+(expect-eqv? v) -> expectation?
+  v : any/c ~
+(expect-equal? v) -> expectation?
+  v : any/c ~
+
+Convenience shortands for calling expect-compare with eq?, eqv?, or
+equal?, respectively. However, due to the recursive properties of
+equal?, expectations returned by  expect-equal? will traverse and
+inspect all values contained in v and the input to the expectation. This
+may result in more than one fault being returned, for instance
+expect-equal? might find several faults pointing to specific incorrect
+values in a complex data structure instead of simply pointing out the
+actual data structure and expected data structure are not equal?.
+
+Example:
+
+  > (expect! '(1 2 (foo 4 5) not-a-list 8)
+             (expect-equal? '(1 2 (3 4 5) (6 7) 8)))
+  multiple failures
+    subject: '(1 2 (foo 4 5) not-a-list 8) ~
+    fault: expected a different value ~
+     in: item at position 2 ~
+     in: item at position 0 ~
+     expected: equal? to 3 ~
+     actual: 'foo ~
+    fault: expected a different kind of value ~
+     in: item at position 3 ~
+     expected: list? ~
+     actual: 'not-a-list ~
+
+                                        *expect-not-eq?*
+(expect-not-eq? v) -> expectation? ~
+  v : any/c ~
+(expect-not-eqv? v) -> expectation?
+  v : any/c ~
+(expect-not-equal? v) -> expectation?
+  v : any/c ~
+
+Negated variants of expect-eq?, expect-eqv?, and expect-equal?
+respectively.
+
+Examples:
+
+  > (expect! '(1 foo) (expect-not-equal? '(1 2)))
+  > (expect! 'a (expect-not-eq? 'a))
+  expected a different value
+    subject: 'a ~
+    expected: not eq? to 'a ~
+    actual: 'a ~
+
+                                        *expect-*
+(expect-= x epsilon) -> expectation? ~
+  x : real? ~
+  epsilon : real? ~
+
+Returns an expectation that expects a value is a number within epsilon
+of x. Returned faults have instances of =-attribute in their expected
+field.
+
+Examples:
+
+  > (define exp10 (expect-= 10 0.01))
+  > (expect! 10 exp10)
+  > (expect! 25 exp10)
+  expected a different number
+    subject: 25 ~
+    expected: = to 10 (with tolerance of 0.01) ~
+    actual: 25 ~
+  > (expect! 10.0001 exp10)
+
+3.1. Comparison Attributes
+
+                                        *struct*
+(struct compare-attribute attribute (proc other) ~
+    #:transparent) ~
+  proc : (-> any/c any/c any/c) ~
+  other : any/c ~
+(make-compare-attribute proc other) -> compare-attribute?
+  proc : (-> any/c any/c any/c) ~
+  other : any/c ~
+
+An attribute and its constructor that represents the result of comparing
+the input value to other using proc. See expect-compare for examples.
+
+                                        *struct*
+(struct contains-attribute attribute (proc value) ~
+    #:transparent) ~
+  proc : (-> any/c any/c any/c) ~
+  value : any/c ~
+(make-contains-attribute proc value) -> contains-attribute?
+  proc : (-> any/c any/c any/c) ~
+  value : any/c ~
+
+An attribute and its constructor that represnts whether the input value
+contains value according to proc. See expect-contains for examples.
+
+                                        *make-contains-all-attribute*
+(make-contains-all-attribute contains? vs) -> and-attribute? ~
+  contains? : (-> any/c any/c any/c) ~
+  vs : list? ~
+
+Returns an and-attribute value wrapping a list of contains-attribute
+values, one for each of vs. The description of the returned attribute is
+more succinct than the default description that and-attribute would
+normally create. Used by expect-contains-all.
+
+Example:
+
+  > (make-contains-all-attribute hash-has-key? '(foo bar baz))
+  (and-attribute
+   "'foo, 'bar and 'baz contained with hash-has-key?"
+   (list
+    (contains-attribute
+     "'foo contained with hash-has-key?"
+     #<procedure:hash-has-key?> ~
+     'foo)
+    (contains-attribute
+     "'bar contained with hash-has-key?"
+     #<procedure:hash-has-key?> ~
+     'bar)
+    (contains-attribute
+     "'baz contained with hash-has-key?"
+     #<procedure:hash-has-key?> ~
+     'baz)))
+
+                                        *make-contains-none-attribute*
+(make-contains-none-attribute contains? vs) -> not-attribute? ~
+  contains? : (-> any/c any/c any/c) ~
+  vs : list? ~
+
+Returns a not-attribute value wrapping an or-attribute which contains a
+list of contains-attribute values, one for each of vs. The description
+of the returned attribute is more succinct than the default description
+that or-attribute would normally create. Used by expect-contains-none.
+
+Example:
+
+  > (make-contains-none-attribute hash-has-key? '(foo bar baz))
+  (not-attribute
+   "not 'foo, 'bar or 'baz contained with hash-has-key?"
+   (or-attribute
+    "'foo, 'bar or 'baz contained with hash-has-key?"
+    (list
+     (contains-attribute
+      "'foo contained with hash-has-key?"
+      #<procedure:hash-has-key?> ~
+      'foo)
+     (contains-attribute
+      "'bar contained with hash-has-key?"
+      #<procedure:hash-has-key?> ~
+      'bar)
+     (contains-attribute
+      "'baz contained with hash-has-key?"
+      #<procedure:hash-has-key?> ~
+      'baz))))
+
+                                        *struct*
+(struct =-attribute attribute (value epsilon) ~
+    #:transparent) ~
+  value : real? ~
+  epsilon : real? ~
+(make-=-attribute value epsilon) -> =-attribute?
+  value : real? ~
+  epsilon : real? ~
+
+An attribute and its constructor that represents the result of comparing
+the input value to value with =, with a tolerance of epsilon allowed to
+account for floating point inaccuracies.
+
+                                        *eq-attribute?*
+(eq-attribute? v) -> boolean? ~
+  v : any/c ~
+(eqv-attribute? v) -> boolean?
+  v : any/c ~
+(equal-attribute? v) -> boolean?
+  v : any/c ~
+
+Convenient shorthand predicates for identifying compare-attribute values
+returned by make-eq-attribute, make-eqv-attribute, and
+make-equal-attribute, respectively.
+
+                                        *make-eq-attribute*
+(make-eq-attribute value) -> eq-attribute? ~
+  value : any/c ~
+(make-eqv-attribute value) -> eqv-attribute?
+  value : any/c ~
+(make-equal-attribute value) -> equal-attribute?
+  value : any/c ~
+
+Convenient shorthands for calling make-compare-attribute with eq?, eqv?,
+and equal?, respectively.
+
+4. Boolean and Logic Expectations
+
+expect-true : expectation? ~
+expect-false : expectation? ~
+expect-not-false : expectation? ~
+
+Expectations that expect a value is either #t, #f, or not #f
+respectively. Returned faults have self-attribute values in the expected
+field, except for expect-not-false which wraps a self-attribute value in
+a not-attribute value.
+
+Examples:
+
+  > (expect! 'foo expect-true)
+  expected true
+    subject: 'foo ~
+    expected: #t ~
+    actual: 'foo ~
+  > (expect! 'foo expect-false)
+  expected false
+    subject: 'foo ~
+    expected: #f ~
+    actual: 'foo ~
+  > (expect! 'foo expect-not-false)
+  > (expect! #f expect-not-false)
+  expected not false
+    subject: #f ~
+    expected: not #f ~
+    actual: #f ~
+
+                                        *expect-pred*
+(expect-pred pred) -> expectation? ~
+  pred : predicate/c ~
+
+Returns an expectation that expects a value results in (pred v)
+returning #t. Returned faults have pred-attribute values and
+self-attribute values in their expected and actual fields respectively.
+
+Examples:
+
+  > (expect! 10 (expect-pred number?))
+  > (expect! 'foo (expect-pred number?))
+  expected a different kind of value
+    subject: 'foo ~
+    expected: number? ~
+    actual: 'foo ~
+
+                                        *expect-all*
+(expect-all exp ...) -> expectation? ~
+  exp : expectation? ~
+
+Returns an expectation that expects everything that each of the given
+exp values expects. All expectations are tested and each expectation’s
+faults are returned together with all other faults. To combine
+expectations in a way where later expectations are tested only if
+earlier ones pass, see expect-and.
+
+Examples:
+
+  > (define positive-even
+      (expect-all (expect-pred positive?) (expect-pred even?)))
+  > (expect! 4 positive-even)
+  > (expect! 7 positive-even)
+  expected a different kind of value
+    subject: 7 ~
+    expected: even? ~
+    actual: 7 ~
+  > (expect! -4 positive-even)
+  expected a different kind of value
+    subject: -4 ~
+    expected: positive? ~
+    actual: -4 ~
+  > (expect! -7 positive-even)
+  multiple failures
+    subject: -7 ~
+    fault: expected a different kind of value ~
+     expected: positive? ~
+     actual: -7 ~
+    fault: expected a different kind of value ~
+     expected: even? ~
+     actual: -7 ~
+
+                                        *expect-and*
+(expect-and exp ...) -> expectation? ~
+  exp : expectation? ~
+
+Returns an expectation that expects everything that each of the given
+exp values expects. Each expectation is tested in order and if any
+expectation finds any faults, those faults are returned immediately and
+the remaining exp expectations are not tested. To combine expectations
+in a way where all expectations are tested and all faults returned
+together, see expect-all.
+
+Examples:
+
+  > (define (small? x) (< x 10))
+  > (define small-number
+      (expect-and (expect-pred real?)
+                  (expect-pred positive?)
+                  (expect-pred small?)))
+  > (expect! 5 small-number)
+  > (expect! 20 small-number)
+  expected a different kind of value
+    subject: 20 ~
+    expected: small? ~
+    actual: 20 ~
+  > (expect! -4 small-number)
+  expected a different kind of value
+    subject: -4 ~
+    expected: positive? ~
+    actual: -4 ~
+  > (expect! 'foo small-number)
+  expected a different kind of value
+    subject: 'foo ~
+    expected: real? ~
+    actual: 'foo ~
+
+                                        *expect-conjoin*
+(expect-conjoin pred ...) -> expectation? ~
+  pred : predicate/c ~
+
+Equivalent to (expect-and (expect-pred pred) ...).
+
+                                        *expect-disjoin*
+(expect-disjoin pred ...) -> expectation? ~
+  pred : predicate/c ~
+
+Returns an expectation that expects a value that satisfies at least one
+of the given pred functions. If no pred returns #t for the checked
+value, a single fault is found with an or-attribute value containing a
+list of pred-attribute values in or-attribute-cases.
+
+Examples:
+
+  > (define exp-str-or-sym (expect-disjoin string? symbol?))
+  > (expect! "foo" exp-str-or-sym)
+  > (expect! 'foo exp-str-or-sym)
+  > (expect! 42 exp-str-or-sym)
+  expected a different kind of value
+    subject: 42 ~
+    expected: string? or symbol? ~
+    actual: 42 ~
+
+4.1. Boolean Attributes
+
+                                        *struct*
+(struct not-attribute attribute (negated) ~
+    #:transparent) ~
+  negated : attribute? ~
+(make-not-attribute negated) -> not-attribute?
+  negated : attribute? ~
+
+An attribute and its constructor that negates the meaning of negated.
+The description of a constucted attribute has the format "not 
+(attribute-description negated) ".
+
+                                        *struct*
+(struct pred-attribute attribute (value) ~
+    #:transparent) ~
+  value : predicate/c ~
+(make-pred-attribute value) -> pred-attribute?
+  value : predicate/c ~
+
+An attribute and its constructor that represents whether or not the
+input value satisfies the value predicate.
+
+                                        *struct*
+(struct and-attribute attribute (cases) ~
+    #:transparent) ~
+  cases : (listof attribute?) ~
+(make-and-attribute  cases                    
+                    [#:description desc]) -> and-attribute? ~
+  cases : (listof attribute?) ~
+  desc : (or/c string? #f) = #f ~
+
+An attribute and its constructor that describes that a fault refers to
+every one of cases. This is useful for collapsing multiple nearly
+identical faults into a single fault; see expect-contains-all? for an
+example. If desc is not provided, it defaults to the descriptions of
+each of cases joined with commas and an and between the last two
+descriptions.
+
+                                        *struct*
+(struct or-attribute attribute (cases) ~
+    #:transparent) ~
+  cases : (listof attribute?) ~
+(make-or-attribute  cases                    
+                   [#:description desc]) -> or-attribute? ~
+  cases : (listof attribute?) ~
+  desc : (or/c string? #f) = #f ~
+
+An attribute and its constructor that describes at least one of cases. A
+fault might use this to describe that it expected one of multiple
+possible values. If desc is not provided, it defaults to the
+descriptions of each of cases joined with commas and an or between the
+last two descriptions.
+
+5. Data Structure Expectations
+
+                                        *expect-list*
+(expect-list item-exp ...) -> expectation? ~
+  item-exp : any/c ~
+
+Returns an expectation that expects a value is a list whose elements
+satisfy the item-exp expectations. Each item-exp is converted to an
+expectation with ->expectation. The length of the list is also checked,
+and only the item-exp expectations for lists that contain enough items
+to include the corresponding item-exp are checked.
+
+Examples:
+
+  > (define num+string-expectation
+      (expect-list (expect-pred number?) (expect-pred string?)))
+  > (expect! '(10 "text") num+string-expectation)
+  > (expect! '(foo bar) num+string-expectation)
+  multiple failures
+    subject: '(foo bar) ~
+    fault: expected a different kind of value ~
+     in: item at position 0 ~
+     expected: number? ~
+     actual: 'foo ~
+    fault: expected a different kind of value ~
+     in: item at position 1 ~
+     expected: string? ~
+     actual: 'bar ~
+  > (expect! '(foo) num+string-expectation)
+  multiple failures
+    subject: '(foo) ~
+    fault: expected a different value ~
+     in: the number of items ~
+     expected: eqv? to 2 ~
+     actual: 1 ~
+    fault: expected a different kind of value ~
+     in: item at position 0 ~
+     expected: number? ~
+     actual: 'foo ~
+
+                                        *expect-list-ref*
+(expect-list-ref item-exp index) -> expectation? ~
+  item-exp : any/c ~
+  index : exact-nonnegative-integer? ~
+
+Returns an expectation that expects a value is a list with an item at
+position index, then checks that item against item-exp. The given
+item-exp is converted to an expectation with ->expectation.
+
+Examples:
+
+  >
+  (define expect-second-string? (expect-list-ref (expect-pred string?) 1))
+  > (expect! '(10 "text") expect-second-string?)
+  > (expect! '(10 20) expect-second-string?)
+  expected a different kind of value
+    subject: '(10 20) ~
+    in: item at position 1 ~
+    expected: string? ~
+    actual: 20 ~
+
+                                        *expect-list-length*
+(expect-list-length len-exp) -> expectation? ~
+  len-exp : (or/c exact-nonnegative-integer? expectation?) ~
+
+Returns an expectation that expects a value is a list, then checks the
+number of items in the list against len-exp. If len-exp is an integer,
+it is converted to an expectation with ->expectation.
+
+Examples:
+
+  > (define expect-even-list (expect-list-length (expect-pred even?)))
+  > (expect! '(a b) expect-even-list)
+  > (expect! '(a b c) expect-even-list)
+  expected a different kind of value
+    subject: '(a b c) ~
+    in: the number of items ~
+    expected: even? ~
+    actual: 3 ~
+
+                                        *expect-vector*
+(expect-vector item-exp ...) -> expectation? ~
+  item-exp : any/c ~
+
+Returns an expectation that expects a value is a vector whose elements
+satisfy the item-exp expectations. Each item-exp is converted to an
+expectation with ->expectation. The length of the vector is also
+checked, and only the item-exp expectations for vectors that contain
+enough items to include the corresponding item-exp are checked.
+
+Examples:
+
+  >
+  (define num+foo-vec-expectation (expect-vector (expect-pred number?) 'foo))
+  > (expect! #(10 foo) num+foo-vec-expectation)
+  > (expect! #(10 bar) num+foo-vec-expectation)
+  expected a different value
+    subject: '#(10 bar) ~
+    in: item at position 1 ~
+    expected: equal? to 'foo ~
+    actual: 'bar ~
+  > (expect! #(10) num+foo-vec-expectation)
+  expected a different value
+    subject: '#(10) ~
+    in: the number of items ~
+    expected: eqv? to 2 ~
+    actual: 1 ~
+
+                                        *expect-vector-ref*
+(expect-vector-ref item-exp index) -> expectation? ~
+  item-exp : any/c ~
+  index : exact-nonnegative-integer? ~
+
+Returns an expectation that expects a value is a vector with an item at
+position index, then checks that item against item-exp. The given
+item-exp is converted to an expectation with ->expectation.
+
+Examples:
+
+  >
+  (define expect-second-string? (expect-vector-ref (expect-pred string?) 1))
+  > (expect! #(10 "text") expect-second-string?)
+  > (expect! #(10 20) expect-second-string?)
+  expected a different kind of value
+    subject: '#(10 20) ~
+    in: item at position 1 ~
+    expected: string? ~
+    actual: 20 ~
+
+                                        *expect-vector-length*
+(expect-vector-length len-exp) -> expectation? ~
+  len-exp : (or/c exact-nonnegative-integer? expectation?) ~
+
+Returns an expectation that expects a value is a vector, then checks the
+number of items in the vector against len-exp. If len-exp is an integer,
+it is converted to an expectation with ->expectation.
+
+Examples:
+
+  > (define expect-even-vector (expect-vector-length (expect-pred even?)))
+  > (expect! #(a b) expect-even-vector)
+  > (expect! #(a b c) expect-even-vector)
+  expected a different kind of value
+    subject: '#(a b c) ~
+    in: the number of items ~
+    expected: even? ~
+    actual: 3 ~
+
+                                        *expect-set*
+(expect-set v ...) -> expectation? ~
+  v : any/c ~
+
+Returns an expectation that expects a value is a set that contains
+exactly the given v values and no other values. The expectation finds
+two faults: one describing that values were missing and one describing
+what values were unexpected. Each of these fault is constructed in the
+same way as in expect-superset and expect-subset, respectively. This
+function does not convert its arguments to expectations, see
+->expectation.
+
+Examples:
+
+  > (expect! (set 1 2 3) (expect-set 1 2 3))
+  > (expect! (set 1 'foo 'bar) (expect-set 1 2 3))
+  multiple failures
+    subject: (set 1 'bar 'foo) ~
+    fault: expected values to be contained ~
+     expected: 2 and 3 contained with set-member? ~
+     actual: (set 1 'bar 'foo) ~
+    fault: expected values to not be contained ~
+     expected: not 'foo or 'bar contained with set-member? ~
+     actual: (set 1 'bar 'foo) ~
+
+                                        *expect-set-member?*
+(expect-set-member? v) -> expectation? ~
+  v : any/c ~
+
+Returns an expectation that expects a value is a set containing v.
+
+Examples:
+
+  > (expect! (set 1 2) (expect-set-member? 1))
+  > (expect! (set 1 2) (expect-set-member? 'foo))
+  expected a value to be contained
+    subject: (set 1 2) ~
+    expected: 'foo contained with set-member? ~
+    actual: (set 1 2) ~
+
+                                        *expect-set-not-member?*
+(expect-set-not-member? v) -> expectation? ~
+  v : any/c ~
+
+Returns an expectation that expects a value is a set that does not
+contain v.
+
+Examples:
+
+  > (expect! (set 1 2) (expect-set-not-member? 'foo))
+  > (expect! (set 1 2) (expect-set-not-member? 1))
+  expected a value to not be contained
+    subject: (set 1 2) ~
+    expected: not 1 contained with set-member? ~
+    actual: (set 1 2) ~
+
+                                        *expect-superset*
+(expect-superset st) -> expectation? ~
+  st : set? ~
+
+Returns an expectation that expects a value is a set that is a superset
+of st. The expectation finds one fault that describes what values were
+missing using make-contains-all-attribute.
+
+Examples:
+
+  > (expect! (set 1 2 3 4 5) (expect-superset (set 1 2 3)))
+  > (expect! (set 1 5) (expect-superset (set 1 2 3)))
+  expected values to be contained
+    subject: (set 1 5) ~
+    expected: 2 and 3 contained with set-member? ~
+    actual: (set 1 5) ~
+
+                                        *expect-subset*
+(expect-subset st) -> expectation? ~
+  st : set? ~
+
+Returns an expectation that expects a value is a set that is a subset of
+st. The expectation finds one fault that describes what unexpected
+values were present using make-contains-none-attribute.
+
+Examples:
+
+  > (expect! (set 1 2) (expect-subset (set 1 2 3)))
+  > (expect! (set 1 2 'foo 'bar) (expect-subset (set 1 2 3)))
+  expected values to not be contained
+    subject: (set 1 'bar 2 'foo) ~
+    expected: not 'foo or 'bar contained with set-member? ~
+    actual: (set 1 'bar 2 'foo) ~
+
+                                        *expect-set-count*
+(expect-set-count count-exp) -> expectation? ~
+  count-exp : (or/c exact-nonnegative-integer? expectation?) ~
+
+Returns an expectation that expects a value is a set whose number of
+elements is then checked against count-exp. If count-exp is an integer,
+it is converted to an expectation with ->expectation.
+
+Examples:
+
+  > (expect! (set 'foo 'bar) (expect-set-count 2))
+  > (expect! (set 1 2 3) (expect-set-count (expect-pred even?)))
+  expected a different kind of value
+    subject: (set 1 3 2) ~
+    in: the number of items ~
+    expected: even? ~
+    actual: 3 ~
+
+                                        *expect-hash*
+(expect-hash k value-exp ... ...) -> expectation? ~
+  k : any/c ~
+  value-exp : any/c ~
+
+Returns an expectation that expects a value is a hash that contains
+exactly the given k keys and, for each key, contains a value that is
+then checked against the corresponding value-exp. Each value-exp is
+converted to an expectation with ->expectation. Extra or missing keys
+result in faults.
+
+Examples:
+
+  > (expect! (hash 'a 1 'b 2) (expect-hash 'a 1 'b 2))
+  > (expect! (hash 'a 1 'c 3) (expect-hash 'a 1 'b 2))
+  multiple failures
+    subject: '#hash((a . 1) (c . 3)) ~
+    fault: expected values to be contained ~
+     in: the set of keys ~
+     expected: 'b contained with set-member? ~
+     actual: (set 'a 'c) ~
+    fault: expected values to not be contained ~
+     in: the set of keys ~
+     expected: not 'c contained with set-member? ~
+     actual: (set 'a 'c) ~
+  > (expect! (hash 'a 1 'b 1000) (expect-hash 'a 1 'b 2))
+  expected a different value
+    subject: '#hash((a . 1) (b . 1000)) ~
+    in: value for key 'b ~
+    expected: equal? to 2 ~
+    actual: 1000 ~
+
+                                        *expect-hash-ref*
+(expect-hash-ref k value-exp) -> expectation? ~
+  k : any/c ~
+  value-exp : any/c ~
+
+Returns an expectation that expects a value is a hash that contains k,
+then checks the value for k against value-exp. The given value-exp is
+converted to an expectation with ->expectation.
+
+Examples:
+
+  > (expect! (hash 'a 1 'b 2) (expect-hash-ref 'a 1))
+  > (expect! (hash 'a 100) (expect-hash-ref 'a 1))
+  expected a different value
+    subject: '#hash((a . 100)) ~
+    in: value for key 'a ~
+    expected: equal? to 1 ~
+    actual: 100 ~
+  > (expect! (hash 'b 2) (expect-hash-ref 'a 1))
+  hash-ref: no value found for key
+    key: 'a ~
+
+                                        *expect-hash-count*
+(expect-hash-count count-exp) -> expectation? ~
+  count-exp : (or/c exact-nonnegative-integer? expectation?) ~
+
+Returns an expectation that expects a value is a hash whose number of
+key-value pairs is then checked against count-exp. If count-exp is an
+integer, it is converted to an expectation with ->expectation.
+
+Examples:
+
+  > (expect! (hash 'a 1 'b 2) (expect-hash-count 2))
+  > (expect! (hash 'a 1) (expect-hash-count (expect-pred even?)))
+  expected a different kind of value
+    subject: '#hash((a . 1)) ~
+    in: the number of items ~
+    expected: even? ~
+    actual: 1 ~
+
+                                        *expect-hash-keys*
+(expect-hash-keys set-exp) -> expectation? ~
+  set-exp : (or/c set? expectation?) ~
+
+Returns an expectation that expects a value is a hash whose set of keys
+is then checked against set-exp. If set-exp is a set, it is converted to
+an expectation with ->expectation.
+
+Examples:
+
+  > (expect! (hash 'a 1 'b 2) (expect-hash-keys (set 'a 'b)))
+  > (expect! (hash 'a 1) (expect-hash-keys (set 'a 'b)))
+  expected values to be contained
+    subject: '#hash((a . 1)) ~
+    in: the set of keys ~
+    expected: 'b contained with set-member? ~
+    actual: (set 'a) ~
+
+                                        *expect-box*
+(expect-box exp) -> expectation? ~
+  exp : any/c ~
+
+Returns an expectation that expects a box whose value is then checked
+against exp. If exp is not an expectation, it is converted to one with
+->expectation.
+
+Examples:
+
+  > (expect! (box 1) (expect-box 1))
+  > (expect! (box 100) (expect-box 1))
+  expected a different value
+    subject: '#&100 ~
+    in: the box's value ~
+    expected: equal? to 1 ~
+    actual: 100 ~
+
+                                        *expect-syntax*
+(expect-syntax value-exp) -> expectation? ~
+  value-exp : any/c ~
+
+Returns an expectation that expects a syntax object whose contents (as
+returned by syntax-e) are then checked against datum-exp. If datum-exp
+is not an expectation, it is converted to one with ->expectation.
+
+Examples:
+
+  > (expect! #'foo (expect-syntax 'foo))
+  > (expect! #'#(1 2 3) (expect-syntax (vector #'1 #'2 #'3)))
+  > (expect! #'foo (expect-syntax 'bar))
+  expected a different value
+    subject: #<syntax:eval:3:0 foo> ~
+    in: the return value of syntax-e ~
+    expected: equal? to 'bar ~
+    actual: 'foo ~
+
+5.1. Data Structure Contexts and Attributes
+
+                                        *struct*
+(struct sequence-context context (position) ~
+    #:transparent) ~
+  position : exact-nonnegative-integer? ~
+(make-sequence-context position) -> sequence-context?
+  position : exact-nonnegative-integer? ~
+
+A context and its constructor that represents the sequence item at
+position in a sequence, such as those returned by in-range. Like
+dict-context, thiscontext may be used in faults that operate on specific
+kinds of sequences. See expect-list-ref for an example.
+
+the-length-context : splice-context? ~
+
+A context value that represents the length of a sequence. More
+specifically, it is a splice-context containing three contexts:
+
+* An apply-context containing the procedure used to extract the length
+  of the sequence, e.g. vector-length.
+
+* the-return-context
+
+* A sequence-context with position 0, representing the first (and only)
+  return value.
+
+This context is used by expect-list-length, expect-set-count, and
+similar procedures.
+
+                                        *struct*
+(struct dict-context context (key) ~
+    #:transparent) ~
+  key : any/c ~
+(make-dict-context key) -> dict-context?
+  key : any/c ~
+
+A context and its constructor that represents the dictionary value for
+key in a dictionary, as defined by the gen:dict interface. This context
+may be used in faults that only operate on specialized dictionaries, see
+expect-hash-ref for an example.
+
+the-keys-context : splice-context? ~
+
+A context value that expect-hash-keys adds to its faults.
+
+the-box-context : context? ~
+
+A context value that represents the contents of a box value as returned
+by unbox.
+
+                                        *syntax-context?*
+(syntax-context? v) -> boolean? ~
+  v : any/c ~
+
+Returns true if v is the context value that expect-syntax adds to its
+faults.
+
+6. Text and String Expectations
+
+                                        *expect-regexp-match*
+(expect-regexp-match pattern [result-exp]) -> expectation? ~
+  pattern : regexp? ~
+  result-exp : (or/c (listof (or/c string? bytes? #f expectation?)) ~
+                     expectation?)
+             = expect-not-false
+
+Returns an expectation that expects a value is either a string, a
+bytestring, a path, or a port. Then, the value is matched against
+pattern using regexp-match and the match result is checked with
+result-exp. Using the default for result-exp checks that pattern matches
+the input value and ignores the result of the match. If result-exp is
+not an expectation, it is converted to one with ->expectation.
+
+Examples:
+
+  > (expect! "This is some message" (expect-regexp-match #rx"some"))
+  > (expect! "12x4x6" (expect-regexp-match #rx"x." '("x4")))
+  > (expect! "12x4x6" (expect-regexp-match #rx"x." '("x6")))
+  expected a different value
+    subject: "12x4x6" ~
+    in: the results of matching #rx"x." ~
+    in: item at position 0 ~
+    expected: equal? to "x6" ~
+    actual: "x4" ~
+
+                                        *expect-string-contains?*
+(expect-string-contains? str) -> expectation? ~
+  str : string? ~
+
+Returns an expectation that expects a string that contains str.
+Convenient shorthand for combining expect-contains with expect-pred and
+string?.
+
+Examples:
+
+  > (expect! "This is some message" (expect-string-contains? "some
+  message"))
+  > (expect! "This is some message" (expect-string-contains? "foo"))
+  expected a value to be contained
+    subject: "This is some message" ~
+    expected: "foo" contained with string-contains? ~
+    actual: "This is some message" ~
+
+                                        *expect-output*
+(expect-output exp [#:call call-exp]) -> expectation? ~ ~
+  exp : (or/c string? regexp? expectation?) ~
+  call-exp : expectation? = expect-not-raise ~
+
+Returns an expectation that expects a thunk. That thunk is called and
+the string it writes to current-output-port is checked against exp. If
+exp is not an expectation, it is converted to one with either
+expect-regexp-match if it’s a regexp or ->expectation otherwise.
+
+Examples:
+
+  > (define (foo) (display "foo!!!"))
+  > (expect! foo (expect-output "foo!!!"))
+  > (expect! foo (expect-output #rx"foo"))
+  > (expect! foo (expect-output "bar"))
+  expected a different value
+    subject: #<procedure:foo> ~
+    in: the string written to the output port ~
+    expected: equal? to "bar" ~
+    actual: "foo!!!" ~
+
+If call-exp is provided, the input thunk is additionally checked against
+call-exp. This allows asserting both the output of a thunk and other
+properties of the thunk without calling it twice, for the rare times
+when multiple calls should be avoided.
+
+Examples:
+
+  > (define (foo) (display "foo!!!"))
+  > (expect! foo (expect-output "foo!!!" #:call (expect-return (void)))) ~
+  > (expect! foo (expect-output "foo!!!" #:call (expect-raise))) ~
+  expected any value raised
+    subject: #<procedure:foo> ~
+    in: the raised value ~
+    expected: anything ~
+    actual: nothing ~
+
+6.1. String Attributes and Contexts
+
+                                        *struct*
+(struct regexp-match-context context (regexp) ~
+    #:transparent) ~
+  regexp : regexp? ~
+(make-regexp-match-context regexp) -> regexp-match-context?
+  regexp : regexp? ~
+
+A context and its constructor that indicates a fault occurred in the
+result of calling regexp-match with regexp.
+
+                                        *struct*
+(struct regexp-match-attribute attribute (regexp) ~
+    #:transparent) ~
+  regexp : regexp? ~
+(make-regexp-match-attribute regexp) -> regexp-match-attribute?
+  regexp : regexp? ~
+
+An attribute and its constructor that refers to whether or not a value
+matches regexp.
+
+the-output-context : context? ~
+
+A context that represents the string written to current-output-port
+during the evaluation of a thunk.
+
+7. Structure Expectations
+
+                                        *expect-struct*
+(expect-struct id [accessor-id expect-expr] ...) ~
+ 
+  expect-expr : any/c ~
+
+Creates an expectation that checks a value is an instance of the
+structure type id, then checks the value of applying each accessor-id to
+the struct with the corresponding expect-expr. If any expect-expr is not
+an expectation, it is converted to one with ->expectation. Not all
+accessors of id need to be provided; extra fields in structures checked
+by the expectation do not cause any faults. Accessors may be provided in
+any order.
+
+The id must have a transformer binding to a struct-info? value, and that
+value must supply the structure type’s predicate. Accessors of the
+struct’s supertypes are allowed. Faults found by the expectation in
+accessed fields have a struct-accessor-context value added to their
+contexts.
+
+Examples:
+
+  > (struct fish (color weight) #:transparent) ~
+  > (expect! (fish 'red 5) (expect-struct fish [fish-color 'blue]))
+  expected a different value
+    subject: (fish 'red 5) ~
+    in: the fish-color struct field ~
+    expected: equal? to 'blue ~
+    actual: 'red ~
+
+                                        *define-struct-expectation*
+(define-struct-expectation struct-maybe-id) ~
+ 
+struct-maybe-id = struct-id
+                | (id struct-id)
+
+Binds id to a procedure that constructs expectations with expect-struct.
+The bound procedure accepts one keyword argument for each non-inherited
+field of struct-id and passes it to struct-id. If id is not provided, it
+defaults to expect-struct-id. All keyword arguments to the bound
+procedure are optional; if not provided they default to expect-any.
+
+Like expect-struct, struct-id must have a transformer binding to a
+struct-info?, which is inspected by define-struct-expectation to
+determine what accessors to generate keyword arguments for. All
+accessors must be of the pattern struct-id-field-id (such as fish-color)
+or an "ambiguous keyword form" syntax error is reported. For accessors
+matching this pattern, the corresponding keyword used by the bound
+procedure is the symbol 'field-id converted to a keyword.
+
+Examples:
+
+  > (struct fish (color weight) #:transparent) ~
+  > (define-struct-expectation fish)
+  > (expect! (fish 'red 5) (expect-fish #:weight 20)) ~
+  expected a different value
+    subject: (fish 'red 5) ~
+    in: the fish-weight struct field ~
+    expected: equal? to 20 ~
+    actual: 5 ~
+
+                                        *struct*
+(struct struct-accessor-context context (accessor-id) ~
+    #:transparent) ~
+  accessor-id : identifier? ~
+
+A context that indicates a fault lies in a struct field defined by
+accessor-id.
+
+                                        *make-struct-accessor-context*
+(make-struct-accessor-context accessor-id) ~
+ -> struct-field-context?
+  accessor-id : identifier? ~
+
+Returns a struct-accessor-context with a default context-description
+string referencing accessor-id.
+
+Example:
+
+  > (make-struct-accessor-context #'shape-area)
+  (struct-accessor-context
+   "the shape-area struct field"
+   #<syntax:eval:1:0 shape-area>) ~
+
+8. Procedure Expectations
+
+                                        *expect-call*
+(expect-call args call-exp) -> expectation? ~
+  args : arguments? ~
+  call-exp : expectation? ~
+
+Returns an expectation that expects a procedure and checks call-exp on a
+thunk wrapping a call to that procedure with args. Use with
+expect-return to check the return value of the procedure call and with
+expect-raise or expect-not-raise to check how the procedure call behaves
+with respect to raised errors. The expected procedure’s arity is checked
+to ensure it can be called with args. See also expect-call-exn.
+
+Examples:
+
+  > (define exp-addition (expect-call (arguments 3 8) (expect-return 11)))
+  > (expect! + exp-addition)
+  > (expect! - exp-addition)
+  expected a different value
+    subject: #<procedure:-> ~
+    in: call with (arguments 3 8) ~
+    in: the return value ~
+    expected: equal? to 11 ~
+    actual: -5 ~
+  > (expect! (thunk 'wrong-arity) exp-addition)
+  expected a more inclusive arity
+    subject: #<procedure> ~
+    in: the procedure's arity ~
+    expected: arity accepting 2 arguments ~
+    actual: 0 ~
+  > (expect! (thunk* (raise 'error)) exp-addition)
+  expected no value raised
+    subject: #<procedure:eval:5:0> ~
+    in: call with (arguments 3 8) ~
+    in: the raised value ~
+    expected: nothing ~
+    actual: 'error ~
+
+                                        *expect-apply*
+(expect-apply f call-exp) -> expectation? ~
+  f : procedure? ~
+  call-exp : expectation? ~
+
+The inverse of expect-call. Returns an expectation that expects an
+arguments value and checks call-exp on a thunk wrapping a call to f with
+the arguments. Like expect-call, to check the return value or raised
+values use expect-return, expect-raise, or expect-not-raise for
+call-exp. See also expect-apply-exn.
+
+Examples:
+
+  > (define exp-add1=10 (expect-apply add1 (expect-return 10)))
+  > (expect! (arguments 9) exp-add1=10)
+  > (expect! (arguments 2) exp-add1=10)
+  expected a different value
+    subject: (arguments 2) ~
+    in: application to #<procedure:add1> ~
+    in: the return value ~
+    expected: equal? to 10 ~
+    actual: 3 ~
+
+                                        *expect-return*
+(expect-return value-exp ...) -> expectation? ~
+  value-exp : any/c ~
+
+Returns an expectation that expects a thunk that returns one value for
+each value-exp. Then, each returned value is checked against the
+corresponding value-exp. Each value-exp is converted to an expectation
+with ->expectation. To assert properties about the list of values as a
+whole, see expect-return*.
+
+Examples:
+
+  > (expect! (thunk 'foo) (expect-return 'foo))
+  > (expect! (thunk 'bar) (expect-return 'foo))
+  expected a different value
+    subject: #<procedure> ~
+    in: the return value ~
+    expected: equal? to 'foo ~
+    actual: 'bar ~
+  > (expect! (thunk (raise 'error)) (expect-return 'foo))
+  expected no value raised
+    subject: #<procedure> ~
+    in: the raised value ~
+    expected: nothing ~
+    actual: 'error ~
+  > (expect! (thunk (values 'foo 'bar)) (expect-return 'foo 'bar))
+
+                                        *expect-return**
+(expect-return* values-exp) -> expectation? ~
+  values-exp : (or/c list? expectation?) ~
+
+Like expect-return, but returns an expectation that expects a thunk,
+then calls that thunk and checks the list of values returned against
+values-exp. If values-exp is a list, it is converted to an expectation
+with ->expectation.
+
+Examples:
+
+  > (define expect-even-values
+      (expect-return* (expect-list-length (expect-pred even?))))
+  > (expect! (thunk (values)) expect-even-values)
+  > (expect! (thunk (values 'foo 'bar)) expect-even-values)
+  > (expect! (thunk 'foo) expect-even-values)
+  expected a different kind of value
+    subject: #<procedure> ~
+    in: the return values list ~
+    in: the number of items ~
+    expected: even? ~
+    actual: 1 ~
+
+                                        *expect-raise*
+(expect-raise [raise-exp]) -> expectation? ~
+  raise-exp : any/c = expect-any ~
+
+Returns an expectation that expects a thunk raises a value which is then
+checked against raise-exp. The given raise-exp is converted to an
+expectation with ->expectation.
+
+Examples:
+
+  > (define (raise-foo) (raise 'foo))
+  > (expect! raise-foo (expect-raise 'foo))
+  > (define (success) 'success)
+  > (expect! success (expect-raise 'foo))
+  expected any value raised
+    subject: #<procedure:success> ~
+    in: the raised value ~
+    expected: anything ~
+    actual: nothing ~
+  > (define (raise-bar) (raise 'bar))
+  > (expect! raise-bar (expect-raise 'foo))
+  expected a different value
+    subject: #<procedure:raise-bar> ~
+    in: the raised value ~
+    expected: equal? to 'foo ~
+    actual: 'bar ~
+
+expect-not-raise : expectation? ~
+
+An expectation that expects a thunk does not raise any value when
+called.
+
+Examples:
+
+  > (expect! (thunk 'success) expect-not-raise)
+  > (expect! (thunk (raise 'failure)) expect-not-raise)
+  expected no value raised
+    subject: #<procedure> ~
+    in: the raised value ~
+    expected: nothing ~
+    actual: 'failure ~
+  > (define (not-a-thunk unexpected-arg)
+      'foo)
+  > (expect! not-a-thunk expect-not-raise)
+  expected a more inclusive arity
+    subject: #<procedure:not-a-thunk> ~
+    in: the procedure's arity ~
+    expected: arity accepting 0 arguments ~
+    actual: 1 ~
+
+                                        *expect-exn*
+(expect-exn [msg-exp]) -> expectation? ~
+  msg-exp : (or/c string? regexp? expectation?) = expect-any ~
+
+Returns an expectation that expects an exn value or a subtype. The input
+exception’s message is then checked against msg-exp. If msg-exp is a
+regexp, it is converted to an expectation with (expect-regexp-match
+msg-exp); otherwise it is converted with ->expectation. See also
+expect-call-exn and expect-apply-exn.
+
+Examples:
+
+  > (define foo-exn (make-exn "foo
+  exception" (current-continuation-marks)))
+  > (expect! foo-exn (expect-exn #rx"foo"))
+  > (expect! foo-exn (expect-exn "foo exception"))
+  > (expect! foo-exn (expect-exn "foo"))
+  expected a different value
+    subject: (exn "foo exception" #<continuation-mark-set>) ~
+    in: the exn-message struct field ~
+    expected: equal? to "foo" ~
+    actual: "foo exception" ~
+  > (expect! 'not-an-exn (expect-exn))
+  expected a different kind of value
+    subject: 'not-an-exn ~
+    expected: exn? ~
+    actual: 'not-an-exn ~
+
+                                        *expect-call-exn*
+(expect-call-exn args [msg-exp]) -> expectation? ~
+  args : arguments? ~
+  msg-exp : (or/c string? regexp? expectation?) = expect-any ~
+
+Convenient shorthand for (expect-call args (expect-raise (expect-exn
+msg-exp))).
+
+                                        *expect-apply-exn*
+(expect-apply-exn f [msg-exp]) -> expectation? ~
+  f : procedure? ~
+  msg-exp : (or/c string? regexp? expectation?) = expect-any ~
+
+Convenient shorthand for (expect-apply args (expect-raise (expect-exn
+msg-exp))).
+
+8.1. Procedure Context Structures
+
+the-return-context : context? ~
+
+A context that represents the (only) return value of a procedure call.
+For calls that return multiple values, see the-return*-context.
+
+the-return*-context : context? ~
+
+A context that represents the list of all return values in a procedure
+call.
+
+the-raise-context : context? ~
+
+A context that represents the value that was given to raise in a
+procedure call that aborted with an exception.
+
+                                        *struct*
+(struct call-context context (args) ~
+    #:transparent) ~
+  args : arguments? ~
+(make-call-context args) -> call-context?
+  args : arguments? ~
+
+A context and its constructor that represents the thunk created by
+calling the subject procedure with args.
+
+                                        *struct*
+(struct apply-context context (proc) ~
+    #:transparent) ~
+  proc : procedure? ~
+(make-apply-context proc) -> apply-context?
+  proc : procedure? ~
+
+A context and its constructor that represents the thunk created by
+applying the subject arguments to proc.
+
+the-arity-context : context? ~
+
+A context that represents the arity of a procedure, as returned by
+procedure-arity.
+
+8.2. Procedure Attribute Structures
+
+                                        *struct*
+(struct arity-includes-attribute attribute (value) ~
+    #:transparent) ~
+  value : procedure-arity? ~
+(make-arity-includes-attribute arity)
+ -> arity-includes-attribute?
+  arity : procedure-arity? ~
+
+An attribute and its constructor that represents an arity that a
+procedure includes, in the sense of arity-includes?. This is distinct
+from arity-attribute in that the procedure’s actual arity may not be
+arity=? to the value arity.
+
+9. Macro Expansion Expectations
+
+                                        *expect-expand*
+(expect-expand exp [#:namespace ns]) -> expectation? ~ ~
+  exp : expectation? ~
+  ns : namespace? = (current-namespace) ~
+
+Returns an expectation that expects a syntax object object stx, then a
+thunk that evaluates (expand stx) is created and checked against exp.
+The call to expand is made with current-namespace parameterized to ns.
+Combine this with expect-raise to test that a specific syntax error is
+made, or  combine with expect-return to test properties of the resulting
+fully expanded syntax. See also expect-syntax-exn.
+
+Examples:
+
+  > (define success #f)
+  > (define-syntax-rule (foo (id v) ...) success)
+  > (expect! #'(foo (a 1) (b 2))
+             (expect-expand (expect-return (expect-syntax 'success))))
+  > (expect! #'(foo a) (expect-expand expect-not-raise))
+  expected no value raised
+    subject: #<syntax:eval:4:0 (foo a)> ~
+    in: application to #<procedure:expand> ~
+    in: the raised value ~
+    expected: nothing ~
+    actual: (exn:fail:syntax "eval:4:0: foo: use does not ~
+  match pattern: (foo (id v) ...)\n  in: (foo a)" ~
+  #<continuation-mark-set> '(#<syntax:eval:4:0 (foo a)>))
+
+                                        *expect-expand-once*
+(expect-expand-once exp [#:namespace ns]) -> expectation? ~ ~
+  exp : expectation? ~
+  ns : namespace? = (current-namespace) ~
+
+Like expect-expand, but calls expand-once on the input syntax object
+instead of expand.
+
+                                        *expect-syntax-exn*
+(expect-syntax-exn [msg-exp #:namespace ns]) -> expectation? ~ ~
+  msg-exp : (or/c string? regexp? expectation?) = expect-any ~
+  ns : namespace? = (current-namespace) ~
+
+Returns an expectation that expects a syntax object and expects that
+expanding that syntax object raises an exn:fail:syntax value whose
+message is checked against msg-exp. The syntax object is expanded with
+current-namespace parameterized to ns. If msg-exp is a regexp, it is
+converted to an expectation with expect-regexp-match. Otherwise, it is
+converted with ->expectation. This procedure is essentially sugar over
+combining expect-expand, expect-raise, expect-struct, and
+expect-regexp-match manually.
+
+Example:
+
+  >
+  (expect! #'(let ([a 1] [a 2]) (void)) (expect-syntax-exn #rx"duplicate"))
+
+10. Expectation Combinators
+
+Due to the structured representation of faults, expectations can be
+composed and extended in a variety of ways. Several combinators are
+provided to make it easier to construct complex expectations out of
+simple ones while preserving error message quality.
+
+                                        *expect/context*
+(expect/context exp ctxt) -> expectation? ~
+  exp : expectation? ~
+  ctxt : context? ~
+
+Returns an expectation that behaves the same as exp except that any
+faults returned have ctxt as an additional context. The extra context is
+added to the beginning of each fault’s list of contexts, not the end.
+
+Examples:
+
+  > (struct test-context context () #:transparent) ~
+  >
+  (define test-exp (expect/context (expect-eq? 'foo) (test-context "test")))
+  > (expect! 5 test-exp)
+  expected a different value
+    subject: 5 ~
+    in: test ~
+    expected: eq? to 'foo ~
+    actual: 5 ~
+
+                                        *expect/proc*
+(expect/proc exp proc) -> expectation? ~
+  exp : expectation? ~
+  proc : (-> any/c any/c) ~
+
+Returns an expectation that behaves like exp except that input values
+are passed to proc and the result is given to exp.
+
+Examples:
+
+  > (define first-foo (expect/proc (expect-eq? 'foo) first))
+  > (expect! '(foo bar) first-foo)
+  > (expect! '(bar foo) first-foo)
+  expected a different value
+    subject: '(bar foo) ~
+    expected: eq? to 'foo ~
+    actual: 'bar ~
+
+                                        *expect/dependent*
+(expect/dependent exp-proc) -> expectation? ~
+  exp-proc : (-> any/c expectation?) ~
+
+Returns an expectation that passes its value to exp-proc then checks the
+value against the expectation returned by exp-proc. This is useful when
+the exact set of faults that a value could have depends on the shape of
+the value, such as in the case of expect-list (which uses
+expect/dependent under the hood).
+
+Examples:
+
+  > (define (last-string-expectation vs)
+      (expect-list-ref (expect-pred string?) (sub1 (length vs))))
+  > (define expect-last-string (expect/dependent last-string-expectation))
+  > (expect! '(a b "foo") expect-last-string)
+  > (expect! '(a b c) expect-last-string)
+  expected a different kind of value
+    subject: '(a b c) ~
+    in: item at position 2 ~
+    expected: string? ~
+    actual: 'c ~
+
+                                        *expect/singular*
+(expect/singular fault-proc) -> expectation? ~
+  fault-proc : (-> any/c (or/c fault? #f)) ~
+
+Returns an expectation that passes its value to fault-proc and either
+returns the fault returned by fault-proc or returns an empty list of
+faults if fault-proc returns #f. This is useful when an expectation
+could logically only return a single fault at most, removing the
+boilerplate of returning either a singular list or an empty list.
+
+Examples:
+
+  > (struct single-digit-attribute attribute () #:transparent) ~
+  > (define (single-digit-fault v)
+      (and (not (<= 0 v 9))
+           (fault #:summary "a single digit positive integer" ~
+                  #:expected (single-digit-attribute "integer between 0 ~
+  and 9")
+                  #:actual (make-self-attribute v)))) ~
+  > (define expect-single-digit (expect/singular single-digit-fault))
+  > (expect! 5 expect-single-digit)
+  > (expect! 123 expect-single-digit)
+  expected a single digit positive integer
+    subject: 123 ~
+    expected: integer between 0 and 9 ~
+    actual: 123 ~
+
+                                        *expect/around*
+(expect/around exp around-proc) -> expectation? ~
+  exp : expectation? ~
+  around-proc : (-> (-> (listof fault?)) (listof fault?)) ~
+
+Returns an expectation that wraps every call to exp with around-proc.
+The argument to around-proc is a thunk that returns the faults found by
+exp in the input of the returned expectation, and the return value of
+around-proc is used as the faults found by the returned expectation.
+This allows customizing the dynamic extent of an expectation, and in
+particular is useful for expectations that need to parameterize their
+application.
+
+Examples:
+
+  > (define (log-num-faults thnk)
+      (define fs (thnk))
+      (printf "found ~v faults\n" (length fs))
+      fs)
+  > (define exp-123/log
+      (expect/around (expect-equal? '(1 2 3)) log-num-faults))
+  > (expect! '(1 2 3) exp-123/log)
+  found 0 faults
+  > (expect! '(1 a b) exp-123/log)
+  found 2 faults
+  multiple failures
+    subject: '(1 a b) ~
+    fault: expected a different value ~
+     in: item at position 1 ~
+     expected: equal? to 2 ~
+     actual: 'a ~
+    fault: expected a different value ~
+     in: item at position 2 ~
+     expected: equal? to 3 ~
+     actual: 'b ~
+
+11. Meta Expectations
+
+These functions construct expectations for asserting properties of other
+expectations. This is especially useful when testing custom
+expectations.
+
+                                        *expect-exp-faults*
+(expect-exp-faults input fault-exp ...) -> expectation? ~
+  input : any/c ~
+  fault-exp : (or/c expectation? fault?) ~
+
+Returns an expectation that expects a value that is itself an
+expectation. That expectation is applied to input and is expected to
+return one fault for each fault-exp. Each returned fault is checked
+against the corresponding exp. If any exp is not an expectation, it is
+converted to one with ->expectation. See also expect-exp-faults*.
+
+Examples:
+
+  > (expect! expect-true (expect-exp-faults #f expect-any))
+  > (expect! expect-true (expect-exp-faults #f))
+  expected a different value
+    subject: #<expectation:true> ~
+    in: the expectation applied to #f ~
+    in: the return value ~
+    in: the number of items ~
+    expected: eqv? to 0 ~
+    actual: 1 ~
+
+                                        *expect-exp-faults**
+(expect-exp-faults* input fault-exp*) -> expectation? ~
+  input : any/c ~
+  fault-exp* : (or/c expectation? ~
+                     (listof (or/c fault?
+                                   expectation?)))
+
+Like expect-exp-faults, but the entire list of faults returned by
+applying a subject expectation to input is checked against fault-exp*.
+
+Examples:
+
+  > (define (expect-exp-even-faults input)
+      (expect-exp-faults* input (expect-list-length (expect-pred even?))))
+  > (define exp-ab (expect-list 1 2))
+  > (expect! exp-ab (expect-exp-even-faults '(1 2)))
+  > (expect! exp-ab (expect-exp-even-faults '(a b)))
+  > (expect! exp-ab (expect-exp-even-faults '(1 foo)))
+  expected a different kind of value
+    subject: #<expectation:list> ~
+    in: the expectation applied to '(1 foo) ~
+    in: the return value ~
+    in: the number of items ~
+    expected: even? ~
+    actual: 1 ~
+
+                                        *expect-exp-apply*
+(expect-exp-apply v thunk-exp) -> expectation? ~
+  v : any/c ~
+  thunk-exp : expectation? ~
+
+A more general form of expect-exp-faults and expect-exp-faults*. Returns
+an expectation that expects a value e that is itself an expectation.
+Then, a thunk wrapping the expression (expectation-apply e v) is created
+and checked against thunk-exp. For thunk-exp, using expect-return checks
+the returned faults of the expectation just like expect-exp-faults and
+expect-exp-faults*.
+
+Examples:
+
+  > (expect! expect-any (expect-exp-apply 'foo (expect-return '())))
+  >
+  (define error-exp (expectation (λ (_) (raise 'kaboom!)) #:name 'error)) ~
+  > (expect! error-exp (expect-exp-apply 'foo (expect-raise 'kaboom!)))
+  > (expect! error-exp (expect-exp-apply 'foo (expect-return '())))
+  expected no value raised
+    subject: #<expectation:error> ~
+    in: the expectation applied to 'foo ~
+    in: the raised value ~
+    expected: nothing ~
+    actual: 'kaboom! ~
+
+                                        *expect-fault*
+(expect-fault [#:summary summary-exp          ~ ~
+               #:actual actual-exp            ~
+               #:expected expected-exp        ~
+               #:contexts contexts-exp]) -> expectation? ~
+  summary-exp : any/c = expect-any ~
+  actual-exp : any/c = expect-any ~
+  expected-exp : any/c = expect-any ~
+  contexts-exp : any/c = expect-any ~
+
+Returns an expectation that expects a fault whose summary, actual,
+expected, and contexts fields are then checked against summary-exp,
+actual-exp, expected-exp, and contexts-exp respectively.
+
+Examples:
+
+  > (define flt
+      (fault #:summary "test fault" ~
+             #:expected (make-self-attribute 'foo) ~
+             #:actual (make-self-attribute 'bar))) ~
+  > (expect! flt (expect-fault))
+  > (expect! flt (expect-fault #:actual (make-self-attribute 'bar))) ~
+  > (expect! flt (expect-fault #:summary "not test fault")) ~
+  expected a different value
+    subject: (fault "test fault" (self-attribute "'foo" 'foo) ~
+  (self-attribute "'bar" 'bar) '())
+    in: the fault-summary struct field ~
+    expected: equal? to "not test fault" ~
+    actual: "test fault" ~
+
+                                        *struct*
+(struct expect-context context (input) ~
+    #:transparent) ~
+  input : any/c ~
+(make-expect-context input) -> expect-context?
+  input : any/c ~
+
+A context and its constructor that represents the thunk created by
+wrapping a call to expectation-apply with the subject expectation and
+input. Used by expect-exp-apply and its derivatives.
+
+12. Conversion to Expectations
+
+                                        *->expectation*
+(->expectation v) -> expectation?
+  v : any/c ~
+
+Returns an expectation constructed by converting v to an expectation.
+Expectation conversion occurs via the following process:
+
+* Any expectation (according to expectation?) is convertible to itself.
+
+* Lists are convertible with expect-list after first converting their
+  contained items.
+
+* Hashes (but not generic dictionaries) are convertible with expect-hash
+  after first converting their contained values.
+
+* Vectors are convertible with expect-vector after first converting
+  their contained items.
+
+* Sets are convertible with expect-set. Items in the set are not
+  converted, as that would have no sensible definition that respected
+  the properties of sets.
+
+* Syntax objects are convertible with expect-syntax after first
+  converting the syntax object’s contents.
+
+* All other values are convertible to expectations constructed with
+  expect-equal?.
+
+This process roughly means that v is converted to an expectation that
+checks that its input is equal? to v, unless v is a container with
+expectations inside it. For example, note the difference between the
+following two expectations:
+
+Examples:
+
+  > (expect! (list 1 2) (->expectation (list 1 expect-any)))
+  > (expect! (list 1 2) (expect-equal? (list 1 expect-any)))
+  expected a different value
+    subject: '(1 2) ~
+    in: item at position 1 ~
+    expected: equal? to #<expectation:any> ~
+    actual: 2 ~
+
+So ->expectation can be thought of a variant of expect-equal? that
+allows specifying that sub-structures of the value should match some
+expectation instead of merely being equal? to an expected value.
+
+WARNING: Not all built-in Racket collection types are supported, and
+there is no way for custom data types to cooperate with ->expectation.
+These limitations may be addressed by future versions of this library.

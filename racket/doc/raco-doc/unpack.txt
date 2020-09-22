@@ -1,0 +1,145 @@
+raco unpack: Unpacking Library Collections
+
+The raco unpack command unpacks a ".plt" archive (see [missing]) to the
+current directory without attempting to install any collections. Use
+raco pkg (see [missing]) to install a ".plt" archive as a package, or
+use raco setup -A (see [missing]) to unpack and install collections from
+a ".plt" archive.
+
+Command-line flags:
+
+* -l or --list — lists the content of the archive without unpacking it.
+
+* -c or --config — shows the archive configuration before unpacking or
+  listing the archive content.
+
+* -f or --force — replace files that exist already; files that the
+  archive says should be replaced will be replaced without this flag.
+
+1. Unpacking API
+
+ (require setup/unpack) package: base ~
+
+The setup/unpack library provides raw support for unpacking a ".plt"
+file.
+
+                                        *unpack*
+(unpack  archive                         ~
+        [main-collects-parent-dir       
+         print-status                   
+         get-target-directory           
+         force?                         
+         get-target-plt-directory]) -> void?
+  archive : path-string? ~
+  main-collects-parent-dir : path-string? = (current-directory) ~
+  print-status : (string? . -> . any) ~
+               = (lambda (x) (printf "~a\n" x))
+  get-target-directory : (-> path-string?) ~
+                       = (lambda () (current-directory))
+  force? : any/c = #f ~
+  get-target-plt-directory : (path-string? ~
+                              path-string?
+                              (listof path-string?)
+                              . -> . path-string?)
+                           = (lambda (preferred-dir main-dir options)
+                               preferred-dir)
+
+Unpacks archive.
+
+The main-collects-parent-dir argument is passed along to
+get-target-plt-directory.
+
+The print-status argument is used to report unpacking progress.
+
+The get-target-directory argument is used to get the destination
+directory for unpacking an archive whose content is relative to an
+arbitrary directory.
+
+If force? is true, then version and required-collection mismatches
+(comparing information in the archive to the current installation) are
+ignored.
+
+The get-target-plt-directory function is called to select a target for
+installation for an archive whose is relative to the installation. The
+function should normally return one if its first two arguments; the
+third argument merely contains the first two, but has only one element
+if the first two are the same. If the archive does not request
+installation for all uses, then the first two arguments will be
+different, and the former will be a user-specific location, while the
+second will refer to the main installation.
+
+                                        *fold-plt-archive*
+(fold-plt-archive archive             ~
+                  on-config-fn       
+                  on-setup-unit      
+                  on-directory       
+                  on-file            
+                  initial-value) -> any/c
+  archive : path-string? ~
+  on-config-fn : (any/c any/c . -> . any/c) ~
+  on-setup-unit : (any/c input-port? any/c . -> . any/c) ~
+  on-directory : ((or/c path-string? ~
+                        (list/c (or/c 'collects 'doc 'lib 'include)
+                                path-string?))
+                  any/c
+                  . -> . any/c)
+  on-file : (or/c ((or/c path-string? ~
+                         (list/c (or/c 'collects 'doc 'lib 'include)
+                                 path-string?))
+                   input-port?
+                   any/c
+                   . -> . any/c)
+                  ((or/c path-string?
+                         (list/c (or/c 'collects 'doc 'lib 'include)
+                                 path-string?))
+                   input-port?
+                   (one-of/c 'file 'file-replace)
+                   any/c
+                   . -> . any/c))
+  initial-value : any/c ~
+
+Traverses the content of archive, which must be a ".plt" archive that is
+created with the default unpacking unit and configuration expression.
+The configuration expression is not evaluated, the unpacking unit is not
+invoked, and files are not unpacked to the filesystem. Instead, the
+information in the archive is reported back through on-config,
+on-setup-unit, on-directory, and on-file, each of which can build on an
+accumulated value that starts with initial-value and whose final value
+is returned.
+
+The on-config-fn function is called once with an S-expression that
+represents a function to implement configuration information. The second
+argument to on-config is initial-value, and the function’s result is
+passed on as the last argument to on-setup-unit.
+
+The on-setup-unit function is called with the S-expression
+representation of the installation unit, an input port that points to
+the rest of the file, and the accumulated value. This input port is the
+same port that will be used in the rest of processing, so if
+on-setup-unit consumes any data from the port, then that data will not
+be consumed by the remaining functions. (This means that on-setup-unit
+can leave processing in an inconsistent state, which is not checked by
+anything, and therefore could cause an error.) The result of
+on-setup-unit becomes the new accumulated value.
+
+For each directory that would be created by the archive when unpacking
+normally, on-directory is called with the directory path (described more
+below) and the accumulated value up to that point, and its result is the
+new accumulated value.
+
+For each file that would be created by the archive when unpacking
+normally, on-file is called with the file path (described more below),
+an input port containing the contents of the file, an optional mode
+symbol indicating whether the file should be replaced, and the
+accumulated value up to that point; its result is the new accumulated
+value. The input port can be used or ignored, and parsing of the rest of
+the file continues the same either way. After on-file returns control,
+however, the input port is drained of its content.
+
+A directory or file path can be a plain path, or it can be a list
+containing 'collects, 'doc, 'lib, or 'include and a relative path. The
+latter case corresponds to a directory or file relative to a target
+installation’s collection directory (in the sense of find-collects-dir),
+documentation directory (in the sense of find-doc-dir), library
+directory (in the sense of find-lib-dir), or “include” directory (in the
+sense of find-include-dir).

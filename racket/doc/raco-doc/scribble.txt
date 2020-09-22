@@ -1,0 +1,4 @@
+raco scribble: Building Documentation
+
+See [missing] for information on the raco scribble command, which is
+used to run and render a Scribble document.

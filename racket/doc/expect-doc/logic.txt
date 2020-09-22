@@ -1,0 +1,196 @@
+Boolean and Logic Expectations
+
+expect-true : expectation? ~
+expect-false : expectation? ~
+expect-not-false : expectation? ~
+
+Expectations that expect a value is either #t, #f, or not #f
+respectively. Returned faults have self-attribute values in the expected
+field, except for expect-not-false which wraps a self-attribute value in
+a not-attribute value.
+
+Examples:
+
+  > (expect! 'foo expect-true)
+  expected true
+    subject: 'foo ~
+    expected: #t ~
+    actual: 'foo ~
+  > (expect! 'foo expect-false)
+  expected false
+    subject: 'foo ~
+    expected: #f ~
+    actual: 'foo ~
+  > (expect! 'foo expect-not-false)
+  > (expect! #f expect-not-false)
+  expected not false
+    subject: #f ~
+    expected: not #f ~
+    actual: #f ~
+
+                                        *expect-pred*
+(expect-pred pred) -> expectation? ~
+  pred : predicate/c ~
+
+Returns an expectation that expects a value results in (pred v)
+returning #t. Returned faults have pred-attribute values and
+self-attribute values in their expected and actual fields respectively.
+
+Examples:
+
+  > (expect! 10 (expect-pred number?))
+  > (expect! 'foo (expect-pred number?))
+  expected a different kind of value
+    subject: 'foo ~
+    expected: number? ~
+    actual: 'foo ~
+
+                                        *expect-all*
+(expect-all exp ...) -> expectation? ~
+  exp : expectation? ~
+
+Returns an expectation that expects everything that each of the given
+exp values expects. All expectations are tested and each expectation’s
+faults are returned together with all other faults. To combine
+expectations in a way where later expectations are tested only if
+earlier ones pass, see expect-and.
+
+Examples:
+
+  > (define positive-even
+      (expect-all (expect-pred positive?) (expect-pred even?)))
+  > (expect! 4 positive-even)
+  > (expect! 7 positive-even)
+  expected a different kind of value
+    subject: 7 ~
+    expected: even? ~
+    actual: 7 ~
+  > (expect! -4 positive-even)
+  expected a different kind of value
+    subject: -4 ~
+    expected: positive? ~
+    actual: -4 ~
+  > (expect! -7 positive-even)
+  multiple failures
+    subject: -7 ~
+    fault: expected a different kind of value ~
+     expected: positive? ~
+     actual: -7 ~
+    fault: expected a different kind of value ~
+     expected: even? ~
+     actual: -7 ~
+
+                                        *expect-and*
+(expect-and exp ...) -> expectation? ~
+  exp : expectation? ~
+
+Returns an expectation that expects everything that each of the given
+exp values expects. Each expectation is tested in order and if any
+expectation finds any faults, those faults are returned immediately and
+the remaining exp expectations are not tested. To combine expectations
+in a way where all expectations are tested and all faults returned
+together, see expect-all.
+
+Examples:
+
+  > (define (small? x) (< x 10))
+  > (define small-number
+      (expect-and (expect-pred real?)
+                  (expect-pred positive?)
+                  (expect-pred small?)))
+  > (expect! 5 small-number)
+  > (expect! 20 small-number)
+  expected a different kind of value
+    subject: 20 ~
+    expected: small? ~
+    actual: 20 ~
+  > (expect! -4 small-number)
+  expected a different kind of value
+    subject: -4 ~
+    expected: positive? ~
+    actual: -4 ~
+  > (expect! 'foo small-number)
+  expected a different kind of value
+    subject: 'foo ~
+    expected: real? ~
+    actual: 'foo ~
+
+                                        *expect-conjoin*
+(expect-conjoin pred ...) -> expectation? ~
+  pred : predicate/c ~
+
+Equivalent to (expect-and (expect-pred pred) ...).
+
+                                        *expect-disjoin*
+(expect-disjoin pred ...) -> expectation? ~
+  pred : predicate/c ~
+
+Returns an expectation that expects a value that satisfies at least one
+of the given pred functions. If no pred returns #t for the checked
+value, a single fault is found with an or-attribute value containing a
+list of pred-attribute values in or-attribute-cases.
+
+Examples:
+
+  > (define exp-str-or-sym (expect-disjoin string? symbol?))
+  > (expect! "foo" exp-str-or-sym)
+  > (expect! 'foo exp-str-or-sym)
+  > (expect! 42 exp-str-or-sym)
+  expected a different kind of value
+    subject: 42 ~
+    expected: string? or symbol? ~
+    actual: 42 ~
+
+1. Boolean Attributes
+
+                                        *struct*
+(struct not-attribute attribute (negated) ~
+    #:transparent) ~
+  negated : attribute? ~
+(make-not-attribute negated) -> not-attribute?
+  negated : attribute? ~
+
+An attribute and its constructor that negates the meaning of negated.
+The description of a constucted attribute has the format "not 
+(attribute-description negated) ".
+
+                                        *struct*
+(struct pred-attribute attribute (value) ~
+    #:transparent) ~
+  value : predicate/c ~
+(make-pred-attribute value) -> pred-attribute?
+  value : predicate/c ~
+
+An attribute and its constructor that represents whether or not the
+input value satisfies the value predicate.
+
+                                        *struct*
+(struct and-attribute attribute (cases) ~
+    #:transparent) ~
+  cases : (listof attribute?) ~
+(make-and-attribute  cases                    
+                    [#:description desc]) -> and-attribute? ~
+  cases : (listof attribute?) ~
+  desc : (or/c string? #f) = #f ~
+
+An attribute and its constructor that describes that a fault refers to
+every one of cases. This is useful for collapsing multiple nearly
+identical faults into a single fault; see expect-contains-all? for an
+example. If desc is not provided, it defaults to the descriptions of
+each of cases joined with commas and an and between the last two
+descriptions.
+
+                                        *struct*
+(struct or-attribute attribute (cases) ~
+    #:transparent) ~
+  cases : (listof attribute?) ~
+(make-or-attribute  cases                    
+                   [#:description desc]) -> or-attribute? ~
+  cases : (listof attribute?) ~
+  desc : (or/c string? #f) = #f ~
+
+An attribute and its constructor that describes at least one of cases. A
+fault might use this to describe that it expected one of multiple
+possible values. If desc is not provided, it defaults to the
+descriptions of each of cases joined with commas and an or between the
+last two descriptions.

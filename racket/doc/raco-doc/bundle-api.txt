@@ -1,0 +1,35 @@
+API for Bundling Distributions
+
+ (require compiler/bundle-dist) package: compiler-lib ~
+
+The compiler/bundle-dist library provides a function to pack a directory
+(usually assembled by assemble-distribution) into a distribution file.
+On Windows, the result is a ".zip" archive; on Mac OS, it’s a ".dmg"
+disk image; on Unix, it’s a ".tgz" archive.
+
+                                        *bundle-directory*
+(bundle-directory dist-file dir [for-exe?]) -> void? ~
+  dist-file : file-path? ~
+  dir : file-path? ~
+  for-exe? : any/c = #f ~
+
+Packages dir into dist-file. If dist-file has no extension, a file
+extension is added automatically (using the first result of
+bundle-put-file-extension+style+filters).
+
+The created archive contains a directory with the same name as
+dir—except on Mac OS when for-exe? is true and dir contains a single a
+single file or directory, in which case the created disk image contains
+just the file or directory. The default for for-exe? is #f.
+
+Archive creation fails if dist-file exists.
+
+                                        *bundle-put-file-extension+style+filters*
+(bundle-put-file-extension+style+filters) ~
+ -> (or/c string? false/c)
+    (listof (one-of/c 'packages 'enter-packages))
+    (listof (list/c string? string?))
+
+Returns three values suitable for use as the extension, style, and
+filters arguments to put-file, respectively to select a
+distribution-file name.

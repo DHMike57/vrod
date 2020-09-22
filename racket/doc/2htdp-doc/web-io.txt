@@ -1,0 +1,21 @@
+Web IO: "web-io.rkt"
+
+Matthias Felleisen
+
+ (require 2htdp/web-io) package: htdp-lib ~
+
+The teachpack provides a single function:
+
+                                        *show-in-browser*
+(show-in-browser x) -> string? ~
+  x : xexpr? ~
+
+Translates the given X-expression into a String. It also has the  effect
+of opening an external browser and displaying the  X-expression rendered
+as XHTML.
+
+Example
+
+  (show-in-browser '(html (body (b "hello world"))))
+
+Added in version 1.0 of package htdp-lib.

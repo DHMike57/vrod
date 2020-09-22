@@ -1,0 +1,17 @@
+raco read: Reading and Pretty-Printing
+
+The raco read command reads and pretty-prints the contents of the given
+files. This command is useful for showing how a #reader or #lang-based
+reader extension converts input to an S-expression. It is also useful
+for pretty-printing a term that is already in S-expression form.
+
+Command-line flags:
+
+* -n >n< or --columns >n<  — format output for a display with >n<
+  columns
+
+* -h or --help — show help information for this command
+
+* -- — do not treat remaining arguments as switches
+
+Added in version 1.3 of package compiler-lib.

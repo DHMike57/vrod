@@ -1,0 +1,69 @@
+Testing Utilities
+
+1. Checking documentation completeness
+
+ (require rackunit/docs-complete) package: racket-index ~
+
+                                        *check-docs*
+(check-docs lib [#:skip skip]) -> any ~ ~
+  lib : module-path? ~
+  skip : (or/c regexp?                         = #f ~
+               symbol?
+               (listof (or/c regexp? symbol?))
+               (-> symbol? any)
+               #f)
+
+Checks to see if the module path named by lib (e.g. 'racket/list) has
+documented all of its exports and prints an error message to
+(current-error-port) if not.
+
+If skip is a regexp, then exporting matching that regexp are ignored. If
+it is a symbol, then that export is ignored. If it is a list of symbols
+and regexps, then any exporting matching any of the symbols or regexps
+are ignored. If it is a function, the function is treated as a predicate
+and passed each export of the module. If skip is #f, no exports are
+skipped.
+
+Changed in version 1.10 of package racket-index: Changed lib to accept
+any module path.
+
+2. Logging Test Results
+
+ (require rackunit/log) package: testing-util-lib ~
+
+Rackunit provides a general purpose library for tracking test results
+and displaying a summary message.
+
+                                        *test-log!*
+(test-log! result) -> void? ~
+  result : any/c ~
+
+Adds a test result to the running log. If result is false, then the test
+is considered a failure.
+
+                                        *test-log*
+(test-log [#:display? display?  ~ ~
+           #:exit? exit?])      ~
+ -> (cons/c exact-nonnegative-integer?
+            exact-nonnegative-integer?)
+  display? : boolean? = #f ~
+  exit? : boolean? = #f ~
+
+Processes the running test log. The first integer is the failed tests,
+the second is the total tests. If display? is true, then a message is
+displayed. If there were failures, the message is printed on
+(current-error-port). If exit? is true, then if there were failures,
+calls (exit 1).
+
+                                        *test-log-enabled?*
+(test-log-enabled?) -> boolean? ~
+(test-log-enabled? enabled?) -> void?
+  enabled? : boolean? ~
+ = #t
+
+When set to #f, test-log! is a no-op. This is useful to dynamically
+disable certain tests whose failures are expected and shouldn’t be
+counted in the test log, such as when testing a custom check’s failure
+behavior.
+
+Added in version 1.1 of package testing-util-lib.

@@ -1,0 +1,8 @@
+raco demod: Demodularizing Programs
+
+The raco demod command takes a Racket module and flattens all of its
+dependencies into a single compiled module. A file ">name<.rkt" is
+demodularized into ">name<_rkt_merged.zo".
+
+The demodularized zo file can be run by passing it as an argument to the
+racket command-line program.

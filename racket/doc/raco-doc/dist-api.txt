@@ -1,0 +1,43 @@
+API for Distributing Executables
+
+ (require compiler/distribute) package: base ~
+
+The compiler/distribute library provides a function to perform the same
+work as raco distribute.
+
+                                        *assemble-distribution*
+(assemble-distribution  dest-dir                           ~
+                        exec-files                        
+                       [#:executables? executables?        ~
+                        #:relative-base relative-base      ~
+                        #:collects-path path               ~
+                        #:copy-collects dirs])        -> void? ~
+  dest-dir : path-string? ~
+  exec-files : (listof path-string?) ~
+  executables? : any/c = #t ~
+  relative-base : (or/c path-string? #f) = #f ~
+  path : (or/c false/c (and/c path-string? relative-path?)) = #f ~
+  dirs : (listof path-string?) = null ~
+
+Copies the executables in exec-files to the directory dest-dir, along
+with DLLs, frameworks, shared libraries, and/or runtime files that the
+executables need to run a different machine. If executables? is #f, then
+the exec-files are treated as plain data files, instead of executables,
+and they are modified in-place.
+
+The arrangement of the executables and support files in dest-dir depends
+on the platform. In general, assemble-distribution tries to do the Right
+Thing, but a non-#f value for relative-base specifies a path for
+reaching the assembled content relative to the executable at run time.
+When executables? is #f, then the default access path is dest-dir, with
+its relativeness preserved.
+
+If a #:collects-path argument is given, it overrides the default
+location of the main "collects" directory for the packaged executables.
+It should be relative to the dest-dir directory (typically inside it).
+
+The content of each directory in the #:copy-collects argument is copied
+into the main "collects" directory for the packaged executables.
+
+Changed in version 6.3 of package base: Added the #:executables?
+and #:relative-base arguments.

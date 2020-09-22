@@ -1,0 +1,72 @@
+SICP Language                        *sicp-lang*
+
+ #lang sicp package: sicp ~
+
+
+
+1. Introduction
+
+The programs in the book are written in (a subset of) the programming
+language Scheme. As the years have passed the programming language
+Scheme has evolved. The language #lang sicp provides you with a version
+of R5RS (the fifth revision of Scheme) changed slightly in order for
+programs in SICP to run as is.
+
+To use the sicp language simply use #lang sicp as the first line of your
+program. If you need to use Racket libraries, then use #%require. R5RS
+has no require to avoid breaking programs that use the name require.
+#%require is therefore used instead.
+
+2. Built-In
+
+nil : null? ~
+
+An alias for '().
+
+                                        *inc*
+(inc x) -> number? ~
+  x : number? ~
+
+Returns (+ x 1).
+
+                                        *dec*
+(dec x) -> number? ~
+  x : number? ~
+
+Returns (- x 1).
+
+the-empty-stream : stream? ~
+
+The null/empty stream.
+
+                                        *cons-stream*
+(cons-stream first-expr rest-expr) ~
+
+Produces a stream
+
+                                        *stream-null?*
+(stream-null? s) -> boolean? ~
+  s : stream? ~
+
+Returns #t if s is the-empty-stream, #f otherwise.
+
+                                        *runtime*
+(runtime) -> natural-number/c ~
+
+Returns the current time measured as the number of microseconds passed
+since a fixed beginning.
+
+                                        *random*
+(random n) -> real? ~
+  n : positive? ~
+
+Returns an random integer between 0 and n-1 (inclusive) if n is an exact
+integer, otherwise returns a random inexact number between 0 and n
+(exclusive).
+
+                                        *amb*
+(amb expr ...) ~
+
+The amb operator.
+
+Additionally, true, false, identity, and error are provided from Racket.

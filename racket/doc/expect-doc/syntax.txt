@@ -1,0 +1,56 @@
+Macro Expansion Expectations
+
+                                        *expect-expand*
+(expect-expand exp [#:namespace ns]) -> expectation? ~ ~
+  exp : expectation? ~
+  ns : namespace? = (current-namespace) ~
+
+Returns an expectation that expects a syntax object object stx, then a
+thunk that evaluates (expand stx) is created and checked against exp.
+The call to expand is made with current-namespace parameterized to ns.
+Combine this with expect-raise to test that a specific syntax error is
+made, or  combine with expect-return to test properties of the resulting
+fully expanded syntax. See also expect-syntax-exn.
+
+Examples:
+
+  > (define success #f)
+  > (define-syntax-rule (foo (id v) ...) success)
+  > (expect! #'(foo (a 1) (b 2))
+             (expect-expand (expect-return (expect-syntax 'success))))
+  > (expect! #'(foo a) (expect-expand expect-not-raise))
+  expected no value raised
+    subject: #<syntax:eval:4:0 (foo a)> ~
+    in: application to #<procedure:expand> ~
+    in: the raised value ~
+    expected: nothing ~
+    actual: (exn:fail:syntax "eval:4:0: foo: use does not ~
+  match pattern: (foo (id v) ...)\n  in: (foo a)" ~
+  #<continuation-mark-set> '(#<syntax:eval:4:0 (foo a)>))
+
+                                        *expect-expand-once*
+(expect-expand-once exp [#:namespace ns]) -> expectation? ~ ~
+  exp : expectation? ~
+  ns : namespace? = (current-namespace) ~
+
+Like expect-expand, but calls expand-once on the input syntax object
+instead of expand.
+
+                                        *expect-syntax-exn*
+(expect-syntax-exn [msg-exp #:namespace ns]) -> expectation? ~ ~
+  msg-exp : (or/c string? regexp? expectation?) = expect-any ~
+  ns : namespace? = (current-namespace) ~
+
+Returns an expectation that expects a syntax object and expects that
+expanding that syntax object raises an exn:fail:syntax value whose
+message is checked against msg-exp. The syntax object is expanded with
+current-namespace parameterized to ns. If msg-exp is a regexp, it is
+converted to an expectation with expect-regexp-match. Otherwise, it is
+converted with ->expectation. This procedure is essentially sugar over
+combining expect-expand, expect-raise, expect-struct, and
+expect-regexp-match manually.
+
+Example:
+
+  >
+  (expect! #'(let ([a 1] [a 2]) (void)) (expect-syntax-exn #rx"duplicate"))

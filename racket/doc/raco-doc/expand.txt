@@ -1,0 +1,13 @@
+raco expand: Macro Expansion
+
+The raco expand command macro-expands and pretty-prints the contents of
+the given source files. See also expand.
+
+Command-line flags:
+
+* -n >n< or --columns >n<  — format output for a display with >n<
+  columns
+
+* -h or --help — show help information for this command
+
+* -- — do not treat remaining arguments as switches

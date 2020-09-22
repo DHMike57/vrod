@@ -1,0 +1,374 @@
+Batch Input/Output: "batch-io.rkt"
+
+Matthias Felleisen
+
+ (require 2htdp/batch-io) package: htdp-lib ~
+
+The batch-io teachpack introduces several functions and a form for
+reading  content from files and one function for writing to a file.
+
+1. IO Functions
+
+All functions that read a file consume the name of a file and possibly
+additional arguments. They assume that the specified file exists in the
+same folder as the program; if not they signal an error:
+
+* (read-file f) -> string?
+    f : (or/c 'standard-in 'stdin (and/c string? file-exists?)) ~
+
+  reads the standard input device (until closed) or the content of file
+  f and produces it as a string, including newlines.
+
+  Example:
+
+    > (read-file "data.txt")
+    "hello world \n good bye \n\ni, for 1, am done "
+
+  assuming the file named "data.txt" has this shape:
+
+  hello world
+   good bye
+   
+  i, for 1, am done
+
+  Note how the leading space in the second line translates into the
+  space between the newline indicator and the word "good" in the result.
+
+* (read-1strings f) -> (listof 1string?)
+    f : (or/c 'standard-in 'stdin (and/c string? file-exists?)) ~
+
+  reads the standard input device (until closed) or the content of file
+  f and produces it as a list of one-char strings, one per character.
+
+  Example:
+
+    > (read-1strings "data.txt")
+    '("h"
+      "e"
+      "l"
+      "l"
+      "o"
+      " "
+      "w"
+      "o"
+      "r"
+      "l"
+      "d"
+      " "
+      "\n"
+      " "
+      "g"
+      "o"
+      "o"
+      "d"
+      " "
+      "b"
+      "y"
+      "e"
+      " "
+      "\n"
+      "\n"
+      "i"
+      ","
+      " "
+      "f"
+      "o"
+      "r"
+      " "
+      "1"
+      ","
+      " "
+      "a"
+      "m"
+      " "
+      "d"
+      "o"
+      "n"
+      "e"
+      " ")
+
+  Note how this function reproduces all parts of the file faithfully,
+  including spaces and newlines.
+
+* (read-lines f) -> (listof string?)
+    f : (or/c 'standard-in 'stdin (and/c string? file-exists?)) ~
+
+  reads the standard input device (until closed) or the content of file
+  f and produces it as a list of strings, one per line.
+
+  Example:
+
+    > (read-lines "data.txt")
+    '("hello world " " good bye " "" "i, for 1, am done ")
+
+  when "data.txt" is the name of the same file as in the preceding item.
+  And again, the leading space of the second line shows up in the second
+  string in the list.
+
+  If the last line is not terminated by a newline, the functions acts as
+  if there were one.
+
+* (read-words f) -> (listof string?)
+    f : (or/c 'standard-in 'stdin (and/c string? file-exists?)) ~
+
+  reads the standard input device (until closed) or the content of file
+  f and produces it as a list of strings, one per white-space separated
+  token in the file.
+
+  Example:
+
+    > (read-words "data.txt")
+    '("hello" "world" "good" "bye" "i," "for" "1," "am" "done")
+
+  This time, however, the extra leading space of the second line of
+  "data.txt" has disappeared in the result. The space is considered a
+  part of the separator that surrounds the word "good".
+
+* (read-words/line f) -> (listof (listof string?))
+    f : (or/c 'standard-in 'stdin (and/c string? file-exists?)) ~
+
+  reads the standard input device (until closed) or the content of file
+  f and produces it as a list of lists, one per line; each line is
+  represented as a list of strings.
+
+  Example:
+
+    > (read-words/line "data.txt")
+    '(("hello" "world") ("good" "bye") () ("i," "for" "1," "am" "done"))
+
+  The results is similar to the one that read-words produces,
+
+  except that the organization of the file into lines is preserved. In
+  particular, the empty third line is represented as an empty list of
+  words.
+
+  If the last line is not terminated by a newline, the functions acts as
+  if there were one.
+
+* (read-words-and-numbers/line f) -> (listof (or number? string?))
+    f : (or/c 'standard-in 'stdin (and/c string? file-exists?)) ~
+
+  reads the standard input device (until closed) or the content of file
+  f and produces it as a list of lists, one per line; each line is
+  represented as a list of strings and numbers.
+
+  Example:
+
+    > (read-words-and-numbers/line "data.txt")
+    '(("hello" "world") ("good" "bye") () ("i," "for" "1," "am" "done"))
+
+  The results is like the one that read-words/line produces, except
+  strings that can be parsed as numbers are represented as numbers.
+
+  If the last line is not terminated by a newline, the functions acts as
+  if there were one.
+
+* (read-csv-file f) -> (listof (listof any/c))
+    f : (or/c 'standard-in 'stdin (and/c string? file-exists?)) ~
+
+  reads the standard input device (until closed) or the content of file
+  f and produces it as a list of lists of comma-separated values.
+
+  Example:
+
+    > (read-csv-file "data.csv")
+    '(("hello" "world") ("good" "bye") ("i" "am" "done"))
+
+  where the file named "data.csv" has this shape:
+
+  hello, world
+   good, bye
+  i, am, done
+
+  It is important to understand that the rows don’t have to have the
+  same length. Here the third line of the file turns into a row of three
+  elements.
+
+* (read-csv-file/rows f s) -> (listof X?)
+    f : (or/c 'standard-in 'stdin (and/c string? file-exists?)) ~
+    s : (-> (listof any/c) X?) ~
+
+  reads the standard input device (until closed) or the content of file
+  f and produces it as reads the content of file f and produces it as
+  list of rows, each constructed via s.
+
+  Examples:
+
+    > (read-csv-file/rows "data.csv" (lambda (x) x))
+    '(("hello" "world") ("good" "bye") ("i" "am" "done"))
+    > (read-csv-file/rows "data.csv" length)
+    '(2 2 3)
+
+  The first example shows how read-csv-file is just a short form  for
+  read-csv-file/rows; the second one simply counts the  number of
+  separated tokens and the result is just a list of numbers.  In many
+  cases, the function argument is used to construct a structure from  a
+  row.
+
+* (read-xexpr f) -> xexpr?
+    f : (or/c 'standard-in 'stdin (and/c string? file-exists?)) ~
+
+  reads the standard input device (until closed) or the content of file
+  f and produces it as an X-expression, including whitespace such as
+  tabs and newlines.
+
+  Assumption: the file f or the selected input device contains an XML
+  element. It assumes the file contains HTML-like text and reads it as
+  XML.
+
+  Example:
+
+    > (read-xexpr "data.xml")
+    '(pre () "\nhello world\ngood bye\n\ni, for 1, am done\n")
+
+  assuming the file named "data.xml" has this shape:
+
+  <pre>
+  hello world
+  good bye
+   
+  i, for 1, am done
+  </pre>
+
+  Note how the result includes "\\n" for the newlines.
+
+* (read-plain-xexpr f) -> xexpr?
+    f : (or/c 'standard-in 'stdin (and/c string? file-exists?)) ~
+
+  reads the standard input device (until closed) or the content of file
+  f and produces it as an X-expression, without whitespace.
+
+  Assumption: the file f or the selected input device contains an XML
+  element and the content of this element are other XML elements and
+  whitespace. In particular, the XML element does not contain any
+  strings as elements other than whitespace.
+
+  Example:
+
+    > (read-plain-xexpr "data-plain.xml")
+    '(pre
+      ()
+      (line ((text "hello world")))
+      (line ((text "good bye")))
+      (line ())
+      (line ((text "i, for 1, am done"))))
+
+  assuming the file named "data-plain.xml" has this shape:
+
+  <pre>
+  <line text="hello world" />
+  <line text="good bye" />
+  <line />
+  <line text="i, for 1, am done" />
+  </pre>
+
+  Compare this result with the one for read-xexpr.
+
+There is only one writer function at the moment:
+
+* (write-file f cntnt) -> string?
+    f : (or/c 'standard-out 'stdout string?) ~
+    cntnt : string? ~
+
+  sends cntnt to the standard output device or turns cntnt into the
+  content of file f, located in the same folder (directory) as the
+  program. If the write succeeds, the function produces the name of the
+  file (f); otherwise it signals an error.
+
+  Example:
+
+    > (if (string=? (write-file "output.txt" "good bye") "output.txt")
+          (write-file "output.txt" "cruel world")
+          (write-file "output.txt" "cruel world"))
+    with-output-to-file: cannot open output file
+      path: /usr/share/racket/pkgs/htdp-doc/teachpack/2htdp/scri ~
+    bblings/output.txt
+      system error: Permission denied; errno=13 ~
+
+  After evaluating this examples, the file named "output.txt"  looks
+  like this: cruel world  Explain why.
+
+                                        *file-exists?*
+(file-exists? f) -> boolean? ~
+  f : string? ~
+
+determines whether a file with the given name exists in the current
+directory.
+
+Warning: The file IO functions in this teachpack are platform
+dependent. That is, as long as your programs and your files live on the
+same platform, you should not have any problems reading the files that
+programs wrote and vice versa. If, however, one of your programs writes
+a  file on a Windows operating system and if you then copy this output
+file  to a Mac, reading the copied text file may produce extraneous
+“return”  characters. Note that this describes only one example of
+possible  malfunction; there are other cases when trans-platform actions
+may cause  this teachpack to fail.
+
+2. Web Functions
+
+All functions that read a web-based XML consume a URL and possibly
+additional arguments. They assume that the computer is connected to
+specified part of the web, though they tolerate non-existent web pages
+(404 errors)
+
+* (read-xexpr/web u) -> xexpr?
+    u : string? ~
+
+  reads the content of URL u and produces the first XML element as an
+  xexpr? including whitespace such as tabs and newlines. If possible,
+  the function interprets the HTML at the specified URL as XML. The
+  function returns #f if the web page does not exist (404)
+
+* (read-plain-xexpr/web u) -> xexpr?
+    u : string? ~
+
+  reads the content of URL u and produces the first XML element as an
+  xexpr? without whitespace. If possible, the function interprets the
+  HTML at the specified URL as XML. The function returns #f if the web
+  page does not exist (404)
+
+* (url-exists? u) -> boolean?
+    u : string? ~
+
+  ensures that the specified URL u does not produce a 404 error.
+
+* (xexpr? u) -> boolean?
+    u : any? ~
+
+  checks that the given value is an X-expression in the following sense:
+
+    ;   Xexpr is one of: ~
+    ;   – symbol?
+    ;   – string?
+    ;   – number?
+    ;   – (cons symbol? (cons [List-of Attribute] [List-of Xexpr]))
+    ;   – (cons symbol? [List-of Xexpr])
+    ; 
+    ;   Attribute is: ~
+    ;      (list symbol? string?)
+    ;   (list 'a "some text") is called an a-Attribute
+    ;   and "some text" is a's value.
+
+  Note that full Racket uses a wider notion of X-expression.
+
+* (xexpr-as-string x) -> string?
+    x : xexpr? ~
+
+  renders the given X-expression as a string.
+
+* (url-html-neighbors u) -> (listof string?)
+    u : string? ~
+
+  retrieves the content of URL u and produces the list of all URLs that
+  refer to .html pages via an <a> tag.
+
+3. Testing
+
+                                        *simulate-file*
+(simulate-file process str ...) ~
+
+simulates a file system for the function process, which reads a file and
+may produce one. Note: this form is under development and will be
+documented in a precise manner after it is finalized and useful for a
+wide audience.

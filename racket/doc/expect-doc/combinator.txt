@@ -1,0 +1,131 @@
+Expectation Combinators
+
+Due to the structured representation of faults, expectations can be
+composed and extended in a variety of ways. Several combinators are
+provided to make it easier to construct complex expectations out of
+simple ones while preserving error message quality.
+
+                                        *expect/context*
+(expect/context exp ctxt) -> expectation? ~
+  exp : expectation? ~
+  ctxt : context? ~
+
+Returns an expectation that behaves the same as exp except that any
+faults returned have ctxt as an additional context. The extra context is
+added to the beginning of each fault’s list of contexts, not the end.
+
+Examples:
+
+  > (struct test-context context () #:transparent) ~
+  >
+  (define test-exp (expect/context (expect-eq? 'foo) (test-context "test")))
+  > (expect! 5 test-exp)
+  expected a different value
+    subject: 5 ~
+    in: test ~
+    expected: eq? to 'foo ~
+    actual: 5 ~
+
+                                        *expect/proc*
+(expect/proc exp proc) -> expectation? ~
+  exp : expectation? ~
+  proc : (-> any/c any/c) ~
+
+Returns an expectation that behaves like exp except that input values
+are passed to proc and the result is given to exp.
+
+Examples:
+
+  > (define first-foo (expect/proc (expect-eq? 'foo) first))
+  > (expect! '(foo bar) first-foo)
+  > (expect! '(bar foo) first-foo)
+  expected a different value
+    subject: '(bar foo) ~
+    expected: eq? to 'foo ~
+    actual: 'bar ~
+
+                                        *expect/dependent*
+(expect/dependent exp-proc) -> expectation? ~
+  exp-proc : (-> any/c expectation?) ~
+
+Returns an expectation that passes its value to exp-proc then checks the
+value against the expectation returned by exp-proc. This is useful when
+the exact set of faults that a value could have depends on the shape of
+the value, such as in the case of expect-list (which uses
+expect/dependent under the hood).
+
+Examples:
+
+  > (define (last-string-expectation vs)
+      (expect-list-ref (expect-pred string?) (sub1 (length vs))))
+  > (define expect-last-string (expect/dependent last-string-expectation))
+  > (expect! '(a b "foo") expect-last-string)
+  > (expect! '(a b c) expect-last-string)
+  expected a different kind of value
+    subject: '(a b c) ~
+    in: item at position 2 ~
+    expected: string? ~
+    actual: 'c ~
+
+                                        *expect/singular*
+(expect/singular fault-proc) -> expectation? ~
+  fault-proc : (-> any/c (or/c fault? #f)) ~
+
+Returns an expectation that passes its value to fault-proc and either
+returns the fault returned by fault-proc or returns an empty list of
+faults if fault-proc returns #f. This is useful when an expectation
+could logically only return a single fault at most, removing the
+boilerplate of returning either a singular list or an empty list.
+
+Examples:
+
+  > (struct single-digit-attribute attribute () #:transparent) ~
+  > (define (single-digit-fault v)
+      (and (not (<= 0 v 9))
+           (fault #:summary "a single digit positive integer" ~
+                  #:expected (single-digit-attribute "integer between 0 ~
+  and 9")
+                  #:actual (make-self-attribute v)))) ~
+  > (define expect-single-digit (expect/singular single-digit-fault))
+  > (expect! 5 expect-single-digit)
+  > (expect! 123 expect-single-digit)
+  expected a single digit positive integer
+    subject: 123 ~
+    expected: integer between 0 and 9 ~
+    actual: 123 ~
+
+                                        *expect/around*
+(expect/around exp around-proc) -> expectation? ~
+  exp : expectation? ~
+  around-proc : (-> (-> (listof fault?)) (listof fault?)) ~
+
+Returns an expectation that wraps every call to exp with around-proc.
+The argument to around-proc is a thunk that returns the faults found by
+exp in the input of the returned expectation, and the return value of
+around-proc is used as the faults found by the returned expectation.
+This allows customizing the dynamic extent of an expectation, and in
+particular is useful for expectations that need to parameterize their
+application.
+
+Examples:
+
+  > (define (log-num-faults thnk)
+      (define fs (thnk))
+      (printf "found ~v faults\n" (length fs))
+      fs)
+  > (define exp-123/log
+      (expect/around (expect-equal? '(1 2 3)) log-num-faults))
+  > (expect! '(1 2 3) exp-123/log)
+  found 0 faults
+  > (expect! '(1 a b) exp-123/log)
+  found 2 faults
+  multiple failures
+    subject: '(1 a b) ~
+    fault: expected a different value ~
+     in: item at position 1 ~
+     expected: equal? to 2 ~
+     actual: 'a ~
+    fault: expected a different value ~
+     in: item at position 2 ~
+     expected: equal? to 3 ~
+     actual: 'b ~

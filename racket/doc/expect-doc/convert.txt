@@ -1,0 +1,52 @@
+Conversion to Expectations
+
+                                        *->expectation*
+(->expectation v) -> expectation?
+  v : any/c ~
+
+Returns an expectation constructed by converting v to an expectation.
+Expectation conversion occurs via the following process:
+
+* Any expectation (according to expectation?) is convertible to itself.
+
+* Lists are convertible with expect-list after first converting their
+  contained items.
+
+* Hashes (but not generic dictionaries) are convertible with expect-hash
+  after first converting their contained values.
+
+* Vectors are convertible with expect-vector after first converting
+  their contained items.
+
+* Sets are convertible with expect-set. Items in the set are not
+  converted, as that would have no sensible definition that respected
+  the properties of sets.
+
+* Syntax objects are convertible with expect-syntax after first
+  converting the syntax object’s contents.
+
+* All other values are convertible to expectations constructed with
+  expect-equal?.
+
+This process roughly means that v is converted to an expectation that
+checks that its input is equal? to v, unless v is a container with
+expectations inside it. For example, note the difference between the
+following two expectations:
+
+Examples:
+
+  > (expect! (list 1 2) (->expectation (list 1 expect-any)))
+  > (expect! (list 1 2) (expect-equal? (list 1 expect-any)))
+  expected a different value
+    subject: '(1 2) ~
+    in: item at position 1 ~
+    expected: equal? to #<expectation:any> ~
+    actual: 2 ~
+
+So ->expectation can be thought of a variant of expect-equal? that
+allows specifying that sub-structures of the value should match some
+expectation instead of merely being equal? to an expected value.
+
+WARNING: Not all built-in Racket collection types are supported, and
+there is no way for custom data types to cooperate with ->expectation.
+These limitations may be addressed by future versions of this library.

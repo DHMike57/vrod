@@ -1,0 +1,260 @@
+Data Model
+
+Conceptually, an expectation is a function that returns a list of faults
+about its input. Faults are a difference between some expected attribute
+of the input and an actual attribute. Faults are often scoped to a
+context, which identifies where precisely in the input value the
+discrepency exists. This section documents each of these structures and
+how to use their basic functionalities.
+
+                                        *expectation?*
+(expectation? v) -> boolean? ~
+  v : any/c ~
+
+Returns #t if v is an expectation, returns #f otherwise.
+
+Examples:
+
+  > (expectation? 6)
+  #f
+  > (expectation? expect-true)
+  #t
+
+                                        *expectation*
+(expectation proc [#:name name]) -> expectation? ~ ~
+  proc : (-> any/c (listof fault?)) ~
+  name : (or/c symbol? #f) = #f ~
+
+Returns an expectation whose implementation is proc and whose name (in
+the sense of object-name) is name.
+
+Examples:
+
+  > (define empty-expectation (expectation (λ (v) (list)) #:name 'empty)) ~
+  > empty-expectation
+  #<expectation:empty>
+  > (expectation-apply empty-expectation 'foo)
+  '()
+
+                                        *expectation-apply*
+(expectation-apply exp v) -> (listof faults?) ~
+  exp : expectation? ~
+  v : any/c ~
+
+Checks v against exp and returns a list of faults found by exp.
+
+Examples:
+
+  > (expectation-apply (expect-equal? (list 1 2)) (list 1 2))
+  '()
+  > (expectation-apply (expect-equal? (list 1 2)) (list 1 'foo))
+  (list
+   (fault
+    "a different value"
+    (compare-attribute "equal? to 2" #<procedure:equal?> 2) ~
+    (self-attribute "'foo" 'foo)
+    (list (sequence-context "item at position 1" 1))))
+
+                                        *expect!*
+(expect! v exp) -> void? ~
+  v : any/c ~
+  exp : any/c ~
+
+Checks that v has no faults according to exp. If it does, an instance of
+exn:fail:expect is raised with a message detailing the faults. If exp is
+not an expectation, it is converted to one with ->expectation.
+
+Examples:
+
+  > (expect! '(1 2) '(1 2))
+  > (expect! '(1 a b) '(1 2))
+  multiple failures
+    subject: '(1 a b) ~
+    fault: expected a different value ~
+     in: the number of items ~
+     expected: eqv? to 2 ~
+     actual: 3 ~
+    fault: expected a different value ~
+     in: item at position 1 ~
+     expected: equal? to 2 ~
+     actual: 'a ~
+
+                                        *struct*
+(struct exn:fail:expect exn:fail (subject faults)) ~ ~
+  subject : any/c ~
+  faults : (listof fault?) ~
+
+An instance of exn:fail that is thrown by expect! when a value does not
+live up to an expectation. The subject field is the original value
+checked against the expectation and the faults field is the list of
+faults found by the expectation.
+
+                                        *expectation-rename*
+(expectation-rename exp name) -> expectation? ~
+  exp : expectation? ~
+  name : (or/c symbol? #f) ~
+
+Returns an expectation that is like exp, but with its name (as returned
+by object-name) set to name. An expectation’s printed form inludes its
+name in the format #<expectation: name >.
+
+Examples:
+
+  > expect-any
+  #<expectation:any>
+  > (expectation-rename expect-any 'anything-at-all)
+  #<expectation:anything-at-all>
+  > (expectation-rename expect-any #f)
+  #<expectation>
+
+expect-any : expectation? ~
+
+The empty expectation. Finds no faults in any value. Not very useful on
+it’s own, but this is sometimes useful in higher order contexts such as
+a default argument.
+
+                                        *fault?*
+(fault? v) -> boolean? ~
+  v : any/c ~
+
+Returns #t if v is a fault, returns #f otherwise.
+
+Examples:
+
+  > (fault? 6)
+  #f
+  > (fault? (fault #:summary "test fault" ~
+                   #:expected (make-self-attribute 'foo) ~
+                   #:actual (make-self-attribute 'bar))) ~
+  #t
+
+                                        *fault*
+(fault  #:summary summary          ~ ~
+        #:expected expected        ~
+        #:actual actual            ~
+       [#:contexts contexts]) -> fault? ~
+  summary : string? ~
+  expected : attribute? ~
+  actual : attribute? ~
+  contexts : (listof context?) = (list) ~
+
+Returns a fault with the given summary, expected and actual attributes,
+and contexts. Contexts are given in order of least specific to most
+specific; see expect-list for an example of proper use of contexts.
+
+Examples:
+
+  > (fault #:summary "test fault" ~
+           #:expected (make-self-attribute 'foo) ~
+           #:actual (make-self-attribute 'bar)) ~
+  (fault
+   "test fault"
+   (self-attribute "'foo" 'foo)
+   (self-attribute "'bar" 'bar)
+   '())
+  > (struct test-context context () #:transparent) ~
+  > (fault #:summary "test fault with contexts" ~
+           #:expected (make-self-attribute 'foo) ~
+           #:actual (make-self-attribute 'bar) ~
+           #:contexts (list (test-context "test context") ~
+                            (test-context "nested test context")))
+  (fault
+   "test fault with contexts"
+   (self-attribute "'foo" 'foo)
+   (self-attribute "'bar" 'bar)
+   (list (test-context "test context") (test-context "nested test
+  context")))
+
+                                        *fault-summary*
+(fault-summary flt) -> string? ~
+  flt : fault? ~
+(fault-expected flt) -> attribute?
+  flt : fault? ~
+(fault-actual flt) -> attribute?
+  flt : fault? ~
+(fault-contexts flt) -> (listof context?)
+  flt : fault? ~
+
+Accessors for the various fields of a fault? structure. See fault for
+information about these fields.
+
+                                        *struct*
+(struct context (description) ~
+    #:transparent) ~
+  description : string? ~
+
+A structure type for what context a fault occurs in. Contexts are meant
+to be structured information, so that different clients can render
+descriptions of contexts in different ways. Every context includes a
+description string so that a simple text description of the context can
+be constructed. The context constructor is not provided; it’s not
+possible to create a context without defining a subtype of the context
+struct. Various expectations provided by this library define and provide
+their own context subtypes that add extra fields, see expect-list for an
+example.
+
+                                        *struct*
+(struct attribute (description) ~
+    #:transparent) ~
+  description : string? ~
+
+A structure type for an attribute, some property of a value that a fault
+refers to. Like contexts, attributes are structured information with a
+string description whose subtypes add additional fields for clients to
+use to construct error messages. Additionally, the attribute constructor
+is not provided so the only way to create attributes is with a subtype.
+See self-attribute for a trivial implementation.
+
+                                        *struct*
+(struct splice-context context (values) ~
+    #:transparent) ~
+  values : (listof context?) ~
+(make-splice-context  ctxts                    
+                     [#:description desc]) -> splice-context? ~
+  ctxts : (listof context?) ~
+  desc : (or/c string? #f) = #f ~
+
+A context and its constructor that represents a summary of ctxts. A list
+of contexts containing a splice-context can be thought of as equivalent
+to if ctxts were inserted to the list instead of the splice-context.
+This is used by expectations that produce several fine-grained contexts
+that can be considered a single logical context. The make-splice-context
+constructor uses desc as the description of the splice; if not provided,
+it combines the descriptions of ctxts. Like a contexts list passed to
+fault, the ctxts contexts are expected to be ordered from most specific
+to least specific.
+
+Examples:
+
+  > (define data-contexts
+      (list (make-sequence-context 2)
+            (make-sequence-context 6)
+            (make-dict-context 'foo)))
+  > (context-description (make-splice-context data-contexts))
+  "item at position 2 of item at position 6 of value for key 'foo"
+  > (context-description
+     (make-splice-context data-contexts #:description ".foo[6][2]")) ~
+  ".foo[6][2]"
+
+                                        *struct*
+(struct self-attribute attribute (value) ~
+    #:transparent) ~
+  value : any/c ~
+(make-self-attribute v) -> self-attribute?
+  v : any/c ~
+
+An attribute and its constructor that directly represents the value
+referred to by the context of a fault.
+
+Example:
+
+  > (make-self-attribute 'foo)
+  (self-attribute "'foo" 'foo)
+
+the-any-attribute : attribute? ~
+the-none-attribute : attribute? ~
+
+These attributes are used by faults to express that they expected or
+found any value at all or no value at all. This is typically for faults
+with a context that may not be present on all values. For a concrete
+example of their uses, see expect-raise and expect-return.

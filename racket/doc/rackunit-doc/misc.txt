@@ -1,0 +1,29 @@
+Miscellaneous Utilities
+
+The require/expose macro allows you to access bindings that a module
+does not provide.  It is useful for testing the private functions of
+modules.
+
+                                        *require/expose*
+(require/expose module (id ...)) ~
+
+Requires id from module into the current module.  It doesn’t matter if
+the source module provides the bindings or not; require/expose can still
+get at them.
+
+Note that require/expose can be a bit fragile, especially when mixed
+with compiled code.  Use at your own risk!
+
+This example gets make-failure-test, which is defined in a RackUnit
+test:
+
+  (require/expose rackunit/private/check-test (make-failure-test))
+
+                                        *dynamic-require/expose*
+(dynamic-require/expose mod name) -> any ~
+  mod : (or/c module-path? ~
+              module-path-index?
+              resolved-module-path?)
+  name : symbol? ~
+
+Like dynamic-require, but gets internal bindings like require/expose.

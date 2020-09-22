@@ -1,0 +1,272 @@
+Planet Cute Images
+
+ (require 2htdp/planetcute) package: htdp-lib ~
+
+The 2htdp/planetcute library contains the Planet Cute art by Daniel Cook
+(Lostgarden.com).
+
+The images are designed to be overlaid with each other to build scenes
+for use in games. Here is an example image taken from the Planet Cute
+website.
+
+  ; stack : non-empty-list-of-images -> image ~
+  ; stacks 'imgs' on each other, separated by 40 pixels
+  (define (stack imgs)
+    (cond
+      [(empty? (rest imgs)) (first imgs)]
+      [else (overlay/xy (first imgs)
+                        0 40
+                        (stack (rest imgs)))]))
+
+  > (beside/align
+     "bottom"
+     (stack (list wall-block-tall stone-block))
+     (stack (list character-cat-girl
+                  stone-block stone-block
+                  stone-block stone-block))
+     water-block
+     (stack (list grass-block dirt-block))
+     (stack (list grass-block dirt-block dirt-block)))
+  #(struct:object:image% ...)
+
+The Planet Cute images also include some shadows that can improve the
+look of your game; see the Shadows section for an overview of how to use
+them.
+
+1. Characters
+
+character-boy : image? ~
+
+#(struct:object:image% ...)
+
+character-cat-girl : image? ~
+
+#(struct:object:image% ...)
+
+character-horn-girl : image? ~
+
+#(struct:object:image% ...)
+
+character-pink-girl : image? ~
+
+#(struct:object:image% ...)
+
+character-princess-girl : image? ~
+
+#(struct:object:image% ...)
+
+enemy-bug : image? ~
+
+#(struct:object:image% ...)
+
+speech-bubble : image? ~
+
+#(struct:object:image% ...)
+
+2. Blocks
+
+brown-block : image? ~
+
+#(struct:object:image% ...)
+
+dirt-block : image? ~
+
+#(struct:object:image% ...)
+
+grass-block : image? ~
+
+#(struct:object:image% ...)
+
+plain-block : image? ~
+
+#(struct:object:image% ...)
+
+stone-block-tall : image? ~
+
+#(struct:object:image% ...)
+
+stone-block : image? ~
+
+#(struct:object:image% ...)
+
+wall-block-tall : image? ~
+
+#(struct:object:image% ...)
+
+wall-block : image? ~
+
+#(struct:object:image% ...)
+
+water-block : image? ~
+
+#(struct:object:image% ...)
+
+wood-block : image? ~
+
+#(struct:object:image% ...)
+
+3. Items
+
+chest-closed : image? ~
+
+#(struct:object:image% ...)
+
+chest-lid : image? ~
+
+#(struct:object:image% ...)
+
+chest-open : image? ~
+
+#(struct:object:image% ...)
+
+gem-blue : image? ~
+
+#(struct:object:image% ...)
+
+gem-green : image? ~
+
+#(struct:object:image% ...)
+
+gem-orange : image? ~
+
+#(struct:object:image% ...)
+
+heart : image? ~
+
+#(struct:object:image% ...)
+
+key : image? ~
+
+#(struct:object:image% ...)
+
+rock : image? ~
+
+#(struct:object:image% ...)
+
+selector : image? ~
+
+#(struct:object:image% ...)
+
+tree-short : image? ~
+
+#(struct:object:image% ...)
+
+tree-tall : image? ~
+
+#(struct:object:image% ...)
+
+tree-ugly : image? ~
+
+#(struct:object:image% ...)
+
+yellow-star : image? ~
+
+#(struct:object:image% ...)
+
+4. Ramps
+
+ramp-east : image? ~
+
+#(struct:object:image% ...)
+
+ramp-north : image? ~
+
+#(struct:object:image% ...)
+
+ramp-south : image? ~
+
+#(struct:object:image% ...)
+
+ramp-west : image? ~
+
+#(struct:object:image% ...)
+
+5. Buildings
+
+door-tall-closed : image? ~
+
+#(struct:object:image% ...)
+
+door-tall-open : image? ~
+
+#(struct:object:image% ...)
+
+roof-east : image? ~
+
+#(struct:object:image% ...)
+
+roof-north-east : image? ~
+
+#(struct:object:image% ...)
+
+roof-north-west : image? ~
+
+#(struct:object:image% ...)
+
+roof-north : image? ~
+
+#(struct:object:image% ...)
+
+roof-south-east : image? ~
+
+#(struct:object:image% ...)
+
+roof-south-west : image? ~
+
+#(struct:object:image% ...)
+
+roof-south : image? ~
+
+#(struct:object:image% ...)
+
+roof-west : image? ~
+
+#(struct:object:image% ...)
+
+window-tall : image? ~
+
+#(struct:object:image% ...)
+
+6. Shadows
+
+The shadow images are intended to be overlaid on the other blocks when
+they appear in certain configurations, as detailed here.
+
+#(struct:object:bitmap% ...) #(struct:object:bitmap% ...)
+#(struct:object:bitmap% ...) #(struct:object:bitmap% ...)
+
+shadow-east : image? ~
+
+#(struct:object:image% ...)
+
+shadow-north-east : image? ~
+
+#(struct:object:image% ...)
+
+shadow-north-west : image? ~
+
+#(struct:object:image% ...)
+
+shadow-north : image? ~
+
+#(struct:object:image% ...)
+
+shadow-side-west : image? ~
+
+#(struct:object:image% ...)
+
+shadow-south-east : image? ~
+
+#(struct:object:image% ...)
+
+shadow-south-west : image? ~
+
+#(struct:object:image% ...)
+
+shadow-south : image? ~
+
+#(struct:object:image% ...)
+
+shadow-west : image? ~
+
+#(struct:object:image% ...)
