@@ -15,7 +15,7 @@ To regenerate a new set of text files from fresh Rackets docs:
 
 To generate the omni list:
 
-    grep -P '\*[a-z=\!\?\-]+\*' doc/*.txt |s 's/.*\*([a-z].*)\*$/\1/' >dict/funcs.txt
+    grep -P '\*[a-z=\!\?\-]+\*' $(find racket/ -name \*.txt) |awk -F\* '{print $2}'|sort -u > dict/funcs.txt
 
 An alternative to scraping the omni functions out of the reference would be to
 process `syntax/racket.vim`.
